@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" font-family="Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="900" height="600" fill="#ffffff"/>
+  <text x="450" y="28" text-anchor="middle" font-size="19" font-weight="bold" fill="#1a1a1a">Provenance Gating Against Slopsquatting — Experimental Architecture</text>
+
+  <!-- ===================== ATTACKER TIMELINE (top) ===================== -->
+  <rect x="20" y="46" width="860" height="104" rx="8" fill="#fbeaea" stroke="#c0392b" stroke-width="1.5"/>
+  <text x="30" y="66" font-size="13" font-weight="bold" fill="#c0392b">Attacker timeline — each existence predicate satisfied on schedule</text>
+  <!-- timeline axis -->
+  <line x1="60" y1="118" x2="720" y2="118" stroke="#c0392b" stroke-width="2"/>
+  <polygon points="720,118 712,114 712,122" fill="#c0392b"/>
+  <!-- steps -->
+  <g font-size="10.5" fill="#1a1a1a" text-anchor="middle">
+    <circle cx="90"  cy="118" r="6" fill="#c0392b"/><text x="90"  y="140">predict name</text><text x="90" y="104" fill="#7a1f16">recurrence</text>
+    <circle cx="220" cy="118" r="6" fill="#c0392b"/><text x="220" y="140">register</text><text x="220" y="104" fill="#7a1f16">existence ✓</text>
+    <circle cx="350" cy="118" r="6" fill="#c0392b"/><text x="350" y="140">age</text><text x="350" y="104" fill="#7a1f16">age ✓</text>
+    <circle cx="480" cy="118" r="6" fill="#c0392b"/><text x="480" y="140">seed downloads</text><text x="480" y="104" fill="#7a1f16">popularity ✓</text>
+    <circle cx="640" cy="118" r="6" fill="#c0392b"/><text x="640" y="140">stay unflagged</text><text x="640" y="104" fill="#7a1f16">not-flagged ✓</text>
+  </g>
+  <!-- the one check the timeline cannot satisfy -->
+  <rect x="742" y="92" width="130" height="52" rx="6" fill="#ffffff" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="807" y="112" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#c0392b">publisher</text>
+  <text x="807" y="126" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#c0392b">provenance ✗</text>
+  <text x="807" y="139" text-anchor="middle" font-size="8.5" fill="#7a1f16">no timeline step</text>
+
+  <!-- ===================== SEEDED STREAM (left) ===================== -->
+  <rect x="20" y="176" width="180" height="150" rx="8" fill="#eef3fb" stroke="#2c5aa0" stroke-width="1.5"/>
+  <text x="110" y="197" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2c5aa0">Literature-seeded stream</text>
+  <g font-size="10" fill="#1a1a1a">
+    <text x="32" y="220">Recurrence stats</text>
+    <text x="32" y="236" font-size="9" fill="#555">(2607.12340; 4.6–43%)</text>
+    <text x="32" y="256">Prediction accuracy</text>
+    <text x="32" y="270" font-size="9" fill="#555">swept in [0,1]</text>
+    <text x="32" y="292">Recommendation</text>
+    <text x="32" y="306">events → installs</text>
+  </g>
+
+  <!-- ===================== THREE SUBSTRATES (center) ===================== -->
+  <rect x="230" y="176" width="220" height="150" rx="8" fill="#eef7ef" stroke="#2e8b57" stroke-width="1.5"/>
+  <text x="340" y="197" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2e8b57">Simulated registries</text>
+  <text x="340" y="212" text-anchor="middle" font-size="9" fill="#555">real public metadata</text>
+  <g font-size="10" fill="#1a1a1a">
+    <rect x="244" y="222" width="192" height="26" rx="4" fill="#ffffff" stroke="#2e8b57"/><text x="252" y="239">npm / PyPI packages</text>
+    <rect x="244" y="254" width="192" height="26" rx="4" fill="#ffffff" stroke="#2e8b57"/><text x="252" y="271">MCP server registry</text>
+    <rect x="244" y="286" width="192" height="26" rx="4" fill="#ffffff" stroke="#2e8b57"/><text x="252" y="303">skill marketplace</text>
+  </g>
+  <!-- attacker injects into registries -->
+  <line x1="480" y1="150" x2="420" y2="176" stroke="#c0392b" stroke-width="1.4" stroke-dasharray="4,3"/>
+  <text x="470" y="168" font-size="8.5" fill="#c0392b">inject pre-registered names</text>
+
+  <!-- arrow seed -> registries -->
+  <line x1="200" y1="251" x2="230" y2="251" stroke="#444" stroke-width="1.6"/>
+  <polygon points="230,251 222,247 222,255" fill="#444"/>
+
+  <!-- ===================== TWO GATES (right) ===================== -->
+  <!-- existence gate -->
+  <rect x="482" y="176" width="180" height="150" rx="8" fill="#fdf4e7" stroke="#d68910" stroke-width="1.5"/>
+  <text x="572" y="196" text-anchor="middle" font-size="12" font-weight="bold" fill="#b9770e">Existence-class gate</text>
+  <text x="572" y="210" text-anchor="middle" font-size="8.5" fill="#8a5a08">attacker-satisfiable</text>
+  <g font-size="9.5" fill="#1a1a1a">
+    <text x="494" y="228">• existence check</text>
+    <text x="494" y="244">• age / popularity</text>
+    <text x="494" y="260">• RAG-grounding</text>
+    <text x="494" y="274" font-size="8" fill="#555">  (40.8→3.2% / ~16% recall)</text>
+    <text x="494" y="290">• self-audit (51–53%)</text>
+    <text x="494" y="306">• name reservation</text>
+  </g>
+  <!-- provenance gate -->
+  <rect x="686" y="176" width="194" height="150" rx="8" fill="#eef3fb" stroke="#2c5aa0" stroke-width="1.5"/>
+  <text x="783" y="196" text-anchor="middle" font-size="12" font-weight="bold" fill="#2c5aa0">Trust-tiered provenance gate</text>
+  <text x="783" y="210" text-anchor="middle" font-size="8.5" fill="#1f3d6b">needs identity compromise</text>
+  <g font-size="9.5" fill="#1a1a1a">
+    <text x="698" y="230">1 untrusted</text>
+    <text x="698" y="248">2 signed (self-asserted)</text>
+    <text x="698" y="266">3 attested-publisher</text>
+    <text x="698" y="284">4 reputation-established</text>
+    <text x="698" y="306" font-size="8" fill="#555">Sigstore / npm prov. / PyPI TP</text>
+  </g>
+
+  <!-- arrows registries -> gates -->
+  <line x1="450" y1="240" x2="482" y2="240" stroke="#444" stroke-width="1.6"/>
+  <polygon points="482,240 474,236 474,244" fill="#444"/>
+  <line x1="450" y1="262" x2="482" y2="262" stroke="#444" stroke-width="0.8" opacity="0"/>
+  <path d="M450 270 C 470 350, 660 350, 686 300" fill="none" stroke="#444" stroke-width="1.6"/>
+  <polygon points="686,300 677,298 681,306" fill="#444"/>
+
+  <!-- ===================== EVALUATION LOOP (bottom) ===================== -->
+  <rect x="20" y="360" width="860" height="220" rx="8" fill="#f6f4fb" stroke="#6c4bb0" stroke-width="1.5"/>
+  <text x="30" y="381" font-size="13" font-weight="bold" fill="#6c4bb0">Evaluation loop — common install-opportunity denominator</text>
+
+  <!-- attack surface / opportunity ledger -->
+  <rect x="36" y="396" width="200" height="82" rx="6" fill="#ffffff" stroke="#6c4bb0"/>
+  <text x="136" y="416" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a3080">Attack surface</text>
+  <text x="136" y="434" text-anchor="middle" font-size="9" fill="#333">malicious pre-registered</text>
+  <text x="136" y="447" text-anchor="middle" font-size="9" fill="#333">installs vs legitimate</text>
+  <text x="136" y="464" text-anchor="middle" font-size="9" fill="#333">installs, aligned on ledger</text>
+
+  <!-- metrics -->
+  <rect x="252" y="396" width="200" height="82" rx="6" fill="#ffffff" stroke="#6c4bb0"/>
+  <text x="352" y="416" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a3080">Metrics per defense</text>
+  <text x="352" y="434" text-anchor="middle" font-size="9" fill="#333">security = interception</text>
+  <text x="352" y="448" text-anchor="middle" font-size="9" fill="#333">usability = recall loss +</text>
+  <text x="352" y="462" text-anchor="middle" font-size="9" fill="#333">cold-start penalty</text>
+
+  <!-- cost table -->
+  <rect x="468" y="396" width="200" height="82" rx="6" fill="#ffffff" stroke="#6c4bb0"/>
+  <text x="568" y="416" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a3080">Predicate-cost table</text>
+  <text x="568" y="434" text-anchor="middle" font-size="9" fill="#333">fee · lead time · effort</text>
+  <text x="568" y="448" text-anchor="middle" font-size="9" fill="#333">per existence predicate;</text>
+  <text x="568" y="462" text-anchor="middle" font-size="9" fill="#333">price-swept flip price p*(g)</text>
+
+  <!-- sweep -->
+  <rect x="684" y="396" width="180" height="82" rx="6" fill="#ffffff" stroke="#6c4bb0"/>
+  <text x="774" y="416" text-anchor="middle" font-size="11" font-weight="bold" fill="#4a3080">Sweeps</text>
+  <text x="774" y="434" text-anchor="middle" font-size="9" fill="#333">hallucination rate</text>
+  <text x="774" y="448" text-anchor="middle" font-size="9" fill="#333">4.6% – 43%</text>
+  <text x="774" y="462" text-anchor="middle" font-size="9" fill="#333">× prediction accuracy</text>
+
+  <!-- frontier output -->
+  <rect x="230" y="496" width="440" height="70" rx="6" fill="#eef3fb" stroke="#2c5aa0" stroke-width="1.5"/>
+  <text x="450" y="516" text-anchor="middle" font-size="12" font-weight="bold" fill="#2c5aa0">Security / usability operating-point frontier</text>
+  <text x="450" y="534" text-anchor="middle" font-size="9.5" fill="#333">provenance tiers (curve) dominate the existence-class cluster;</text>
+  <text x="450" y="549" text-anchor="middle" font-size="9.5" fill="#333">per substrate, RAG-grounding annotated at its published point</text>
+
+  <!-- falsification -->
+  <rect x="684" y="496" width="180" height="70" rx="6" fill="#fbeaea" stroke="#c0392b"/>
+  <text x="774" y="514" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#c0392b">Falsification F1–F4</text>
+  <text x="774" y="531" text-anchor="middle" font-size="8.5" fill="#7a1f16">graded existence holds /</text>
+  <text x="774" y="543" text-anchor="middle" font-size="8.5" fill="#7a1f16">cold-start dominates /</text>
+  <text x="774" y="555" text-anchor="middle" font-size="8.5" fill="#7a1f16">low-rate flip / infeasible</text>
+
+  <!-- gates -> evaluation arrows -->
+  <line x1="572" y1="326" x2="470" y2="396" stroke="#6c4bb0" stroke-width="1.4"/>
+  <polygon points="470,396 474,387 479,394" fill="#6c4bb0"/>
+  <line x1="783" y1="326" x2="600" y2="396" stroke="#6c4bb0" stroke-width="1.4"/>
+  <polygon points="600,396 606,389 609,397" fill="#6c4bb0"/>
+
+  <!-- feedback loop arrow: sweeps back to seed -->
+  <path d="M684 437 C 150 590, 30 520, 30 326" fill="none" stroke="#999" stroke-width="1.2" stroke-dasharray="5,4"/>
+  <polygon points="30,326 26,335 34,335" fill="#999"/>
+  <text x="150" y="575" font-size="8.5" fill="#777">re-seed adversary per rate / accuracy cell</text>
+</svg>

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arch.reproduction.engineer",
+  "version": "0.1.0",
+  "name": "Reproduction Engineer",
+  "description": "Turns paper claims into executable specifications and isolated implementations.",
+  "maturity": "stable",
+  "capabilities": ["reproduction.specify", "reproduction.implement"],
+  "inputs": ["research.objective.v1", "reproduction.specification.v1"],
+  "outputs": ["reproduction.specification.v1", "experiment.implementation.v1"],
+  "adapter": {"type": "command", "command": ["python3", "{runtime_stub}"]},
+  "risk": "R2",
+  "permissions": {
+    "filesystem": {"read": ["project:papers", "project:workspace"], "write": ["attempt:artifacts", "attempt:workspace"]},
+    "network": {"mode": "disabled", "hosts": []},
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": ["schema.valid", "evidence.locator_resolution"],
+  "budgets": {"maxWallSeconds": 300, "maxToolCalls": 10, "maxSources": 20, "maxCostUsd": 0},
+  "routing": {"allowImplicit": true}
+}

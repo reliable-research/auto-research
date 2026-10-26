@@ -1,0 +1,284 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{The Price of Compliance:\\ Measuring the Utility-Constraint Frontier for Design-Aware Coding Agents}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic T5.5), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}). Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets, not results.}
+\end{quote}
+
+\begin{abstract}
+Organizations that delegate production code to LLM coding agents increasingly want those agents to obey design-level constraints --- architectural layering, dependency direction, complexity ceilings --- on top of functional correctness. We show this is not free by assumption: design compliance and functional correctness are produced by the same bounded generation process, so enforcing constraints cannot trade utility at a fixed rate, and a team that measures only an average cost-per-constraint cannot tell a frontier that degrades gracefully from one that hides a knee just past whatever range it happened to pilot. We build a $\kappa$-audited, bindingness-screened catalog of machine-checkable design rules, parameterized by breadth and strictness, and sweep it across executable coding benchmarks under prompt-only, checker-in-the-loop-retry, and binary-all-on enforcement, logging pass rate, residual violation rate, and generation cost at every level. A dual statistical criterion tests the pass-rate and cost curves independently for a detectable knee, reporting disagreement between the two as a distinct, informative outcome rather than resolving it by fiat; an interaction model decomposes measured cost into mechanism-attributable and constraint-attributable shares; and a token-count-matched placebo control isolates genuine constraint-content effects from the confound of simply having more instructions in the prompt. The resulting frontier turns whether design-aware coding agents are engineering-feasible from a bet into a measurement.
+\end{abstract}
+
+\section{Introduction}
+
+Design compliance and functional correctness in an LLM coding agent are not two independent knobs --- they are two outputs of one bounded generation process, drawing on the same prompt budget, the same sampling attempts, and the same solution-space slack that unit-test passing depends on. This is easy to forget when a team decides to enforce architectural rules on a coding agent: adding a layering contract, a complexity ceiling, or a forbidden-API list looks like bolting a cheap check onto an already-working system, the same way a linter bolts onto a human developer's workflow. That intuition is exactly why it deserves to be measured rather than assumed.
+
+Yet the central question about this practice remains unmeasured --- and the open part is no longer whether constraints can interfere with task solving at all. Recent work has shown that inserting even self-evident instruction constraints measurably depresses task performance, including on code generation (arXiv:2601.22047); what stays unmeasured is the price's \textit{schedule}: whether design compliance is actually cheap, and whether its price scales at a predictable, near-linear rate as more or stricter rules are added. A team that measures only the average cost across whatever range it happened to pilot cannot tell a frontier that degrades gracefully from one that hides a knee just past that range --- both can show the identical average slope over the piloted region while implying opposite deployment decisions beyond it. A graceful frontier means cost scales predictably as rules accumulate; a knee means the rule that looked cheap at the last piloted level becomes disproportionately expensive at the next one. Extrapolating linearly from an average, instead of testing the curve's shape directly, is precisely the mistake that would make ``design-aware coding agents are affordable'' a claim that quietly stops being true the moment a real deployment pushes past whatever strength was piloted.
+
+The closest published work to this question is a study of a single, semantically neutral constraint dimension: removing code-formatting requirements cuts input tokens substantially with negligible change in pass rate, establishing that not every constraint is expensive --- but leaving open whether the same holds for constraints that can actually conflict with a correct solution, such as architectural layering or dependency direction, rather than a purely cosmetic one.
+
+Several other adjacent lines of work also fall short of this specific joint measurement, each for a different reason. Instruction-following benchmarks document that satisfaction of accumulating natural-language constraints degrades substantially as more constraints are added, and training pipelines built on top of such benchmarks optimize for satisfying many constraints at once --- the general-instruction wave measures satisfaction with no independent functional-correctness oracle, and while a newer code-specific wave does score constraint adherence and executable correctness jointly, neither wave parametrizes constraint strength as a swept axis, and generation cost never appears as an evaluation axis in either. The alignment literature has named an analogous phenomenon a ``tax'' for training-time safety objectives, and decode-time multi-objective methods characterize Pareto trade-offs once per-objective reward models already exist --- but neither parametrizes constraint strength for coding agents, nor measures where a graceful trade-off turns into a cliff. An inference-time constraining mechanism built on sequential Monte Carlo shows that enforcement itself can be computationally expensive (``neither token-local nor cheap,'' in its own framing) --- a warning that any measured price of compliance risks being a property of the enforcement machinery rather than of the constraints, unless the two are deliberately pulled apart.
+
+Turning this gap into a measurable question surfaces its own difficulties. Design intent is usually stated qualitatively --- ``keep layers decoupled'' --- and converting it into a deterministic, sweepable rule catalog risks the catalog silently drifting from the intent it's supposed to represent, especially since rules chosen for checkability tend to over-represent mechanical constraints (naming, complexity thresholds) at the expense of subtler architectural ones that resist deterministic checking. Constraint strength itself is not one-dimensional: how many rules are active and how strictly each is enforced are logically separate axes that a single ordinal ladder conflates, so a knee found on such a ladder could be a knee in either axis or some undefined mixture of both. Because enforcement can trigger retry loops that simultaneously depress pass rate and inflate cost, the shape of the resulting curve cannot be assumed a priori and must be tested with enough sweep resolution to detect a genuine breakpoint rather than manufacturing or missing one from noise. Cost measured under one enforcement mechanism is entangled with that mechanism's own overhead, so a single-arm frontier risks describing the harness's implementation choice rather than the constraints themselves. And because every arm that renders active rules as prompt text necessarily lengthens the prompt as strength grows, any observed behavioral change is entangled with the sheer presence of more instructions, independent of what those instructions say --- a confound with no counterpart in settings where ``memory'' is a fixed-parameter model rather than however much text fits in a prompt.
+
+Our approach turns each of these obstacles into a specific design choice. A machine-checkable rule catalog is audited against independent human judgment and screened for whether unconstrained generations ever approach violating it at all, converting an otherwise unverifiable fidelity question into a verifiable inter-rater-agreement one. Strength is swept along breadth and strictness as two separate, factorially crossed axes rather than one conflated ladder, so degradation can be attributed to the right axis. A dual statistical criterion --- requiring two independent tests of curve shape to agree before declaring a knee --- is applied separately to the pass-rate curve and the cost curve, so that agreement or disagreement between the two is itself a reported, informative outcome rather than an assumption baked into the method. The identical constraint content is run under mechanically distinct enforcement arms with disaggregated cost logging, so that cost attributable to the enforcement mechanism can be separated from cost attributable to the constraints being enforced. And a token-count-matched but semantically inert placebo condition isolates whatever behavioral change is driven by constraint content from whatever change is driven merely by prompt length.
+
+We evaluate this design across executable, real coding benchmarks at both function-level and repository-level scope, comparing constrained conditions against an unconstrained control, a naive all-or-nothing enforcement policy, and a length-matched placebo, under multiple models and multiple enforcement mechanisms.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item An identification and formalization of the asymmetry underlying design-constraint governance for coding agents: compliance and correctness draw on one bounded generation process, so the price of compliance is a shape to be measured, not an average to be assumed, and a graceful frontier and a knee-shaped one can look identical until tested directly.
+\item A $\kappa$-audited, bindingness-screened rule catalog and a factorial breadth-by-strictness strength parameterization that separates two logically distinct sources of degradation a single ordinal ladder would otherwise conflate.
+\item A dual-criterion shape test applied independently to the pass-rate and cost curves, reporting cross-axis disagreement as a first-class, informative outcome rather than resolving it by an arbitrary tie-break, together with a mechanism-versus-constraint cost decomposition and a placebo-controlled isolation of constraint-content effects from generic instruction-load effects.
+\item An empirical account of whether current LLM coding agents' compliance-utility frontier is graceful or knee-shaped, and what that shape implies for the engineering feasibility of deploying design-aware coding agents.
+\end{itemize}
+
+Throughout, the measured shape verdict is this paper's primary framing; the audited rule catalog, sweep harness, and constraint-annotated task suites are a secondary, separately releasable resource contribution --- and the pre-committed fallback headline only in the event that the central shape hypotheses all fail --- so the reader is never left to guess which of the two framings the paper stands on.
+
+\section{Problem Definition}
+
+\noindent\textbf{Formal setup.} Consider a task set $T$, split into function-level tasks $T_f$ (each with an executable unit-test oracle) and repository-level tasks $T_r$ (each with fail-to-pass tests against a real repository). A catalog of design rules $R = \{r_1,\dots,r_K\}$ is available, each $r$ a deterministic decision procedure over static analysis of a candidate solution $y$. Constraint strength is a pair $\sigma = (b,s)$ --- breadth $b$ (how many rule packs are active) and strictness $s$ (each active rule's threshold tier) --- determining an active rule set $R(\sigma) \subseteq R$. A generation attempt is indexed by $(\text{task}, \sigma, a, m, \text{sample})$, where $a \in \{P, R, B\}$ (prompt-only, checker-in-the-loop retry, binary all-on) and $m$ is a model. Each attempt yields $\text{pass}(y,\text{task}) \in \{0,1\}$ from the task's executable oracle, a violation count $V(y,\sigma) = |\{r \in R(\sigma): r(y) = \text{violated}\}| / |R(\sigma)|$, and a logged generation cost $c(\text{attempt})$ (input/output tokens, retries, wall-clock, USD). The object of study is, for each $(m,a)$, how $\text{pass}(\cdot)$ and $\text{cost}(\cdot)$ each vary as functions of $\sigma$, and whether each of those two relationships is graceful (well-approximated by a single smooth trend) or contains a statistically detectable knee --- a strength region beyond which the trend changes abruptly.
+
+\noindent\textbf{Why this is hard.} A rule catalog capable of being swept at all must be deterministic and machine-checkable, but nothing guarantees that such a catalog faithfully represents the design intent it is meant to formalize --- a catalog audited only against its own checker outputs would measure agreement with the checker, not with design intent. The strength parameter $\sigma$ is inherently two-dimensional, and collapsing breadth and strictness into a single ordinal position conflates two potentially distinct sources of degradation. Because enforcement (especially retry-based enforcement) can simultaneously depress $\text{pass}(\cdot)$ and inflate $\text{cost}(\cdot)$, neither curve's shape can be assumed in advance, and the two curves' shapes are not guaranteed to agree with each other even when they are both well-measured. Measured cost is confounded with the choice of enforcement arm $a$, since the same rule set produces a different cost profile depending purely on how it is enforced. And because every arm that renders $R(\sigma)$ as prompt text necessarily grows the prompt as $\sigma$ increases, any change in $\text{pass}(\cdot)$ or $\text{cost}(\cdot)$ is entangled with prompt length itself, independent of $R(\sigma)$'s content --- a confound that has no analogue for a fixed-parameter model whose ``memory'' is not literally however much text is in its context window.
+
+\section{Method Overview}
+
+At a conceptual level, the study is a single measurement pipeline with six cooperating parts. A rule catalog and a strength parameterization enter the pipeline; a fidelity-and-bindingness audit turns the catalog into a trustworthy measurement instrument; a task-level statistical model turns raw per-attempt outcomes into a condition-level trend that survives ordinary LLM sampling noise; a dual-criterion shape test turns that trend into a graceful-or-knee verdict for each of the pass-rate and cost curves; a factorial strength design attributes degradation to breadth versus strictness; a cross-arm cost model attributes cost to enforcement mechanism versus constraint content; and a placebo-controlled comparison attributes behavioral change to constraint content versus prompt length.
+
+The \textbf{catalog fidelity and bindingness audit} takes the initial rule catalog and returns a subset of rules whose checker verdicts agree with independent human judgment above a pre-registered threshold and which are shown to actually bind on the studied tasks, dropping or replacing whichever rules fail either test. The \textbf{task-level trend model} takes raw per-attempt pass/fail and cost outcomes across many sampled attempts per condition and separates a genuine strength-driven effect from ordinary task-to-task and sample-to-sample noise, including a power check run before any scale-up commitment. The \textbf{dual-criterion shape test} takes the resulting condition-level pass-rate and cost trends and independently classifies each as graceful or knee-shaped, reporting the two curves' agreement or disagreement explicitly. The \textbf{factorial strength design} governs how breadth and strictness are varied so that their separate contributions to degradation can be read off rather than conflated. The \textbf{cross-arm cost decomposition} takes identical constraint content run under mechanically distinct enforcement arms and attributes measured cost to the enforcement mechanism versus the constraints themselves. The \textbf{length-matched placebo control} re-renders the active rule set as token-count-matched but semantically inert text, isolating whether observed behavior tracks constraint content or merely prompt length.
+
+\section{Methodology}
+
+\subsection{Catalog Fidelity and Bindingness Audit}
+\textbf{Challenge.} Design intent is usually qualitative (``keep layers decoupled''), and converting it into a deterministic, sweepable rule catalog risks the catalog silently drifting from the intent it claims to formalize --- with no ground truth to check against except human judgment, which the checker exists to replace.
+
+\textbf{Insight.} Fidelity cannot be proven analytically, but it can be bounded empirically: requiring a rule's checker verdicts to agree with independent human judgment above a pre-registered threshold converts an otherwise unverifiable question into a verifiable inter-rater-agreement one, and a separate bindingness screen catches rules that are nominally active but never actually approached by unconstrained generations.
+
+\textbf{Method.} An initial catalog of approximately twenty deterministic, static-analysis rules --- import-layering and dependency-direction contracts, complexity and length ceilings, naming and visibility conventions, forbidden-API lists, dependency-injection mandates --- is audited by two human annotators labeling each flagged instance as a genuine design violation or a checker artifact, on a per-rule stratified sample with a pre-specified minimum of twenty flagged instances per rule (drawing additional unconstrained generations until each rule meets that quota --- a single fixed 100-sample pool split across $\sim$20 rules would leave roughly five instances per rule, far too few for any per-rule agreement estimate to support a drop decision); any rule scoring Cohen's $\kappa$ below 0.8 against that human judgment is dropped from the catalog. Independently, any rule violated by fewer than 5\% of unconstrained (no active rules) generations is treated as non-binding and replaced before the constraint-strength sweep proceeds, so that nominally ``active'' but practically inert rules cannot flatten the measured frontier artificially.
+
+\subsection{Task-Level Trend Model}
+\textbf{Challenge.} A single attempt's pass/fail outcome is far too noisy, on its own, to attribute a change to constraint strength rather than to ordinary LLM sampling variability --- and reporting a trend without checking whether the design has enough power to detect one risks mistaking an underpowered null for a genuine finding of ``compliance is free.''
+
+\textbf{Insight.} Modeling task-level variance explicitly, with enough independently sampled attempts per condition, is what lets a genuine strength-driven trend survive individual tasks and samples behaving noisily --- and running a power check before committing to a larger sweep, rather than only after, prevents an underpowered pilot from masquerading as a real result.
+
+\textbf{Method.} Many attempts are run per (strength level, model, enforcement arm) cell; a mixed-effects logistic regression models per-attempt pass as a function of strength level with a task-level random intercept, alongside a parallel model for log-cost, both Holm-corrected across models and arms. A post-pilot power analysis, run on the observed variance before any scale-up commitment, checks whether the design has adequate power to detect a pre-specified pass-rate margin; if it does not, the sample size per cell is increased according to the pre-committed rule rather than the underpowered result being reported as a null finding; any cell still underpowered after that one-time enlargement is pre-declared inconclusive --- excluded from pass/fail aggregation entirely rather than counted as a null result.
+
+\subsection{Dual-Criterion Shape Test}
+\textbf{Challenge.} Whether the pass-rate-versus-strength and cost-versus-strength relationships are smooth or contain a breakpoint cannot be assumed in advance, and a test relying on a single statistical criterion can be fooled either by noise (manufacturing a spurious knee) or by curve-fitting flexibility (overfitting a knee that isn't really there) --- and the two curves are not guaranteed to agree on which regime holds.
+
+\textbf{Insight.} Requiring two independent statistical criteria to agree before declaring a knee guards against either failure mode individually; running that same dual-criterion procedure once on the pass-rate curve and once on the cost curve, rather than assuming they must move together, is what turns cross-axis agreement or disagreement into a reported finding instead of a silent assumption.
+
+\textbf{Method.} For each (model, arm) cell, a breakpoint-existence test and a model-selection criterion favoring a segmented over a linear fit are jointly required before a knee is declared for either the pass-rate curve or the cost curve, together with a pre-registered effect floor: the segmented fit's post-breakpoint slope must be at least twice its pre-breakpoint slope in magnitude, so that a statistically detectable but practically negligible bend is reported as graceful-with-inflection rather than scored as a knee; the location of any detected knee is reported with a bootstrap confidence interval computed by resampling at the task level. The pass-rate-based and cost-based verdicts are then compared directly: where they agree, the cell is classified graceful or knee-shaped accordingly; where they disagree, the cell is reported as \textbf{shape-discordant} --- a distinct, informative classification in its own right, never resolved by treating one curve as automatically authoritative over the other.
+
+\subsection{Factorial Strength Design}
+\textbf{Challenge.} Constraint strength has at least two logically separate axes --- how many rules are active (breadth) and how strictly each is enforced (strictness) --- that a single ordinal ladder conflates into one number, so a knee found on such a ladder cannot be attributed to either axis specifically.
+
+\textbf{Insight.} An ordinal ladder can detect that something degrades; only a design that varies breadth and strictness independently can attribute how much of that degradation belongs to each axis.
+
+\textbf{Method.} A pilot phase uses a cumulative ordinal ladder of at least seven levels, from no active rules through all rule packs at fixed strictness --- the minimum resolution at which a segmented-versus-linear comparison is meaningfully powered rather than vacuous --- to establish that strength separates measurably at all. A subsequent phase replaces the ladder with a factorial grid crossing breadth and strictness independently, so that each axis's main effect on pass rate and cost, and their interaction, can be read directly from the fitted trend model rather than inferred from a single confounded ordinal position.
+
+\subsection{Cross-Arm Cost Decomposition}
+\textbf{Challenge.} The same design-constraint content can cost differently depending purely on how it is enforced --- prompt-only injection versus checker-in-the-loop retry versus a single binary all-on attempt --- so measuring cost under only one enforcement mechanism risks reporting a property of that mechanism rather than of the constraints themselves.
+
+\textbf{Insight.} Holding constraint content fixed while varying only the enforcement mechanism is the only way to assign a share of the measured cost to the mechanism rather than to the constraints --- and formally testing the interaction between enforcement arm and strength, rather than only comparing arms descriptively, is what makes that attribution a statistical claim rather than an eyeballed one.
+
+\textbf{Method.} Identical constraint grids are run under all three enforcement arms with cost logged separately by component (prompt-overhead tokens, retry-loop tokens, output-inflation tokens). A two-way mixed-effects model on pass and on log-cost, with enforcement arm and strength as crossed factors, tests whether their interaction is significant; a mechanism-share statistic estimates the proportion of the cost difference between the retry arm and the prompt-only arm that is attributable to the enforcement mechanism itself rather than to the underlying constraint content. Because this ratio is only meaningful when its denominator --- the retry arm's cost premium over the unconstrained baseline --- is non-negligible, mechanism share is computed and reported only for cells where that premium exceeds a pre-specified floor; cells falling below the floor are reported as \textbf{mechanism-share undefined}, mirroring the shape-discordant convention above, rather than an unstable or sign-flipped ratio being fed into a hypothesis test as if it were an ordinary bounded proportion.
+
+\subsection{Length-Matched Placebo Control}
+\textbf{Challenge.} Because every enforcement arm that renders active rules as prompt text necessarily lengthens the prompt as strength grows, any observed change in pass rate or cost is entangled with the sheer presence of more instructions, independent of what those instructions say --- a confound distinct from, and unresolved by, the cross-arm decomposition above, since a fixed enforcement arm could still be reacting to prompt length alone.
+
+\textbf{Insight.} The only way to separate ``the model does worse when given more instructions'' from ``the model does worse specifically because those instructions are design constraints'' is a control that holds instruction length fixed while emptying its semantic content.
+
+\textbf{Method.} At each strength level, a placebo condition renders semantically inert instructions, token-count-matched in position and formatting to the real active rule set, in place of the actual constraint text. The real constraint arm's strength effect on pass rate is compared against the placebo arm's strength effect via an interaction test; only if the real arm's effect exceeds the placebo's by a pre-specified margin is the observed frontier attributed to constraint content rather than re-scoped as a generic instruction-load effect.
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Datasets.} A function-level suite of approximately 150 tasks with executable unit tests (BigCodeBench-Hard-style) provides a cheap, high-$n$ substrate for the pilot ladder sweep. A 50-task repository-level subset (SWE-bench Verified-style, with a per-repository mapping of which catalog rules are applicable) is required --- not merely realistic --- for the catalog fidelity and bindingness audit to apply to the catalog's repository-level rules at all: import-layering, dependency-direction, and dependency-injection rules have no multi-file structure to bind against on function-level tasks, so without a repository-level suite the bindingness screen would silently exempt the architectural rule subset from ever being tested; the same suite also lets the breadth-versus-strictness and mechanism-share findings be checked for generalization beyond function-level scope.
+
+\textbf{Contamination check.} Because both suites are drawn from public benchmarks that may overlap with model pretraining corpora, per-task pass rates are additionally stratified by each task's public release date relative to each tested model's documented training cutoff where that information is available, and the dual-criterion shape test is re-run excluding any task subset flagged as likely-memorized (near-ceiling pass rate at zero constraint strength across all tested models); if the shape verdict changes materially between the pooled and contamination-excluded analyses, both are reported rather than only the pooled one.
+
+\textbf{Sweep resolution and budget} (pre-registered design targets, not results). The pilot ladder comprises at least seven strength levels including the unconstrained level, and the scale-up grid crosses at least four breadth levels with three strictness tiers, since the dual-criterion shape test's power depends directly on the number of distinct strength levels available to the segmented fit. In generation-count terms the pilot is on the order of 150 tasks $\times$ 7 levels $\times$ 5 samples $\approx 5\times10^{3}$ generations on one mid-tier model, and the scale-up --- twelve grid cells $\times$ three arms $\times$ at least three models $\times$ 5 samples across both suites --- is on the order of $10^{5}$ generations before retry overhead; retry overhead is itself a logged outcome of the study rather than an assumed input, and the disaggregated cost logging that the cross-arm decomposition requires doubles as the study's own budget accounting.
+
+\textbf{Baselines} (sanity-check comparators and confound controls, not competitors to beat --- this is a measurement study, and no research question here is framed as ``our procedure beats baseline X''). An unconstrained arm (no active rules) anchors the utility ceiling and doubles as the bindingness-screen control. A binary all-or-nothing enforcement arm --- every rule active in a single attempt --- is the naive deployment policy the graded, multi-level sweep is compared against, to show the graded design yields information a single all-on run cannot. The length-matched placebo arm (Methodology) isolates instruction-load from constraint-content effects. Satisfaction-only degradation curves from constraint-following benchmarks are compared qualitatively as an external anchor, since their published results lack a pass-rate/cost axis and are not run under this paper's conditions.
+
+\textbf{Metrics.} Pass@1 per (strength, arm, model) cell; residual violation rate; compliant-pass rate (passes tests and has zero violations); cost per attempt (tokens, retries, wall-clock, USD) and cost per compliant-solved task; knee location and its bootstrap confidence interval where a knee is detected; mechanism share where defined.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.6em]
+\item RQ1 --- Does the audited rule catalog retain its fidelity and bindingness after the audit, and if not, where do the drops concentrate?
+\item RQ2 --- How much does enforcing design constraints reduce pass rate and increase cost over the pilot strength range?
+\item RQ3 --- Is the pilot design adequately powered to detect that effect, and if not, does the pre-committed enlargement rule fire rather than a null being reported?
+\item RQ4 --- Does the compliance-utility frontier exhibit a statistically detectable knee?
+\item RQ5 --- Do the pass-rate-based and cost-based shape verdicts agree with each other?
+\item RQ6 --- Does constraint breadth or constraint strictness drive more of the measured degradation?
+\item RQ7 --- How much of the measured cost is attributable to the enforcement mechanism rather than to the constraints themselves?
+\item RQ8 --- Does the observed frontier reflect constraint content, or merely the presence of more instructions in the prompt?
+\end{enumerate}
+
+\subsubsection{RQ1: Does the audited rule catalog retain its fidelity and bindingness after the audit, and if not, where do the drops concentrate?}
+\textbf{Setup.} The initial $\sim$20-rule catalog is audited by two human annotators (genuine violation vs.\ checker artifact) on a per-rule stratified sample with a minimum of twenty flagged instances per rule; rules scoring Cohen's $\kappa$ below 0.8 are dropped, and rules violated by fewer than 5\% of unconstrained generations are separately replaced. Dropped/replaced rules are categorized as mechanical (naming, complexity thresholds) or architectural (layering, cohesion-adjacent judgment calls).
+
+\textbf{Expected outcome.} No more than 40\% of the initial catalog is dropped or replaced overall, and the drops that do occur concentrate in architectural-intent categories rather than being spread uniformly across rule types.
+
+\textbf{Falsification condition.} Refuted if more than 40\% of the catalog is dropped or replaced (triggering the pre-registered halt-and-rescope gate), or if drops are distributed roughly uniformly across mechanical and architectural categories rather than concentrating in the architectural ones --- either would mean the catalog's fidelity risk is not where this design predicted it would be.
+
+\textbf{Hypothesis (plain language).} Catalog-fidelity risk is real but concentrated and bounded, not a generalized failure of machine-checkability.
+
+\textbf{Metrics.} Proportion of catalog dropped/replaced; category breakdown of drops.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ2: How much does enforcing design constraints reduce pass rate and increase cost over the pilot strength range?}
+\textbf{Setup.} Pilot stage: one mid-tier model, $\sim$150 function-level tasks, an ordinal strength ladder (no constraints through all cumulative rule packs at fixed strictness), prompt-only enforcement, several sampled generations per (task, level). Scale-up: several models (including at least one frontier and one open-weight model) across both task suites, replacing the ladder with a factorial breadth-by-strictness grid and adding the retry and binary-all-on arms. Mixed-effects logistic regression of pass on strength level (task random intercept), trend-tested across levels, Holm-corrected across models and arms.
+
+\textbf{Expected outcome.} Pass rate at maximum pilot strength is at least 5 percentage points below the unconstrained baseline with a significant negative strength coefficient, and cost per compliant-solved task at maximum strength is at least 25\% above the unconstrained baseline, holding for a majority of tested models.
+
+\textbf{Falsification condition.} Refuted if the strength coefficient on pass is not statistically significant, or if cost per compliant-solved task is flat across the swept range --- i.e., compliance turns out to be approximately free, which would itself be a publishable finding removing the premise that compliance has a meaningful price at all.
+
+\textbf{Hypothesis (plain language).} Enforcing design constraints measurably reduces pass rate and increases cost over the tested range, rather than being free.
+
+\textbf{Metrics.} Mixed-effects strength coefficient and its confidence interval; cost-per-compliant-solved-task ratio at maximum versus zero strength.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ3: Is the pilot design adequately powered to detect that effect, and if not, does the pre-committed enlargement rule fire rather than a null being reported?}
+\textbf{Setup.} A post-pilot power analysis on the observed per-cell variance from RQ2's fitted model, checked against the pre-specified 5-percentage-point pass-rate margin before any scale-up sample size is finalized.
+
+\textbf{Expected outcome.} If observed power for the 5pp margin falls below 80\%, the pre-committed sample-size enlargement rule is applied for the scale-up rather than the pilot's result being reported as a null finding of ``graceful'' or ``free'' compliance; any cell still below 80\% power after the one-time enlargement is pre-declared inconclusive and excluded from pass/fail aggregation, never counted as a null result.
+
+\textbf{Falsification condition.} Refuted (in the sense of a design failure, not a scientific finding) if a below-80\%-power pilot result is reported as evidence of a graceful or free frontier without the enlargement rule being applied --- this would conflate an underpowered null with a genuine one.
+
+\textbf{Hypothesis (plain language).} An apparently ``free'' pilot result is only trustworthy once it has been checked for adequate statistical power, not assumed.
+
+\textbf{Metrics.} Observed effect size and corresponding power for the pre-specified margin; whether the enlargement rule fired.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ4: Does the compliance-utility frontier exhibit a statistically detectable knee?}
+\textbf{Setup.} Under the checker-in-the-loop retry arm on scale-up data, a breakpoint-existence test and a segmented-versus-linear model-selection criterion are jointly required, per model, together with the pre-registered slope-steepening effect floor (the segmented fit's post-breakpoint slope at least twice its pre-breakpoint slope; a detected breakpoint below this floor is reported as graceful-with-inflection, not scored as a knee), to declare a knee in the pass-rate curve; knee location is estimated with a task-level bootstrap confidence interval.
+
+\textbf{Expected outcome.} A knee (both criteria jointly satisfied) exists for a majority of tested models under the retry arm, with knee locations whose confidence intervals overlap across models exhibiting a knee.
+
+\textbf{Falsification condition.} Refuted (frontier is graceful, not knee-shaped) if neither criterion rejects a linear fit for any tested model, if every detected breakpoint falls below the slope-steepening effect floor (graceful-with-inflection throughout), or if the two criteria disagree with each other in a way that prevents a joint verdict in a majority of cells.
+
+\textbf{Hypothesis (plain language).} The pass-rate cost of compliance is not merely proportional to strength --- it plausibly gets disproportionately worse beyond some strength level.
+
+\textbf{Metrics.} Per-model knee-existence verdict; knee location and bootstrap confidence interval; cross-model interval overlap.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ5: Do the pass-rate-based and cost-based shape verdicts agree with each other?}
+\textbf{Setup.} The identical dual-criterion procedure from RQ4 is applied to the log-cost-versus-strength curve, per model and arm, and its verdict (graceful or knee) is compared against the pass-rate-based verdict for the same cell.
+
+\textbf{Expected outcome.} The two verdicts agree (both graceful or both knee) for a majority of tested cells; where they disagree, the cell is reported as shape-discordant.
+
+\textbf{Falsification condition.} Refuted (as a clean single-frontier claim) if the two verdicts disagree in a majority of cells --- this would mean ``the frontier's shape'' cannot be reported as a single verdict per cell and must be reported per-axis throughout.
+
+\textbf{Hypothesis (plain language).} Pass-rate degradation and cost inflation tell substantially the same shape story, though exceptions are expected and are themselves informative rather than discarded.
+
+\textbf{Metrics.} Cross-axis verdict agreement rate; identity and count of shape-discordant cells.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ6: Does constraint breadth or constraint strictness drive more of the measured degradation?}
+\textbf{Setup.} On the scale-up's factorial breadth-by-strictness grid, main effects of each axis on pass-rate odds ratio are estimated at matched ladder position from the mixed-effects model, holding the other axis fixed.
+
+\textbf{Expected outcome.} Breadth's main effect exceeds strictness's main effect in magnitude --- adding more distinct rules costs more pass rate than tightening thresholds on already-active rules --- for a majority of tested models.
+
+\textbf{Falsification condition.} Refuted if strictness's main effect equals or exceeds breadth's in a majority of tested models, or if the two axes' effects are statistically indistinguishable, which would mean the pilot's one-dimensional ladder was not conflating meaningfully different sources of degradation.
+
+\textbf{Hypothesis (plain language).} Having more active rules matters more for pass rate than making existing rules stricter.
+
+\textbf{Metrics.} Per-axis main-effect estimate and confidence interval; effect-size comparison between axes.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ7: How much of the measured cost is attributable to the enforcement mechanism rather than to the constraints themselves?}
+\textbf{Setup.} Identical constraint grids run under prompt-only and checker-in-the-loop-retry arms, with disaggregated cost logging; a two-way (arm $\times$ strength) mixed-effects model on log-cost tests the interaction term, and mechanism share is computed for cells where the retry arm's cost premium over the unconstrained baseline exceeds a pre-specified floor (cells below the floor are reported as mechanism-share undefined).
+
+\textbf{Expected outcome.} At the top strength tier, the retry arm's log-cost slope exceeds $1.5\times$ the prompt-only arm's slope, the arm-by-strength interaction is significant, and mechanism share is at least 0.30 in qualifying cells, for a majority of tested models.
+
+\textbf{Falsification condition.} Refuted (frontier is mechanism-invariant) if the interaction term is non-significant or mechanism share falls below 0.30 in qualifying cells --- meaning practitioners could choose the cheapest enforcement mechanism without materially shifting the frontier.
+
+\textbf{Hypothesis (plain language).} A substantial share of the measured price of compliance is attributable to how enforcement is implemented, not only to what is being enforced.
+
+\textbf{Metrics.} Arm-by-strength interaction estimate; mechanism-share statistic in qualifying cells; log-cost slope ratio (retry/prompt-only).
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ8: Does the observed frontier reflect constraint content, or merely the presence of more instructions in the prompt?}
+\textbf{Setup.} Within the prompt-only arm, the real constraint condition is compared against the length-matched placebo condition at each strength level via an interaction test on the strength effect on pass rate.
+
+\textbf{Expected outcome.} The real constraint arm's strength effect on pass exceeds the placebo arm's strength effect by at least 3 percentage points at maximum strength.
+
+\textbf{Falsification condition.} Refuted (instruction-load artifact) if the margin is not met --- the observed frontier would then be re-scoped as a generic instruction-load effect rather than a design-constraint-specific one, and every claim in RQ2, RQ4, and RQ6 above would need re-framing accordingly.
+
+\textbf{Hypothesis (plain language).} The measured frontier reflects what the constraints say, not merely how much text is added to the prompt.
+
+\textbf{Metrics.} Interaction-term estimate and confidence interval between the real and placebo arms.
+
+\textbf{Result.} \ph
+
+\vspace{0.5em}
+\noindent\textbf{Further evaluation.} With more time, a natural extension is the pre-registered compliance-ceiling check --- whether residual violation rate ever reaches exactly zero at an affordable strength level (cost within roughly $2\times$ of the unconstrained baseline) --- read directly off the shape-test instrument's own fitted curves rather than requiring new runs; this is deliberately treated as a descriptive rider on the dual-criterion shape test above, not a seventh standalone research question, since it requires no new measurement apparatus of its own.
+
+\section{Related Work}
+
+The single closest prior work to this paper studies the cost and pass-rate impact of one constraint dimension --- code formatting --- showing that removing it cuts input tokens substantially with negligible change in pass rate; it is worth stating the delta plainly before surveying the wider landscape. That result establishes that not every constraint is expensive, but formatting is semantically neutral and removable without changing program behavior at all, and the study sweeps no strength axis and touches no constraint that can actually conflict with a correct solution. This paper's gap is precisely what that result leaves open: whether the same near-free finding holds for semantically binding design constraints --- layering, dependency direction, complexity ceilings --- that can trade off directly against task correctness, and whether the relationship holds smoothly across a swept strength range rather than at a single fixed level. A second near neighbor has since appeared on the utility side: an interference study showing that inserting even self-evident constraints --- constraints the model's own successful outputs already satisfy --- measurably depresses task performance across domains including code generation (SUSTAINSCORE, arXiv:2601.22047). That result establishes that the interference this paper's asymmetry predicts is real at a single implicit strength level, but it sweeps no strength axis, prices nothing in tokens or dollars, and tests no curve shape --- it demonstrates the existence of a price, where this paper measures its schedule.
+
+\textbf{Constraint-following measurement without a utility axis.} Benchmarks that define programmatically verifiable instruction constraints and measure satisfaction rates, and multi-level benchmarks that incrementally add constraints and measure degradation as they accumulate, both establish that satisfaction of natural-language constraints degrades measurably as constraints pile up. Training pipelines built on top of such benchmarks synthesize large-scale, verifiable multi-constraint instructions and train models to satisfy many constraints simultaneously via constraint-level verification rewards, and self-play frameworks generate verifiable instructions alongside executable checks to supervise constrained instruction-following at scale. The general-instruction wave of this line measures satisfaction without an independent functional-correctness oracle, so compliance is never traded off against whether the underlying task was actually solved. A code-specific wave has since closed that particular gap: controlled code-generation benchmarks now decouple instruction adherence from executable correctness (IFEvalCode, arXiv:2507.22462), evaluate hierarchical constraint types with multi-turn feedback (MultiCodeIF, arXiv:2507.00699), score correctness and multi-constraint compliance jointly through a composite metric (CIFE, arXiv:2512.17387), and grade correctness alongside readability, maintainability, and efficiency requirements (RACE, arXiv:2407.11470). What every entry in both waves still lacks is what this paper's frontier is built to make measurable jointly: constraint strength as a parametrized, swept axis rather than a fixed per-task constraint set, generation cost as a first-class outcome, and a statistical test of the resulting curves' shape.
+
+\textbf{Utility-compliance trade-offs in adjacent domains.} Safety-alignment work frames training-time safety objectives as a constrained optimization whose utility cost is structural, naming the phenomenon an ``alignment tax'' and projecting policy updates to preserve general capability while improving safety. Decode-time multi-objective methods characterize worst-case trade-offs across existing per-objective reward models, and exact Pareto-front computation is available in closed form for classification-style, concave-utility settings. None of these parametrizes design-constraint strength for coding agents specifically, and the closed-form Pareto result explicitly does not extend to open-ended code generation, where the frontier must be measured empirically rather than derived --- the methodological precedent these results establish (that an entire frontier, not a single operating point, is worth characterizing) is what this paper's shape test directly extends into a domain with no closed form.
+
+\textbf{Enforcement mechanisms and executable coding-agent substrates.} An inference-time constrained-decoding mechanism built on sequential Monte Carlo treats controlled generation as posterior sampling under a product of constraint potentials, with its own motivation noting that expensive semantic constraints are ``neither token-local nor cheap'' --- a direct precedent for why this paper isolates enforcement-mechanism cost from constraint-content cost via a cross-arm decomposition, rather than assuming a single mechanism's cost profile generalizes. Large-scale, execution-verified benchmarks pairing real repository issues with resolving pull requests provide the de-facto substrate for evaluating a coding agent's functional utility, but define correctness purely via test resolution, with no design-constraint dimension and no cost axis --- this paper's repository-level suite is built on that substrate, extended with a per-repository mapping of applicable design rules it does not itself provide. Two further adjacent measurements bracket this design from either side: an effectiveness re-evaluation of software-engineering agents under resource constraints prices accuracy against tokens and time but attaches no design-constraint axis at all (SWE-Effi, arXiv:2509.09853), while a pilot study of LLM-generated microservices under a fixed hexagonal-architecture mandate measures architectural violation rates but sweeps no strength axis and reports no pass-rate or cost frontier (arXiv:2512.04273) --- one has the cost axis without the constraints, the other the constraints without the frontier.
+
+\textbf{A note on coverage.} The corpus search underlying this survey (digest N3, eight query angles over 11,683 papers) returned no on-topic hits for software-architecture-conformance-checking tooling and literature --- the decades-old subfield of dependency-structure-matrix analysis and automated architecture-rule enforcement (the tradition that tools like import-linter-style dependency contracts are drawn from) that this paper's own rule catalog is directly modeled on. This is a genuine, acknowledged gap rather than a silently omitted thread: no specific citation is claimed here that was not independently verified, so this line of work is marked \textbf{[citation needed --- architecture-conformance-checking tooling and literature, not found in the searched corpus]} rather than invented, and should be added once a targeted, non-corpus literature search is run.
+
+\section{Conclusion}
+
+This work reframes a governance assumption --- that enforcing design constraints on coding agents is a cheap, linear-cost addition --- as an empirical question about the shape of a measurable frontier, not merely its average price. The central methodological wager is that a graceful frontier and a knee-shaped one can be indistinguishable from an average cost computed over a limited pilot range, so only a directly tested shape verdict --- checked independently on the pass-rate and cost curves, with disagreement between them reported rather than resolved by fiat --- tells a team which regime it is actually in. Whichever regime dominates for current coding agents, the finding is decision-relevant: a graceful frontier means compliance can be budgeted linearly per rule; a knee means the same rule set that looked affordable at a lower strength becomes disproportionately expensive just beyond it, with direct consequences for how aggressively design-aware agents should be deployed. Two limitations bound this claim from the outset and are natural next steps rather than afterthoughts: the study is scoped to constraint types that admit a deterministic, machine-checkable definition, leaving qualitative design properties that resist such checking (and the software-architecture-conformance-checking literature this catalog draws on but does not yet cite directly) for future methodological work; and the catalog-fidelity check (RQ1) may itself surface a nontrivial drop rate concentrated in architectural rule categories, which this design reports and bounds rather than eliminates, pointing toward richer, semi-automated design-intent elicitation as the next instrument to build.
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section*{Pre-handoff checklist}
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Organization/navigation} --- narrative flows problem $\to$ method $\to$ experiments $\to$ related work without forward references to undefined terms.
+\item \textbf{Terminology discipline} --- ``constraint strength,'' ``breadth/strictness,'' ``shape-discordant,'' ``mechanism share,'' ``bindingness'' each defined at first use in Problem Definition/Methodology, used consistently thereafter; no internal stage IDs (\texttt{sp\_*}, \texttt{m\_*}, \texttt{rq\_*}, \texttt{C1}--\texttt{C4}, \texttt{M1}--\texttt{M6}) leaked into prose --- checked directly against the discussion pipeline log.
+\item \textbf{Notation with worked example} --- the formal setup section defines $(T, T_f, T_r, R, K, \sigma=(b,s), R(\sigma), a, m, \text{pass}(\cdot), V(\cdot,\cdot), c(\cdot))$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+\item \textbf{RQ framing matches outcomes} --- all 8 RQs are graded/quantitative (rates, slopes, agreement proportions, ratios), each answered in its own subsection with an explicit falsifiable expected outcome and a distinct falsification condition, not a binary yes/no.
+\item \textbf{No typesetting artifacts} --- only explicit placeholder markers in Results, per the drafting convention this is a pre-registered spec, not a report; the one honest coverage gap (architecture-conformance-checking literature) is marked \texttt{[citation needed]} rather than silently omitted or invented.
+\item \textbf{Artifact plan} --- the audited rule catalog, the sweep harness, and the constraint-annotated task suites are the natural release artifacts; not yet built, so not claimed as available.
+\end{itemize}
+
+\section*{Hand-off}
+This is a draft, not a finished paper --- experiments have not run. Natural next steps: prose polish and venue-specific LaTeX formatting once a target venue is chosen, or revising an earlier stage if piloting surfaces a problem (e.g., if the catalog-fidelity drop rate in RQ1 is much higher than expected).
+
+\end{document}

@@ -1,0 +1,854 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{balance}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\emergencystretch=1.5em
+
+% ---- draft machinery -------------------------------------------------
+% \wj{...}  : author-standpoint comment on a hypothesis (visible, blue)
+% \ph{...}  : pre-registered result placeholder (visible, red) — every \ph
+%             is bound to a falsifier in the pre-registration (Sec. V).
+\newcommand{\wj}[1]{\textcolor{blue}{\textbf{[WJ:} \textit{#1}\textbf{]}}}
+\newcommand{\ph}[1]{\textcolor{red}{\textbf{[#1]}}}
+\newcommand{\rescell}{\textcolor{red}{--}}
+% ----------------------------------------------------------------------
+
+\newcommand{\Et}{E_t}
+\newcommand{\eps}{\varepsilon}
+
+\begin{document}
+
+\title{Reputation Conditions on Agreement, Not Fairness:\\
+Measuring Exploitation and Collusion in Repeated LLM Bargaining}
+
+\author{\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockA{Anonymous Institution\\
+anonymous@example.com}}
+
+\maketitle
+
+\begingroup\small\noindent\textit{Draft status: pre-registered specification.
+No experiments have been run. Every \textcolor{red}{red bracketed} value is a
+placeholder bound to a pre-registered hypothesis and falsifier
+(Sec.~\ref{sec:experiments}); every \textcolor{blue}{blue}
+\textnormal{\wj{...}} note states the authors' pre-registered standpoint on a
+hypothesis and must be deleted before submission. Introduction, motivation,
+methodology, and experimental protocol are final.}\endgroup
+
+\begin{abstract}
+A reputation channel feeds back whether bargainers agreed---never whether the
+agreed split was fair given the surplus actually available---so persistent
+exploitation and tacit coordination are both self-reinforcing fixed points of
+the mechanism assumed to eliminate them. We formalize this identifiability gap
+for LLM-agent bargaining and measure its consequences. In a repeated bilateral
+bargaining testbed instantiated from real human negotiation corpora
+(CraigslistBargain, Deal-or-No-Deal, GLEE), fixed pairs of LLM agents
+negotiate across many episodes with the prior-outcome ledger toggled on or
+off, and with content/order-decoupled history encodings that separate
+strategic use of history from context-length artifacts. Exploitation is scored
+against two independently defensible fairness references (Nash bargaining,
+even split) and quantified over a tolerance band; collusion-like dynamics are
+declared only by a pre-registered three-conjunct criterion---cross-pair
+convergence, within-pair alternation, and sustained unfairness---that a benign
+convergence-to-fairness process cannot satisfy, together with a direct test
+that the third conjunct is load-bearing. Across \ph{N=4} backbones and
+\ph{K=3} domains, reputation visibility reduces the exploitation trend by
+\ph{XX\%} relative to no history, yet the modal trajectory class is
+\ph{persistence} in \ph{YY\%} of condition cells, with decay in only
+\ph{ZZ\%}: the signal is directionally corrective but under-corrects. These
+results indicate that reputation-only safeguards for autonomous agent-to-agent
+commerce are under-specified: outcome visibility shapes behavior without
+reliably moving it toward fair surplus division.
+\end{abstract}
+
+\begin{IEEEkeywords}
+LLM agents, repeated bargaining, reputation mechanisms, tacit collusion,
+agent governance, pre-registered empirical study
+\end{IEEEkeywords}
+
+\section{Introduction}\label{sec:intro}
+
+Let two bargaining agents see each other's track record, and unfair behavior
+should become costly: this is the simplest governance story for autonomous
+negotiation, and the one most often assumed. As large language models (LLMs)
+are delegated price negotiations, resource splits, and service contracts on
+behalf of a principal, history-visibility recurs as the default
+safeguard---enforcement-free, cheap to implement, easy to justify. A visible
+record of who conceded, who held firm, and who walked away should discipline
+bad behavior the way reputation disciplines human counterparties in repeated
+markets. That the safeguard is cheap and plausible is exactly why it deserves
+to be checked rather than assumed.
+
+This paper studies a failure mode hidden inside that story. A reputation
+channel, as typically implemented, records \emph{whether} an agreement was
+reached and \emph{what} outcome was accepted---a behavioral trace, not a
+normative judgment. It does not record whether the outcome was \emph{fair}
+relative to the surplus, private valuations, and outside options available in
+that episode. This distinction is not an implementation detail. A pair of
+agents can repeatedly agree to a lopsided split, and the history channel then
+reinforces that the split was \emph{accepted}, not that it was exploitative.
+Two agents can instead alternate who benefits across episodes while keeping
+every split unfair relative to the available surplus. In both cases agreement
+persists, so the reputation mechanism receives a positive signal even though
+the underlying allocation stays exploitative. Persistent exploitation and
+covert coordination are, in this precise sense, both fixed points of the very
+mechanism assumed to correct them.
+
+We therefore ask a deliberately narrow question: \textbf{does observable
+outcome history self-correct exploitation in repeated LLM bargaining, or can
+it instead stabilize persistent exploitation and collusion-like coordination?}
+Throughout, \emph{collusion-like} denotes strictly a behavioral signature
+defined below---cross-pair convergence, within-pair alternation, and sustained
+unfairness occurring jointly---with no claim about intent, communication, or
+awareness. The question is not whether LLM agents can negotiate, nor whether
+repeated interaction can produce strategic adaptation. It is whether the
+specific governance signal most naturally exposed to LLM agents---the
+prior-outcome ledger---is sufficient to drive fairer behavior over time.
+
+Existing work leaves this open, from four directions. Social-agent benchmarks
+evaluate rich negotiation behavior but score each scenario as an independent
+episode with no persistent counterpart history, so longitudinal
+self-correction is outside their measurement scope~\cite{sotopia}. Multi-agent
+market simulations study adaptation across repeated rounds, but reputation
+there is implicit in aggregate customer feedback rather than a toggleable
+bilateral signal, and there is no surplus split to score for
+exploitation~\cite{competeai}; long-horizon trust benchmarks track evolving
+credibility, but in an asymmetric supervisor--performer hierarchy rather than
+peer bargaining where both sides hold reputational
+leverage~\cite{lhdeception}. Closest to our setup, concurrent work toggles
+bilateral reputation for LLM agents in repeated credence-goods markets and
+finds it is not a reliable corrective for exploitation of the information
+asymmetry~\cite{erlei2026llmmarkets}---but it measures aggregate market income
+and honesty rates, without scoring outcomes against episode-specific fairness
+references or classifying their trajectory, so it cannot separate decay from
+persistence from collusion-like coordination; its ambivalent reputation effect
+is, if anything, external evidence that the contrast we isolate is
+non-trivial. Finally, the classic algorithmic-collusion result shows that
+\emph{trained} pricing agents reliably discover tacit coordination in repeated
+markets~\cite{calvano2020}---but that coordination is a property of a learned
+value table. Any coordination we observe is produced \emph{in-context}, from a
+natural-language ledger, with nothing trained---a regime the trained-agent
+literature cannot speak to and our design is built to isolate.
+
+The obstacle to answering the question is that exploitation and collusion are
+not observable from agreement alone: a repeated sequence of accepted deals
+could indicate learning toward fairness, resignation to exploitation, or
+strategic turn-taking. We therefore convert the vague notion of
+``self-correction'' into a \textbf{trajectory-classification problem}. For
+each condition we compute exploitation relative to two independently
+defensible fairness references---an even-split reference and a Nash-bargaining
+reference built from episode-specific surplus and outside options---and
+classify each condition as \textbf{decay}, \textbf{persistence},
+\textbf{collusion-like}, or \textbf{unclassified} under a pre-registered
+decision rule. The classification separates three possibilities usually
+conflated: exploitation shrinking into a fairness band (decay---the
+self-correction story), exploitation stable outside it (persistence---a
+preserved exploitative equilibrium), and shrinking cross-pair dispersion plus
+within-pair alternation plus sustained unfairness (collusion-like---
+coordination without fairness).
+
+Making that classification trustworthy forces four obstacles into four design
+choices. (i)~No single ``fair'' split is correct once valuations and outside
+options are asymmetric, so every trajectory claim must hold \emph{under both
+references at once}, and class labels are quantified over a tolerance band
+$\eps \in \{0.05, 0.10, 0.15\}$ rather than a single cutoff---cells that flip
+within the band are reported as $\eps$-marginal, never voted. (ii)~Individual
+pairs behave noisily run-to-run, so we track many independently seeded pairs
+under a \emph{mixed-effects model that separates pair-level noise from
+condition-level trend}. (iii)~The two coordination signatures---cross-pair
+convergence and within-pair alternation---are each, alone, indistinguishable
+from benign convergence to fairness, so collusion-like is declared \emph{only
+when both co-occur while the split stays away from the fair reference}; and we
+pre-register a direct test that this third conjunct is
+load-bearing---dropping it must measurably misclassify benign-convergence
+controls, or the criterion is demoted from a contribution to a rigor device.
+(iv)~An in-context LLM's memory is exactly the transcript in its prompt, so
+behavioral drift is entangled with context growth in a way absent for a
+fixed-parameter policy; we re-render the same history three ways---full
+ledger, length-matched summary, order-scrambled---with all four outcome
+quadrants of that contrast interpreted in advance, so no result forces
+improvisation.
+
+We evaluate this design on repeated bargaining instantiated from real human
+negotiation corpora across \ph{N=4} backbones (including cross-model pairs)
+and \ph{K=3} domains, against a reputation-OFF control, scripted non-adaptive
+opponents, and a single-episode protocol that isolates what repeated structure
+itself adds.
+
+Our central finding is that reputation visibility does \textbf{not} reliably
+self-correct exploitation on the backbones tested. Reputation-ON reduces the
+exploitation trend by \ph{XX\%} relative to reputation-OFF---the signal is not
+absent---yet the modal trajectory class is \textbf{persistence} in \ph{YY\%}
+of (backbone $\times$ domain) cells (pre-registered threshold $\geq 2/3$),
+with \textbf{decay} in only \ph{ZZ\%}: directionally corrective, but too small
+to move conditions into the fair band. Where exploitation does not decay, the
+three-conjunct criterion fires, with within-pair alternation emerging before
+cross-pair convergence (Sec.~\ref{sec:experiments}); these dynamics survive
+length-matched summarization but attenuate under order-scrambling, locating
+them in the history's content and order rather than in mere context growth.
+
+We make four contributions:
+\begin{itemize}[leftmargin=1.2em]
+\item \textbf{A mechanism-level asymmetry} in reputation-based governance for
+LLM bargaining: outcome history conditions on agreement, not fairness, making
+persistent exploitation and collusion-like coordination both stable under the
+mechanism meant to prevent them.
+\item \textbf{A dual-reference, band-robust formalization} of exploitation
+trajectories, so that no claim rests on one arbitrary fairness reference or
+one arbitrary tolerance---reference- and threshold-dependence become reported
+robustness analyses.
+\item \textbf{A three-conjunct identifiability criterion} separating
+collusion-like coordination from benign convergence by requiring convergence,
+alternation, and sustained unfairness \emph{jointly}---with a pre-registered
+necessity test whose failure would demote the criterion, a novelty claim that
+carries its own falsifier.
+\item \textbf{Content/order-decoupled history encodings} that isolate
+strategic use of prior outcomes from context-length artifacts intrinsic to
+in-context---rather than trained---bargaining agents, supporting a
+pre-registered characterization of which regime dominates across the backbones
+and domains tested.
+\end{itemize}
+
+\section{Motivation}\label{sec:motivation}
+
+\subsection{The Safeguard Is the Default, and It Is Assumed Rather than
+Tested}
+LLM agents are increasingly positioned as negotiators---over prices, shared
+resources, services, or on a user's behalf in platform-mediated
+transactions---where heavy enforcement is expensive. Reputation looks cheap:
+keep a ledger of past outcomes, expose it to both sides, and let repeated
+interaction discipline bad behavior. If that assumption holds,
+history-visibility is a lightweight governance layer for agent-to-agent
+commerce. Precisely because it is the cheap default, its failure is expensive:
+a safeguard deployed everywhere but effective nowhere manufactures confidence
+without protection. Early economic simulations already hint the assumption is
+shaky---toggled reputation does not cleanly restore honest behavior in
+repeated LLM markets~\cite{erlei2026llmmarkets}---but they stop short of
+asking \emph{what regime} the exploitation follows instead, which is the
+question that determines what a designer should do about it.
+
+\subsection{The Same Simplicity Creates the Risk, and the Risk Is
+Mechanism-Specific}
+A reputation ledger records a behavioral trace, not a normative judgment: it
+can tell an agent that a counterpart \emph{accepted} a deal, never that the
+deal was \emph{fair}. In human institutions that gap is filled by external
+norms, audits, law, or competition. For an LLM agent negotiating in-context,
+the ledger may become the \textbf{main state variable} carried across
+episodes---for a trained policy the ledger is peripheral to a fixed value
+table, but for a prompted agent it may be nearly the \emph{entire} state that
+conditions the next move. If that state variable preserves agreement but omits
+fairness, repeated interaction can reinforce exactly the wrong pattern---a
+failure mode with no clean analogue in the trained-agent collusion literature
+this work otherwise draws on.
+
+\subsection{The Distinction Is Not Free---It Needs a Criterion No Single
+Metric Provides}
+This is why the question has stayed open: the two coordination signatures are
+each \emph{confounded with virtue}. Cross-pair price convergence is also what
+independent pairs converging on the fair price produce; within-pair
+alternation is also what two agents equitably taking turns produce. Either
+signal alone flags benign fairness as collusion. The load-bearing
+methodological bet is that collusion-like coordination is separable
+\emph{only} when both signatures co-occur while the split stays away from the
+fair reference---drop any conjunct and the distinction collapses. We do not
+merely assert this: we pre-register a test that removing the
+sustained-unfairness conjunct measurably misclassifies benign-convergence
+controls, and commit to withdrawing the criterion's novelty claim if it does
+not. This is what makes the decay/persistence/collusion question
+\emph{decidable} for LLM bargainers, and why the contribution is a decision
+procedure, not a testbed with metrics attached.
+
+\subsection{Either Outcome Is Decision-Relevant}
+If reputation-ON produces robust decay under both references and across the
+tolerance band, the paper reports a clean positive result with its boundary
+conditions. If exploitation persists, that refutes the reputation-only
+safeguard and localizes where it fails. If outcomes become more regular while
+unfairness is sustained, reputation may even \emph{support} collusion-like
+coordination. These regimes carry different governance implications but look
+alike unless surplus-relative fairness, temporal trend, and coordination
+signatures are measured together---which is what the design does; every branch
+has pre-committed fallback wording, so the experiment does not need to ``win''
+to be publishable. We test the \emph{deployed default}---an agreement-only
+ledger. Whether an enriched ledger that itself carries a fairness signal would
+self-correct is the natural intervention our result motivates; we treat it as
+a pre-registered, budget-gated stretch condition rather than assume its
+outcome. The evidence supports one concrete, falsifiable governance claim:
+reputation-only safeguards are \textbf{under-specified}---adequate only if
+outcome visibility reliably moves bargaining trajectories toward fair surplus
+division, not merely toward stable agreement.
+
+\section{Problem Definition}\label{sec:problem}
+
+\subsection{Formal Setup}
+Consider a pair of agents $(i, j)$ that plays a sequence of episodes
+$t = 1, \dots, T$. Each episode $t$ is a bargaining scenario with total
+disposable surplus $S_t > 0$ and private valuations and outside options
+$(d_i, d_j)$ known to each agent but not to its counterpart. A negotiation of
+bounded length ($\leq 10$ dialogue turns plus a forced final-offer round)
+yields an outcome $o_t$: an agreement flag together with realized surplus
+shares $s_t^i$ and $s_t^j$ satisfying $s_t^i + s_t^j \leq S_t$. A history
+channel $H_t = \{o_1, \dots, o_{t-1}\}$ (the \emph{reputation ledger}) is
+either exposed to both agents before episode $t$ or withheld from both, held
+identical in every other respect between the two conditions. The object of
+study is the long-run behavior of the per-episode \emph{exploitation
+deviation}
+\begin{equation}
+\Et \;=\; \frac{s_t - s_{\mathrm{fair}}}{S_t},
+\label{eq:exploitation}
+\end{equation}
+where $s_t$ is the focal agent's realized surplus share and
+$s_{\mathrm{fair}}$ is a fairness reference computed from the episode's known
+parameters. The \emph{estimand} is the long-run trajectory class of $\Et$ for
+a fixed pair under a manipulated reputation-visibility treatment; the unit of
+analysis is one (backbone $\times$ domain $\times$ condition) cell aggregated
+over its pairs.
+
+\subsection{Fairness References}
+Two independently defensible references are computed per episode:
+(1)~the \emph{even split}, $s_{\mathrm{fair}} = S_t/2$; and (2)~the
+\emph{Nash bargaining solution} share given $(S_t, d_i, d_j)$. Both are
+analytic given the scenario parameters. No trajectory claim is reported unless
+it holds under both.
+
+\subsection{Trajectory Classes}\label{sec:classes}
+Let $\beta_{\mathrm{ep}}$ be the mixed-effects slope of $\Et$ on episode
+index, and let $\bar{|\Et|}_{Q5}$ denote the final-quintile mean absolute
+deviation. For a tolerance $\eps$:
+\begin{itemize}[leftmargin=1.2em]
+\item \textbf{Decay}: $\beta_{\mathrm{ep}}$ significantly $< 0$ (Holm-$\alpha$
+= 0.05) \emph{and} $\bar{|\Et|}_{Q5} \leq \eps$, under both references.
+\item \textbf{Persistence}: the 95\% CI of $\beta_{\mathrm{ep}}$ contains $0$
+(or $\beta_{\mathrm{ep}} > 0$) \emph{and} $\bar{|\Et|}_{Q5} > \eps$, under
+both references.
+\item \textbf{Collusion-like}: the three-conjunct criterion of
+Sec.~\ref{sec:criterion} fires.
+\item \textbf{Unclassified}: the two references disagree on the class.
+\end{itemize}
+\textbf{Band-robustness rule.} A cell receives a decay or persistence label
+only if it classifies identically for all $\eps \in \{0.05, 0.10, 0.15\}$;
+cells that flip class within the band are reported as \emph{$\eps$-marginal},
+a distinct outcome excluded from the modal-class vote, together with the
+$\eps$ at which they flip. Separately, a cell whose standardized slope
+contrast remains under-powered after the pre-committed enlargement
+(Sec.~\ref{sec:setup}) is \emph{inconclusive}; $\eps$-marginal, unclassified,
+and inconclusive are never merged or silently dropped.
+
+\subsection{Why This Is Hard}
+Fixing $S_t$ and the private valuations does not fix a unique fairness
+reference: the two candidates can disagree on both the magnitude and, in
+asymmetric cases, the direction of a split's deviation from ``fair.'' The
+sequence $\{o_t\}$ is realized through a stochastic dialogue process, so a
+genuine condition-level trend must be separated from ordinary pair-to-pair
+variation before it can be attributed to $H_t$ at all. Two candidate
+signatures of coordination---a shrinking spread of $s_t$ across independently
+sampled pairs, and above-chance alternation in which side receives the larger
+share---are each, in isolation, exactly what a benign process of converging on
+the fair reference would also produce. Finally, because $H_t$ is delivered as
+part of an LLM's prompt rather than as input to a fixed-parameter policy, its
+size necessarily grows with $t$, entangling any measured behavioral change
+with context growth unless the informational content of $H_t$ and its raw
+length are experimentally decoupled.
+
+\section{Methodology}\label{sec:method}
+
+At a conceptual level, the study is a single measurement pipeline with five
+cooperating components. Bargaining scenarios and agent pairs enter the
+pipeline; two fairness references and a matched-pair statistical model turn
+the resulting outcome sequence into a condition-level exploitation trend; a
+compound coordination test turns the same sequence into a collusion-or-not
+verdict; and a set of controlled history rewrites turns the whole exercise
+into a claim about strategic response rather than context-length bookkeeping.
+
+\subsection{Repeated Bilateral Bargaining Testbed (M1)}
+A simulation harness (i)~samples episode parameters (item, list price, private
+target prices or issue valuations) from CraigslistBargain~\cite{he2018},
+Deal-or-No-Deal~\cite{lewis2017}, or GLEE~\cite{shapira2024glee} scenario
+files; (ii)~runs a turn-alternating natural-language negotiation between two
+LLM agents with a hard cap of 10 dialogue turns and a forced final-offer round
+with outside-option defaults, guaranteeing a scored outcome every episode; and
+(iii)~records structured outcomes (agreed price/allocation, agreement flag,
+per-agent surplus) per episode. Per-turn offers are parsed to numeric values
+by a rule-based extractor with an LLM fallback, validated against two
+independent human raters (Sec.~\ref{sec:threats}).
+
+\subsection{Reputation Channel as Treatment (M2)}
+A toggleable context block is prepended before each episode containing the
+pair's full prior-episode ledger (episode index, final offers, agreed split,
+no-deal events). The OFF condition receives an identically formatted but
+empty ledger, holding prompt shape constant; a per-episode token-count parity
+assertion is enforced in the harness, so the ON/OFF arms differ only in the
+information the ledger carries.
+
+\subsection{Dual-Reference Exploitation Scorer (M3)}
+Each episode's realized share is scored by Eq.~\eqref{eq:exploitation} under
+\emph{both} references, yielding two parallel exploitation readings. A
+trajectory claim is reported only when both agree
+(Sec.~\ref{sec:classes}); disagreements are reported as unclassified rather
+than resolved by fiat. The ambiguity cannot be resolved analytically, but it
+can be converted into an explicit, checkable sensitivity analysis rather than
+a hidden modeling decision.
+
+\subsection{Joint Coordination Criterion (M4)}\label{sec:criterion}
+A condition is declared \emph{collusion-like} only if all three conjuncts
+hold, under both references:
+\begin{enumerate}[leftmargin=1.4em,label=(\roman*)]
+\item \textbf{Cross-pair convergence}: the variance of realized shares across
+independently seeded pairs, $\mathrm{Var}_{\mathrm{pairs}}(s_t)$, shrinks with
+episode index (Sen's-slope trend test, bootstrap 95\% CI excluding 0);
+\item \textbf{Within-pair alternation}: the alternation rate
+$A = \frac{1}{T-1}\sum_t \mathbf{1}[\mathrm{winner}_t \neq
+\mathrm{winner}_{t+1}]$ (winner = surplus-majority side) exceeds chance
+(exact binomial test vs.\ $0.5$, $p<0.05$, $A > 0.5$);
+\item \textbf{Sustained unfairness}: condition-mean $|\Et|$ remains above
+$\eps$ through the final two quintiles.
+\end{enumerate}
+The insight is directional: a benign convergence process moves the split
+\emph{toward} the fair reference; genuine coordination does not have to.
+Requiring both signatures \emph{plus} sustained deviation is therefore exactly
+the condition a benign process cannot also satisfy. Whether conjunct~(iii) is
+load-bearing rather than decorative is itself a pre-registered hypothesis
+(RQ4, Sec.~\ref{sec:experiments}), with a demotion clause if it fails.
+
+\subsection{Decoupled History Encodings (M5)}\label{sec:encodings}
+Within reputation-ON, the same episode sequence is additionally run under
+(a)~a \emph{fixed-length summary} of the ledger, holding token budget constant
+across episodes (fixed at the episode-1 ledger length $\pm 5\%$); and
+(b)~an \emph{order-scrambled} full ledger, holding length and content constant
+while destroying temporal order. Comparing trend magnitude across the three
+arms attributes any observed effect to content, order, or mere length
+growth---the confound that has no analogue for trained policies. All four
+outcome quadrants of the (summary, scramble) retention contrast are
+interpreted in advance (RQ6).
+
+\subsection{Randomized Condition Design and Trend Model (M6)}
+Bargaining is path-dependent: an early outcome can lock a pair into a regime
+it never revisits. Role assignment, first-mover order, seed, and scenario draw
+are randomized across pairs, and classification is performed only at the
+condition level over $\geq 50$ pairs, so the trajectory label describes the
+distribution of paths rather than any single path's lock-in. The trend model
+is a linear mixed-effects regression
+\begin{equation}
+\Et \sim \text{episode} \times \text{condition} + (1 + \text{episode} \mid
+\text{pair}),
+\label{eq:lme}
+\end{equation}
+with likelihood-ratio tests on the episode term (within-condition trend) and
+on the episode $\times$ condition interaction (the ON/OFF causal contrast),
+Holm-corrected across backbones and the two fairness references within each
+hypothesis family.
+\section{Experiment Design}\label{sec:experiments}
+
+This section is written as an executable, pre-registered protocol: every
+research question carries a verbatim hypothesis, an explicit falsification
+condition, and a result slot. Result slots are placeholders
+(\textcolor{red}{red}); no number may be asserted in the text until it is
+traceable to this protocol. Author-standpoint notes (\wj{like this}) record
+the pre-registered prediction and its rationale, and are removed before
+submission.
+
+\subsection{Experimental Setup}\label{sec:setup}
+
+\textbf{Datasets.} \emph{CraigslistBargain}~\cite{he2018}: $\sim$6.6k real
+single-issue price-negotiation scenarios with known list/target prices; the
+pilot domain, because the single-issue structure gives the Nash reference a
+closed form. \emph{Deal-or-No-Deal}~\cite{lewis2017}: multi-issue division
+scenarios with private valuations; tests generalization beyond single-issue
+price bargaining. \emph{GLEE}~\cite{shapira2024glee}: a parameterized economic
+game benchmark; included specifically so that reference agreement (RQ1) can be
+tested as a function of \emph{controlled} valuation asymmetry rather than only
+observed post hoc. The human-subjects bargaining corpus of
+Heddaya et al.~\cite{heddaya2023} is not used to instantiate episodes (it has
+no repeated-interaction structure) but anchors the scenario-realism
+plausibility check in piloting.
+
+\textbf{Agents and conditions.} Stage~1 (pilot): 2 backbones $\times$ 2
+conditions (reputation ON/OFF) $\times$ 50 pairs $\times$ 20 episodes on
+CraigslistBargain. Stage~2 (scale-up): $\geq 4$ backbones (including
+cross-model pairs) $\times$ 5 conditions (ON, OFF, and the three M5 encodings)
+$\times$ 100 pairs $\times$ 40 episodes $\times$ 3 domains. Model snapshots
+are pinned; a 20-episode canary pair is re-run weekly, and a shift
+$> 0.05$ in canary mean $|\Et|$ triggers freeze-and-report. A
+\emph{fairness-visible} ledger arm (the ledger annotated with each episode's
+realized split vs.\ the fair reference) is pre-registered as a budget-gated
+stretch condition, added to Stage~2 only if the pilot gates clear; we test the
+deployed default first.
+
+\textbf{Baselines.} These are sanity-check comparators, not competitors to
+beat---this is a measurement study, and no research question is framed as
+``our procedure beats baseline X.'' (1)~\emph{Reputation-OFF} (empty ledger),
+the necessary control for every ON-condition claim; if OFF already decays to
+the fair band, repeated-interaction-with-reputation adds nothing and the
+contrast is moot---this is the ``why do this at all'' control. (2)~Scripted
+\emph{Boulware} and \emph{tit-for-tat} opponents, non-adaptive and memoryless
+beyond one episode: if the same trends appear against a memoryless opponent,
+``adaptation to the partner's reputation'' is refuted in favor of generic
+concession drift. (3)~A \emph{single-episode i.i.d.\ protocol} adapted from
+SOTOPIA's episodic structure~\cite{sotopia} (borrowing the protocol, not its
+results), isolating what repeated structure itself adds.
+
+\textbf{Statistical protocol.} Significance $\alpha = 0.05$, Holm-corrected
+across \{backbones\} $\times$ \{2 references\} within each hypothesis family.
+Power: 50 pairs detect a standardized slope contrast $d \approx 0.4$ at
+$\sim$80\% power; an observed contrast $0.2 \leq d < 0.4$ in the pilot
+triggers a pre-committed enlargement to 150 pairs/cell for that contrast in
+Stage~2, not a null claim. Cells that remain under-powered after enlargement
+are labeled inconclusive and excluded from the modal-class vote
+(Sec.~\ref{sec:classes}).
+
+\textbf{Walking-skeleton gates.} Before any Stage-1 spend, a 10-pair
+$\times$ 10-episode $\times$ 2-arm skeleton on one backbone must pass:
+\textbf{G1}~non-degenerate agreement $\geq 80\%$ (agreement at a negotiated
+interior point, not list or reservation price); \textbf{G2}~$\geq 30\%$ of
+pairs with early $|\Et| > 0.10$ under both references (there is exploitation
+to correct); \textbf{G3}~parser accuracy $\geq 95\%$ against two human raters
+(Cohen's $\kappa \geq 0.7$); \textbf{G4}~pair-slope variance $> 0$ in both
+arms; \textbf{G5}~token-parity assertion passes on every episode;
+\textbf{G6}~modal class stable across $\eps \in \{0.05, 0.10, 0.15\}$ at
+pilot scale; \textbf{G7}~the drop-a-conjunct test (RQ4) changes $\geq 1$
+classification at pilot scale; \textbf{G8}~full vs.\ scrambled encodings
+produce distinguishable trends at pilot scale (else the M5 firewall lacks
+power and needs more episodes before the main run). A gate failure requiring
+a new mechanism reopens the skeleton before any scale-up spend.
+
+\textbf{Metrics.} The dual-referenced $\Et$ and its mixed-effects slope;
+$\mathrm{Var}_{\mathrm{pairs}}(s_t)$ and its Sen's-slope trend; alternation
+rate $A$ vs.\ the binomial null; the condition-level classification (decay /
+persistence / collusion-like / unclassified / $\eps$-marginal /
+inconclusive); and harness-validity metrics (no-deal rate, extraction
+accuracy).
+
+\subsection{Research Questions}
+
+\subsubsection*{RQ1 --- Do the two fairness references agree on trajectory
+classification?}
+\textbf{Setup.} For every (backbone $\times$ domain) cell, compute the
+classification under each reference and compare; GLEE's controlled asymmetry
+provides a direct asymmetry axis.
+\textbf{Hypothesis H1.} \emph{The two references agree on classification in at
+least $5/6$ of tested cells; where they disagree, disagreement concentrates in
+the highest-asymmetry quartile of scenarios rather than being uniform.}
+\wj{Standpoint: we expect H1 to hold. The two references coincide exactly at
+symmetric outside options and diverge smoothly with asymmetry, so
+disagreement should be structured, not arbitrary. If H1 fails, reference
+choice is a noise source and the honest report is the unclassified rate---the
+design survives, the headline weakens.}
+\textbf{Falsifier.} Agreement $< 5/6$ of cells, or disagreement uniform
+across asymmetry levels.
+\textbf{Metrics.} Cross-reference agreement rate; asymmetry-quartile-conditioned
+disagreement rate vs.\ a uniform null.
+\textbf{Result.} Agreement in \ph{--/--} cells (\ph{XX\%}); disagreement
+concentration in the top asymmetry quartile: \ph{XX\%} vs.\ uniform
+expectation \ph{XX\%}, $p = $ \ph{p}.
+
+\subsubsection*{RQ2 --- Does exploitation decay or persist under reputation
+visibility?}
+\textbf{Setup.} Stage-1/Stage-2 grids of Sec.~\ref{sec:setup};
+model~\eqref{eq:lme}; LRT on the episode term; class assigned by
+Sec.~\ref{sec:classes} including the $\eps$-band rule.
+\textbf{Hypothesis H2.} \emph{Under reputation-ON, the modal classification is
+persistence, not decay, in $\geq 2/3$ of (backbone $\times$ domain) cells,
+with $\leq 1/6$ unclassified.}
+\wj{Standpoint: we predict persistence. The ledger tells an agent what the
+counterpart accepted before, which anchors the next offer near past splits;
+nothing in it prices fairness, so there is no gradient toward the fair band.
+This is the paper's central bet; the decay branch has pre-committed fallback
+wording (``reputation-only guardrails are stronger than the identifiability
+critique suggests''), and the collusion branch promotes RQ5 to headline.}
+\textbf{Falsifier.} Refuted toward decay if the majority of cells show
+$\beta_{\mathrm{ep}}$ significantly $<0$ with $\bar{|\Et|}_{Q5}$ inside the
+band under both references; refuted toward collusion if the M4 criterion
+fires instead.
+\textbf{Metrics.} Per-cell slope + 95\% CI; $\bar{|\Et|}_{Q5}$; per-cell class.
+\textbf{Result.} Modal class \ph{persistence} in \ph{YY\%} of cells; decay
+\ph{ZZ\%}; collusion-like \ph{QQ\%}; unclassified \ph{--\%};
+$\eps$-marginal \ph{--\%} (Table~\ref{tab:classes}).
+
+\subsubsection*{RQ3 --- Does reputation visibility causally shift the
+exploitation trend relative to no history?}
+\textbf{Setup.} Model~\eqref{eq:lme}, reading the episode $\times$ condition
+(ON/OFF) interaction $\beta_{\mathrm{int}}$; sign consistency required in
+$\geq 3/4$ backbones.
+\textbf{Hypothesis H3 (two-part).} \emph{(a) Pooled
+$\beta_{\mathrm{int}} < 0$ with Holm-corrected $p < 0.05$ and standardized
+$|d| \geq 0.2$; and (b) despite (a), ON cells do not reclassify from
+persistence to decay.} H3 passes only if (a) $\wedge$ (b).
+\wj{Standpoint: we predict directionally-corrective-but-insufficient. The
+ledger is informative (walk-aways and hard bargaining are visible), so a weak
+corrective pressure is plausible; but under-correction follows from the same
+asymmetry argument as H2. Note both failure directions are findings: (a)
+failing means reputation is inert or harmful (equivalence bounds $\pm 0.2d$
+reported); (b) failing means reputation fully self-corrects---each has
+pre-committed wording.}
+\textbf{Falsifier.} (a)~fails if $\beta_{\mathrm{int}}$ is non-significant or
+positive; (b)~fails if ON cells reach decay while matched OFF cells do not.
+\textbf{Metrics.} $\beta_{\mathrm{int}}$ estimate + CI, pooled and
+per-backbone; reclassification proportions.
+\textbf{Result.} $\beta_{\mathrm{int}} = $ \ph{est} (95\% CI \ph{--,--}),
+$d = $ \ph{d}, Holm $p = $ \ph{p}; trend reduction \ph{XX\%} vs.\ OFF; ON
+cells reclassified to decay: \ph{--/--}.
+
+\subsubsection*{RQ4 --- Is the sustained-unfairness conjunct load-bearing for
+the coordination criterion?}
+\textbf{Setup.} Recompute the coordination verdict with conjunct~(iii) of
+Sec.~\ref{sec:criterion} removed and compare against the full three-conjunct
+verdict across all cells, including the benign-convergence control cells
+(decay-classified cells and the scripted-opponent arms).
+\textbf{Hypothesis H4.} \emph{Dropping conjunct~(iii) reclassifies
+$\geq$ \ph{X}\% of benign-convergence control cells as collusion-like (false
+positives), demonstrating the conjunct changes verdicts rather than being
+redundant.}
+\wj{Standpoint: we expect the two-conjunct variant to over-fire on
+convergence-to-fairness cells, because shrinking variance plus equitable
+turn-taking is exactly what benign fairness looks like. This hypothesis
+carries a demotion clause: if reclassification is below the threshold, the
+three-conjunct criterion is reported as a rigor device and withdrawn as a
+novelty claim. The willingness to withdraw is deliberate---it is what makes
+the novelty defense falsifiable rather than rhetorical.}
+\textbf{Falsifier.} Every cell's classification identical with and without
+conjunct~(iii), or reclassification $<$ \ph{X}\%.
+\textbf{Metrics.} Count and identity of cells whose classification changes.
+\textbf{Result.} \ph{--/--} control cells reclassified (\ph{XX\%});
+identities in Table~\ref{tab:classes}.
+
+\subsubsection*{RQ5 --- Which coordination signature emerges first?}
+\textbf{Setup.} Conditional on $\geq 3$ non-decay cells existing (otherwise
+reported as not evaluable---no substitute analysis). Among non-decay cells
+where at least one signature reaches significance, compare onset-episode
+indices (first episode at which the running test reaches $p<0.05$) via paired
+Wilcoxon signed-rank; proportion tested by exact binomial vs.\ $0.5$.
+\textbf{Hypothesis H5.} \emph{Within-pair alternation reaches onset $\geq 5$
+episodes earlier than cross-pair convergence in $\geq 70\%$ of qualifying
+cells.}
+\wj{Standpoint: we predict alternation first. Alternation needs only local
+two-agent reciprocity; convergence requires the same dynamic to replicate
+independently across separately seeded pairs, so its onset should lag. The
+fallback is itself actionable: if convergence leads, monitoring should target
+population-level price statistics rather than dyad-level turn-taking.}
+\textbf{Falsifier.} Alternation fails to precede convergence by $\geq 5$
+episodes in $\geq 70\%$ of qualifying cells.
+\textbf{Metrics.} Onset index per signature per cell; precedence proportion;
+standardized effect sizes.
+\textbf{Result.} Alternation precedes in \ph{--/--} qualifying cells
+(\ph{PP\%}); median onset gap \ph{--} episodes; Wilcoxon $p = $ \ph{p}.
+
+\subsubsection*{RQ6 --- Content and order, or context length alone?}
+\textbf{Setup.} Three-arm mixed-effects model within reputation-ON (full /
+summary / scrambled encodings; Sec.~\ref{sec:encodings}), encoding as fixed
+effect; slope-magnitude ratios (summary/full, scrambled/full) with
+10{,}000-resample pair-level bootstrap CIs; Holm across the two ratio tests
+$\times$ references.
+\textbf{Hypothesis H6 (two-part).} \emph{(a) The summary arm retains
+$\geq 50\%$ of the full-ledger trend magnitude (ratio CI excluding 0); and
+(b) the scrambled arm retains $\leq 50\%$ (ratio CI upper bound $< 1$).}
+\wj{Standpoint: we predict content-and-order. All four quadrants are
+interpreted in advance: (a)$\wedge$(b) = strategic use of history;
+(a)$\wedge\neg$(b) = history-as-statistics (content matters, order does not
+---still not a context artifact, but it bounds the mechanism available to
+reputation-based guardrails); $\neg$(a) = context-length artifact, in which
+case the headline dynamics claim falls and the pre-committed fallback fires
+(``all apparent reputation effects require re-examination under
+budget-matched encodings''); mixed = reported as-is. No outcome forces
+improvisation.}
+\textbf{Falsifier.} (a)~fails if the summary ratio falls below $0.5$;
+(b)~fails if the scrambled ratio is $\geq 0.5$.
+\textbf{Metrics.} The two ratios with bootstrap CIs.
+\textbf{Result.} Summary/full $= $ \ph{--} (CI \ph{--,--}); scrambled/full
+$= $ \ph{--} (CI \ph{--,--}); quadrant: \ph{strategic}.
+
+\subsubsection*{RQ7 --- Is the classification stable across sub-samples?}
+\textbf{Setup.} Split each condition's pairs into two disjoint random halves;
+classify each half independently; compare across cells.
+\textbf{Hypothesis H7.} \emph{The two half-sample classifications agree in
+$\geq 80\%$ of tested cells.}
+\wj{Standpoint: we expect H7 to hold given the power analysis; it is included
+as an honesty check on the label itself. Failure would mean the trajectory
+label describes sampling luck, not the condition---in which case per-cell
+labels are withdrawn and only pooled contrasts (RQ3) are reported.}
+\textbf{Falsifier.} Agreement $< 80\%$ of cells.
+\textbf{Metrics.} Split-half agreement rate.
+\textbf{Result.} Agreement in \ph{--/--} cells (\ph{XX\%}).
+
+\subsection{Result Tables (placeholders)}
+
+\begin{table}[t]
+\caption{Trajectory classification per (backbone $\times$ domain) cell under
+reputation-ON, both references, $\eps$-band rule applied. D = decay, P =
+persistence, C = collusion-like, U = unclassified, M = $\eps$-marginal, I =
+inconclusive. All entries are pre-registered placeholders.}
+\label{tab:classes}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+Backbone & Craigslist & DoND & GLEE & Modal \\
+\midrule
+\ph{B1} & \rescell & \rescell & \rescell & \rescell \\
+\ph{B2} & \rescell & \rescell & \rescell & \rescell \\
+\ph{B3} & \rescell & \rescell & \rescell & \rescell \\
+\ph{B4} & \rescell & \rescell & \rescell & \rescell \\
+\ph{B1$\times$B2} & \rescell & \rescell & \rescell & \rescell \\
+\midrule
+Modal (col.) & \rescell & \rescell & \rescell &
+\ph{P in YY\% of cells} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\caption{Causal contrast (RQ3) and encoding decomposition (RQ6). All entries
+are pre-registered placeholders bound to H3/H6 falsifiers.}
+\label{tab:contrast}
+\centering
+\begin{tabular}{lccc}
+\toprule
+Quantity & Estimate & 95\% CI & Holm $p$ \\
+\midrule
+$\beta_{\mathrm{int}}$ (ON vs.\ OFF) & \rescell & \rescell & \rescell \\
+Trend reduction vs.\ OFF & \ph{XX\%} & \rescell & --- \\
+Summary/full ratio & \rescell & \rescell & \rescell \\
+Scrambled/full ratio & \rescell & \rescell & \rescell \\
+Boulware arm slope & \rescell & \rescell & \rescell \\
+Single-episode protocol slope & \rescell & \rescell & \rescell \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Further Evaluation (scoped out)}
+Partner-choice, reputation-visible \emph{markets} (many-to-many, not fixed
+pairs) are explicitly out of scope: they change the unit of analysis from a
+dyad's trajectory to a population's and require their own identifiability
+design rather than an extension of the criterion above.
+
+\section{Threats to Validity}\label{sec:threats}
+
+\textbf{Construct validity.} The exploitation and coordination constructs are
+only as sound as their extraction and reference instruments. The
+offer/agreement parser is validated against two independent human raters
+(Cohen's $\kappa \geq 0.7$; accuracy $\geq 95\%$), audited on 50 transcripts
+in the pilot and 300 pre-scale-up, with confusion-structure inspection
+(adjacent-value misreads vs.\ systematic misparse of one offer type); a
+threshold miss blocks scale-up rather than being absorbed into noisier
+metrics. Reference selection itself is a construct threat: no single fairness
+baseline is uniquely correct under asymmetric valuations, so every claim must
+hold under both references, with disagreement reported as unclassified (RQ1)
+and tolerance-dependence handled by the $\eps$-band rule rather than a single
+cutoff.
+
+\textbf{Internal validity.} Two confounds threaten the causal reading of the
+ON/OFF contrast. First, scenarios must yield well-defined surplus and outside
+options for both references to exist; scenarios failing static validation are
+excluded before any API spend, with the exclusion rate reported. Second, the
+empty ledger (OFF) and the fixed-length summary (M5) must hold prompt format
+and token budget constant, or effects are confounded with prompt shape; this
+is enforced by an automated per-episode token-parity assertion, and a
+violation is pre-committed to downgrade the causal reading of RQ3 and RQ6
+specifically---the two hypotheses the assertion protects---rather than
+blocking the run.
+
+\textbf{External validity.} The study is scoped to sandboxable two-party
+bargaining with instrument-known valuations across three corpora; it does not
+cover population-level markets with partner choice, live deployments, or
+domains without a computable fairness reference. Findings are scoped to the
+backbones and domains actually tested and are not asserted to generalize
+beyond that grid. Commercial-model drift is mitigated by pinned snapshots, a
+weekly canary pair with a pre-registered freeze rule, release of all
+transcripts (so measured trajectories remain auditable even if regeneration
+diverges), and inclusion of at least one open-weights backbone.
+
+\textbf{Conclusion validity.} Conditions $\times$ backbones $\times$
+references multiply the hypothesis space; we mitigate with the pre-registered
+decision rule, Holm correction within hypothesis families, mixed-effects
+modeling rather than pooling correlated pairs, and the compound three-conjunct
+criterion that a spurious single signal cannot satisfy. The split-half check
+(RQ7) tests whether labels describe conditions rather than sampling luck.
+
+\section{Related Work}\label{sec:related}
+
+\textbf{Repeated-interaction LLM-agent simulations.}
+CompeteAI~\cite{competeai} situates competing LLM agents in a persistent,
+resource-constrained market and studies cumulative advantage over many
+rounds; SOTOPIA~\cite{sotopia} scores rich multi-turn social scenarios,
+including negotiation, along multiple behavioral dimensions. Both establish
+that repeated or richly-scored LLM-agent interaction produces measurable
+dynamics, but neither isolates an observable-history channel as a toggleable
+treatment with a bilateral surplus split to score: CompeteAI's reputation is
+implicit in aggregate market feedback, and SOTOPIA scores each scenario as an
+independent episode with no persistent cross-episode memory for a fixed pair.
+
+\textbf{Reputation in repeated LLM markets.} Concurrent work by Erlei and
+Meub~\cite{erlei2026llmmarkets} manipulates reputation mechanisms for LLM
+agents in credence-goods markets across one-shot and repeated 16-round
+interactions, finding reputation is not a reliable corrective for exploiting
+the information asymmetry. It is the nearest neighbor to our treatment
+design, and we differ on all three axes that our question requires: construct
+(credence-goods diagnosis and service provision vs.\ a bilateral surplus
+split), measurement (aggregate market income and honesty rates vs.\
+episode-fairness-scored exploitation under dual references), and analysis (no
+trajectory classification vs.\ the decay/persistence/collusion-like decision
+rule). Its ambivalent reputation effect independently motivates isolating the
+contrast we study.
+
+\textbf{Trust, deception, and strategic behavior.} The LH-DECEPTION
+benchmark~\cite{lhdeception} models an evolving trust state in a
+supervisor--performer hierarchy and audits accumulated deception;
+AmongUs~\cite{amongus} elicits emergent strategic misbehavior in a discrete
+social-deduction game scored by Elo; StrategicPersuasion~\cite{strategicpersuasion}
+formalizes one-shot sender--receiver persuasion with explicit utilities. None
+covers symmetric peer bargaining with reputational leverage on both sides
+across genuinely repeated interaction: the hierarchy lacks peer symmetry, the
+win/lose structure cannot express graded exploitation of a continuous split,
+and one-shot games admit no history channel to manipulate.
+
+\textbf{Repeated-game collusion and negotiation foundations.}
+Calvano et al.~\cite{calvano2020} show that independent Q-learning agents in
+repeated pricing games reliably discover supra-competitive, tacitly collusive
+prices without communication; SocialJax~\cite{socialjax} provides sequential
+social-dilemma environments with trained MARL baselines exhibiting related
+exploitation/cooperation dynamics. Both concern \emph{trained} policies whose
+coordination is a property of a learned value table.
+Lewis et al.~\cite{lewis2017} established the multi-issue negotiation-dialogue
+task our scale-up domain builds on, and Heddaya et al.~\cite{heddaya2023}
+collected a human-subjects bargaining corpus contrasting alternating-offer and
+free-form negotiation---both as single episodes with no reputation channel.
+Training-time approaches such as ARIA~\cite{aria} and
+MARSHAL~\cite{marshal} treat strategic games as environments for learning
+stronger policies; they measure learning performance, not the behavioral
+trajectory of exploitation under a reputation manipulation. None of these
+establishes whether dynamics measurable for trained policies also arise for
+\emph{prompted}, in-context bargainers conditioned on a natural-language
+transcript---the gap our encoding controls (M5) are built to close.
+
+\section{Conclusion}\label{sec:conclusion}
+
+Reputation channels, as deployed for LLM-agent bargaining, condition on
+agreement rather than fairness---an asymmetry under which persistent
+exploitation and collusion-like coordination are both stable outcomes of the
+mechanism assumed to prevent them. We converted the resulting question into a
+pre-registered trajectory-classification problem, with dual fairness
+references quantified over a tolerance band, a three-conjunct coordination
+criterion carrying its own necessity test, and content/order-decoupled
+history encodings that firewall the in-context confound no trained-agent
+study faces. Across \ph{N=4} backbones and \ph{K=3} domains, reputation
+visibility reduced the exploitation trend by \ph{XX\%} yet left
+\ph{persistence} as the modal regime in \ph{YY\%} of cells---directionally
+corrective, insufficient to self-correct. The governance implication is
+stated as a falsifiable conditional: reputation-only safeguards are adequate
+only if outcome visibility reliably moves bargaining trajectories toward fair
+surplus division, not merely toward stable agreement. Our results indicate it
+\ph{does not}, on the backbones and domains tested; the enriched,
+fairness-carrying ledger is the natural next intervention, pre-registered
+here as a stretch condition. We release the testbed, the full transcript
+corpus, and the pre-registration to make every claim auditable.
+
+\balance
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

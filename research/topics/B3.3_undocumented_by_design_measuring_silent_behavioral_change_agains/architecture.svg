@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#52606D"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="620" fill="#FFFFFF"/>
+
+  <!-- ================= Row 1: two input arms ================= -->
+  <rect x="16" y="14" width="420" height="80" rx="8" fill="#E8F1FB" stroke="#3B76B5" stroke-width="1.6"/>
+  <text x="28" y="34" font-size="13" font-weight="bold" fill="#1F2933">Arm 1 · Behavioral probe battery (frozen &amp; hashed)</text>
+  <text x="28" y="52" font-size="11" fill="#1F2933">~1,400 probes · 6 categories · paraphrase-grouped families</text>
+  <text x="28" y="67" font-size="11" fill="#1F2933">N = 25–50 samples / version · locked decoding config</text>
+  <text x="28" y="82" font-size="11" fill="#1F2933">A0 same-version nulls → detector FPR ≤ 1.5α (gate)</text>
+
+  <rect x="464" y="14" width="420" height="80" rx="8" fill="#FDF3E3" stroke="#C98A2B" stroke-width="1.6"/>
+  <text x="476" y="34" font-size="13" font-weight="bold" fill="#1F2933">Arm 2 · Changelog claim corpus (released artifact)</text>
+  <text x="476" y="52" font-size="11" fill="#1F2933">release notes · model cards · blogs (Wayback-archived)</text>
+  <text x="476" y="67" font-size="11" fill="#1F2933">segmented into dated claim units</text>
+  <text x="476" y="82" font-size="11" fill="#1F2933">specificity: S0 absent · S1 blanket · S2 specific</text>
+
+  <line x1="226" y1="94" x2="226" y2="112" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="674" y1="94" x2="674" y2="112" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ================= Row 2: processing ================= -->
+  <rect x="16" y="114" width="420" height="104" rx="8" fill="#E8F1FB" stroke="#3B76B5" stroke-width="1.6"/>
+  <text x="28" y="134" font-size="13" font-weight="bold" fill="#1F2933">Detection → Behavioral Change Ledger</text>
+  <text x="28" y="152" font-size="11" fill="#1F2933">blocked permutation + BY q=.05 (retro / snapshots)</text>
+  <text x="28" y="167" font-size="11" fill="#1F2933">e-process change-points + e-BH q=.05 (alias)</text>
+  <text x="28" y="182" font-size="11" fill="#1F2933">|Cliff's δ| ≥ .33 floor · held-out confirmation</text>
+  <text x="28" y="197" font-size="11" fill="#1F2933">complete-link clustering (cos ≥ .80)</text>
+  <text x="28" y="212" font-size="11" font-weight="bold" fill="#3B76B5">→ countable change units D_r  (ρ denominator)</text>
+
+  <rect x="464" y="114" width="420" height="104" rx="8" fill="#FDF3E3" stroke="#C98A2B" stroke-width="1.6"/>
+  <text x="476" y="134" font-size="13" font-weight="bold" fill="#1F2933">Scope-lattice encoding (calibrated)</text>
+  <text x="476" y="152" font-size="11" fill="#1F2933">6 frozen axes — primary: model · interval · behavior ·</text>
+  <text x="476" y="167" font-size="11" fill="#1F2933">direction; secondary: domain · population</text>
+  <text x="476" y="182" font-size="11" fill="#1F2933">LLM/NLI encoder → lattice fields + evidence spans</text>
+  <text x="476" y="197" font-size="11" fill="#1F2933">blinded human dual-coding audit (κ ≥ .6 gate, .75 target)</text>
+  <text x="476" y="212" font-size="11" font-weight="bold" fill="#C98A2B">→ eligible claims, per transition window</text>
+
+  <!-- arrows into alignment -->
+  <path d="M 226 218 L 226 240 L 322 240 L 322 250" fill="none" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+  <path d="M 674 218 L 674 240 L 578 240 L 578 250" fill="none" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ================= Row 3: alignment ================= -->
+  <rect x="190" y="252" width="520" height="86" rx="8" fill="#E9F6EC" stroke="#3E8E52" stroke-width="1.6"/>
+  <text x="204" y="272" font-size="13" font-weight="bold" fill="#1F2933">Claim–change alignment (deterministic containment)</text>
+  <text x="204" y="290" font-size="11" fill="#1F2933">strict: one specific claim matches all primary axes + interval</text>
+  <text x="204" y="305" font-size="11" fill="#1F2933">lenient: descendant containment; blanket only if explicitly all-scoped</text>
+  <text x="204" y="320" font-size="11" fill="#1F2933">per-claim OR · no field unioning · contradiction rejects</text>
+  <text x="204" y="334" font-size="11" font-weight="bold" fill="#3E8E52">→ each change: absent / blanket / specific · covered or uncovered</text>
+
+  <!-- arrows to regimes -->
+  <line x1="260" y1="338" x2="260" y2="368" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="450" y1="338" x2="450" y2="368" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="640" y1="338" x2="640" y2="368" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ================= Row 4: three regimes, never pooled ================= -->
+  <text x="884" y="346" font-size="11" font-style="italic" font-weight="bold" fill="#6A4FB3" text-anchor="end">three version-pair regimes — never pooled</text>
+  <rect x="10" y="350" width="880" height="126" rx="10" fill="none" stroke="#6A4FB3" stroke-width="1.2" stroke-dasharray="6 5"/>
+
+  <rect x="22" y="370" width="276" height="96" rx="8" fill="#F0ECFA" stroke="#6A4FB3" stroke-width="1.5"/>
+  <text x="32" y="388" font-size="12" font-weight="bold" fill="#1F2933">R-OW · retrospective open-weight</text>
+  <text x="32" y="404" font-size="10.5" fill="#1F2933">6–8 transitions · vLLM · re-queryable</text>
+  <text x="32" y="418" font-size="10.5" fill="#1F2933">disclosure = model card + release blog</text>
+  <text x="32" y="432" font-size="10.5" fill="#1F2933">headline, fully reproducible</text>
+  <text x="32" y="449" font-size="11" font-weight="bold" fill="#6A4FB3">ρ̂ strict / lenient + 95% CI</text>
+
+  <rect x="312" y="370" width="276" height="96" rx="8" fill="#F0ECFA" stroke="#6A4FB3" stroke-width="1.5"/>
+  <text x="322" y="388" font-size="12" font-weight="bold" fill="#1F2933">R-API · dated API snapshots</text>
+  <text x="322" y="404" font-size="10.5" fill="#1F2933">4–6 pairs · ≥2 vendors · N=25 · ≤$4K</text>
+  <text x="322" y="418" font-size="10.5" fill="#1F2933">aligned to vendor release notes</text>
+  <text x="322" y="432" font-size="10.5" fill="#1F2933">vendor-selected pairs (caveat reported)</text>
+  <text x="322" y="449" font-size="11" font-weight="bold" fill="#6A4FB3">ρ̂ strict / lenient + 95% CI</text>
+
+  <rect x="602" y="370" width="276" height="96" rx="8" fill="#F0ECFA" stroke="#6A4FB3" stroke-width="1.5"/>
+  <text x="612" y="388" font-size="12" font-weight="bold" fill="#1F2933">P · prospective alias monitoring</text>
+  <text x="612" y="404" font-size="10.5" fill="#1F2933">daily fingerprints + weekly mini-suite</text>
+  <text x="612" y="418" font-size="10.5" fill="#1F2933">anytime-valid tests · boundary-attributed</text>
+  <text x="612" y="432" font-size="10.5" fill="#1F2933">pre-declared case study (non-blocking)</text>
+  <text x="612" y="449" font-size="11" font-weight="bold" fill="#6A4FB3">ρ̂ or descriptive report</text>
+
+  <!-- arrows to bottom strip -->
+  <line x1="160" y1="476" x2="160" y2="496" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="450" y1="476" x2="450" y2="496" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="740" y1="476" x2="740" y2="496" stroke="#52606D" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ================= Row 5: estimand + gates ================= -->
+  <rect x="16" y="498" width="868" height="108" rx="8" fill="#F2F4F6" stroke="#6B7580" stroke-width="1.5"/>
+  <line x1="560" y1="506" x2="560" y2="598" stroke="#6B7580" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <text x="28" y="518" font-size="12.5" font-weight="bold" fill="#1F2933">Estimand &amp; inference (per regime)</text>
+  <text x="28" y="536" font-size="11" fill="#1F2933">ρ_strict = frac. without specific claim · ρ_lenient = frac. with no claim</text>
+  <text x="28" y="551" font-size="11" fill="#1F2933">reported as strict/lenient interval · boilerplate share = ρ_s − ρ_l · σ companion</text>
+  <text x="28" y="566" font-size="11" fill="#1F2933">crossed-block bootstrap, full-pipeline reconstruction (B = 1,000)</text>
+  <text x="28" y="581" font-size="11" fill="#1F2933">|D_r| &lt; 10 → descriptive only · failure labels: non-estimable · cluster-dominated</text>
+  <text x="28" y="596" font-size="11" fill="#1F2933">sensitivity grid over α · |δ| floor · clustering threshold · encoder vs human labels</text>
+
+  <text x="574" y="518" font-size="12.5" font-weight="bold" fill="#B3564A">Pilot gates (go / no-go)</text>
+  <text x="574" y="536" font-size="11" fill="#1F2933">A0 detector FPR ≤ 1.5α on ≥ 200 null pairs</text>
+  <text x="574" y="551" font-size="11" fill="#1F2933">annotator κ ≥ .6 on S0–S2 (≥ 50 pairs)</text>
+  <text x="574" y="566" font-size="11" fill="#1F2933">≥ 15 confirmed diffs, or calibrated + powered</text>
+  <text x="574" y="581" font-size="11" fill="#1F2933">budget: API ≤ $4K · 600–900 A100-h</text>
+  <text x="574" y="596" font-size="11" fill="#1F2933">NO-GO → instrument-paper descope</text>
+</svg>

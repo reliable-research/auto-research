@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arch.experiment.engineer",
+  "version": "0.1.0",
+  "name": "Experiment Engineer",
+  "description": "Implements bounded changes and executes fixed experiment contracts.",
+  "maturity": "stable",
+  "capabilities": ["experiment.implement", "experiment.execute"],
+  "inputs": ["research.objective.v1", "experiment.implementation.v1"],
+  "outputs": ["experiment.implementation.v1", "experiment.result_set.v1"],
+  "adapter": {"type": "command", "command": ["python3", "{runtime_stub}"]},
+  "risk": "R3",
+  "permissions": {
+    "filesystem": {"read": ["project:workspace"], "write": ["attempt:artifacts", "attempt:workspace"]},
+    "network": {"mode": "disabled", "hosts": []},
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": ["schema.valid", "numeric.provenance", "baseline.matched"],
+  "budgets": {"maxWallSeconds": 300, "maxToolCalls": 10, "maxSources": 0, "maxCostUsd": 0},
+  "routing": {"allowImplicit": true}
+}

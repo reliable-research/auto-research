@@ -1,0 +1,48 @@
+name: adapted-research-arch
+
+services:
+  ara:
+    image: adapted-research-arch:local
+    build:
+      context: .
+      args:
+        ARA_UID: "${ARA_UID:-1000}"
+        ARA_GID: "${ARA_GID:-1000}"
+        CODEX_CLI_VERSION: "${CODEX_CLI_VERSION:-0.149.0}"
+        CLAUDE_CODE_VERSION: "${CLAUDE_CODE_VERSION:-2.1.239}"
+    init: true
+    user: "${ARA_UID:-1000}:${ARA_GID:-1000}"
+    read_only: true
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    environment:
+      HOME: /home/ara
+      ARA_OS_SANDBOX: "off"
+      DISABLE_AUTOUPDATER: "1"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 512
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=1g
+      - "/home/ara:rw,nosuid,nodev,mode=0700,uid=${ARA_UID:-1000},gid=${ARA_GID:-1000},size=512m"
+    volumes:
+      - type: bind
+        source: "${ARA_PROJECT_DIR:-./docker-project}"
+        target: /workspace
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${HOME}/.codex"
+        target: /run/ara-auth/codex
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${HOME}/.claude"
+        target: /run/ara-auth/claude
+        read_only: true
+        bind:
+          create_host_path: false

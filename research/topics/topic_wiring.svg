@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 920" role="img" aria-labelledby="title desc">
+  <title id="title">Research topic wiring map</title>
+  <desc id="desc">A cluster map wiring the research topic families B1 through B6, T5, and T3 by dependency and research lifecycle.</desc>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f5fbf"/>
+    </marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#087f73"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6d49aa"/>
+    </marker>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1d2430" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #17233a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #5b6472; }
+      .axis { font: 700 14px Arial, sans-serif; fill: #667085; }
+      .box-title { font: 700 21px Arial, sans-serif; fill: #152238; }
+      .box-sub { font: 600 14px Arial, sans-serif; fill: #435063; }
+      .item { font: 400 13px Arial, sans-serif; fill: #273445; }
+      .chip { font: 700 13px Arial, sans-serif; fill: #ffffff; }
+      .note { font: 400 13px Arial, sans-serif; fill: #536171; }
+      .edge-label { font: 700 12px Arial, sans-serif; fill: #344054; }
+    </style>
+  </defs>
+
+  <rect width="1320" height="920" fill="#fbfaf7"/>
+  <text x="58" y="58" class="title">Topic Wiring Map</text>
+  <text x="58" y="84" class="subtitle">How the 39 candidate topics connect across evaluation, diagnosis, runtime, governance, and ecosystem risk.</text>
+
+  <g opacity="0.78">
+    <line x1="80" y1="842" x2="1235" y2="842" stroke="#c9d1dc" stroke-width="2"/>
+    <text x="80" y="875" class="axis">S1 Measurement</text>
+    <text x="292" y="875" class="axis">S2 Mechanism</text>
+    <text x="498" y="875" class="axis">S3 Boundary</text>
+    <text x="702" y="875" class="axis">S4 Intervention</text>
+    <text x="918" y="875" class="axis">S5 Scale</text>
+    <text x="1118" y="875" class="axis">S6 Governance</text>
+  </g>
+
+  <!-- Edges -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 345 210 C 430 210, 470 245, 535 295" stroke="#1f5fbf" stroke-width="3" marker-end="url(#arrow-blue)"/>
+    <path d="M 725 330 C 790 330, 850 285, 915 245" stroke="#1f5fbf" stroke-width="3" marker-end="url(#arrow-blue)"/>
+    <path d="M 725 400 C 798 430, 845 512, 915 585" stroke="#6d49aa" stroke-width="3" marker-end="url(#arrow-purple)"/>
+    <path d="M 1030 300 C 1030 378, 1020 472, 1015 545" stroke="#6d49aa" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrow-purple)"/>
+    <path d="M 345 650 C 435 650, 470 590, 535 535" stroke="#087f73" stroke-width="3" marker-end="url(#arrow-teal)"/>
+    <path d="M 345 715 C 530 760, 780 760, 915 670" stroke="#087f73" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#arrow-teal)"/>
+    <path d="M 735 540 C 785 540, 840 533, 910 505" stroke="#087f73" stroke-width="3" marker-end="url(#arrow-teal)"/>
+  </g>
+
+  <g>
+    <rect x="380" y="214" width="130" height="28" rx="14" fill="#eef4ff" stroke="#b9c9ed"/>
+    <text x="397" y="233" class="edge-label">failure signals</text>
+    <rect x="792" y="275" width="120" height="28" rx="14" fill="#eef4ff" stroke="#b9c9ed"/>
+    <text x="810" y="294" class="edge-label">cost policy</text>
+    <rect x="784" y="454" width="126" height="28" rx="14" fill="#f4efff" stroke="#cfbaf3"/>
+    <text x="801" y="473" class="edge-label">runtime audit</text>
+    <rect x="385" y="590" width="125" height="28" rx="14" fill="#e8f7f4" stroke="#b2ddd5"/>
+    <text x="399" y="609" class="edge-label">state drift</text>
+    <rect x="690" y="504" width="130" height="28" rx="14" fill="#e8f7f4" stroke="#b2ddd5"/>
+    <text x="707" y="523" class="edge-label">repo checks</text>
+  </g>
+
+  <!-- B1 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="58" y="130" width="287" height="214" rx="14" fill="#ffffff" stroke="#1f5fbf" stroke-width="2"/>
+    <rect x="58" y="130" width="287" height="42" rx="14" fill="#1f5fbf"/>
+    <text x="78" y="158" class="box-title" fill="#ffffff">B1 Verifier Sufficiency</text>
+    <text x="78" y="195" class="box-sub">Question: does passing the verifier mean task success?</text>
+    <text x="78" y="224" class="item">B1.1 forgeable action logs</text>
+    <text x="78" y="248" class="item">B1.2 visible-test overfitting</text>
+    <text x="78" y="272" class="item">B1.3 checkpoint bypass</text>
+    <text x="78" y="296" class="item">B1.4 verifier composition shortcuts</text>
+    <text x="78" y="320" class="item">B1.5 verification budget allocation</text>
+  </g>
+
+  <!-- B2 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="535" y="250" width="297" height="218" rx="14" fill="#ffffff" stroke="#356fc7" stroke-width="2"/>
+    <rect x="535" y="250" width="297" height="42" rx="14" fill="#356fc7"/>
+    <text x="555" y="278" class="box-title" fill="#ffffff">B2 Failure Attribution</text>
+    <text x="555" y="315" class="box-sub">Question: which layer caused the failure?</text>
+    <text x="555" y="344" class="item">B2.1 controlled substitution</text>
+    <text x="555" y="368" class="item">B2.2 minimal replay budget</text>
+    <text x="555" y="392" class="item">B2.3 cross-model diagnosis stability</text>
+    <text x="555" y="416" class="item">B2.4 infeasible vs failed</text>
+    <text x="555" y="440" class="item">B2.5 corrupted observations</text>
+  </g>
+
+  <!-- B4 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="915" y="130" width="310" height="215" rx="14" fill="#ffffff" stroke="#5c8fdb" stroke-width="2"/>
+    <rect x="915" y="130" width="310" height="42" rx="14" fill="#5c8fdb"/>
+    <text x="935" y="158" class="box-title" fill="#ffffff">B4 Budget Allocation</text>
+    <text x="935" y="195" class="box-sub">Question: where should compute be spent?</text>
+    <text x="935" y="224" class="item">B4.1 stopping regret</text>
+    <text x="935" y="248" class="item">B4.2 thinking / sampling / verifying rates</text>
+    <text x="935" y="272" class="item">B4.3 overthinking boundary</text>
+    <text x="935" y="296" class="item">B4.4 cheap compute controllers</text>
+    <text x="935" y="320" class="item">B4.5 selective verification</text>
+  </g>
+
+  <!-- T3 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="58" y="515" width="287" height="190" rx="14" fill="#ffffff" stroke="#087f73" stroke-width="2"/>
+    <rect x="58" y="515" width="287" height="42" rx="14" fill="#087f73"/>
+    <text x="78" y="543" class="box-title" fill="#ffffff">T3 Memory Constraints</text>
+    <text x="78" y="580" class="box-sub">Question: which rules survive compaction?</text>
+    <text x="78" y="609" class="item">T3.1 adversarial pin failure</text>
+    <text x="78" y="633" class="item">T3.2 soft-policy decay mechanism</text>
+    <text x="78" y="657" class="item">T3.3 robust rule-span identification</text>
+    <text x="78" y="681" class="item">T3.4 pinning at scale</text>
+  </g>
+
+  <!-- B3 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="535" y="505" width="297" height="218" rx="14" fill="#ffffff" stroke="#0d9488" stroke-width="2"/>
+    <rect x="535" y="505" width="297" height="42" rx="14" fill="#0d9488"/>
+    <text x="555" y="533" class="box-title" fill="#ffffff">B3 Version Drift</text>
+    <text x="555" y="570" class="box-sub">Question: what changes across releases?</text>
+    <text x="555" y="599" class="item">B3.1 minimal probe set</text>
+    <text x="555" y="623" class="item">B3.2 capability / policy / format split</text>
+    <text x="555" y="647" class="item">B3.3 undocumented silent change</text>
+    <text x="555" y="671" class="item">B3.4 structured contract breakage</text>
+    <text x="555" y="695" class="item">B3.5 cross-vendor homogenization</text>
+  </g>
+
+  <!-- T5 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="915" y="410" width="310" height="218" rx="14" fill="#ffffff" stroke="#7b61c9" stroke-width="2"/>
+    <rect x="915" y="410" width="310" height="42" rx="14" fill="#7b61c9"/>
+    <text x="935" y="438" class="box-title" fill="#ffffff">T5 Design Constraints</text>
+    <text x="935" y="475" class="box-sub">Question: do patches satisfy design intent?</text>
+    <text x="935" y="504" class="item">T5.1 review-history constraints</text>
+    <text x="935" y="528" class="item">T5.2 structural test blind spots</text>
+    <text x="935" y="552" class="item">T5.3 automated constraint checking</text>
+    <text x="935" y="576" class="item">T5.4 architectural erosion over edits</text>
+    <text x="935" y="600" class="item">T5.5 compliance cost frontier</text>
+  </g>
+
+  <!-- B5 and B6 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="58" y="760" width="560" height="62" rx="14" fill="#fff8ed" stroke="#d68b22" stroke-width="2"/>
+    <text x="78" y="785" class="box-title">B5 Bargaining Mechanisms</text>
+    <text x="78" y="809" class="item">Manipulation pricing, information asymmetry, protocol defenses, capability gaps, repeated games</text>
+  </g>
+  <g filter="url(#soft-shadow)">
+    <rect x="665" y="760" width="560" height="62" rx="14" fill="#eefaf3" stroke="#3a9f63" stroke-width="2"/>
+    <text x="685" y="785" class="box-title">B6 Synthetic-Data Contamination</text>
+    <text x="685" y="809" class="item">Estimator robustness, dose-response, temporal anchors, domain sensitivity, evasion economics</text>
+  </g>
+
+  <g>
+    <rect x="1035" y="675" width="190" height="42" rx="21" fill="#f4efff" stroke="#cfbaf3"/>
+    <text x="1054" y="701" class="chip" fill="#6d49aa">monitor until truth source</text>
+    <path d="M 1128 760 C 1100 730, 1092 710, 1085 628" fill="none" stroke="#d68b22" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrow-purple)"/>
+    <path d="M 948 760 C 930 720, 930 675, 950 628" fill="none" stroke="#3a9f63" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrow-teal)"/>
+  </g>
+
+  <text x="58" y="902" class="note">Solid arrows: direct methodological dependency. Dashed arrows: monitoring / optional extension. The map is family-level; each box links back to the detailed topic READMEs in the index.</text>
+</svg>

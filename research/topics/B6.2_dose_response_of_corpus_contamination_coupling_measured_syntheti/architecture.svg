@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a5568"/>
+    </marker>
+    <marker id="arrd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a94a6"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="620" fill="#ffffff"/>
+  <text x="450" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a202c">B6.2 — Dose-Response of Synthetic Contamination with Rarity Displacement</text>
+
+  <!-- ================= Band 1: corpus construction ================= -->
+  <!-- A: human pool -->
+  <rect x="16" y="34" width="214" height="54" rx="6" fill="#e8f1fb" stroke="#3b6ea5" stroke-width="1.2"/>
+  <text x="24" y="49" font-size="11.5" font-weight="bold" fill="#1a3a5c">Human pool (pre-2022 C4/Pile)</text>
+  <text x="24" y="63" font-size="9.5" fill="#2d4a66">rarity strata: rare-token deciles ×</text>
+  <text x="24" y="75" font-size="9.5" fill="#2d4a66">topic-cluster size (pre-registered)</text>
+  <!-- strata mini-bars -->
+  <rect x="196" y="52" width="10" height="28" fill="#9dc3e6" stroke="#3b6ea5" stroke-width="0.6"/>
+  <rect x="208" y="62" width="10" height="18" fill="#6fa3d4" stroke="#3b6ea5" stroke-width="0.6"/>
+  <rect x="220" y="72" width="6" height="8" fill="#2f6ca8" stroke="#3b6ea5" stroke-width="0.6"/>
+
+  <!-- B: synthetic pool -->
+  <rect x="16" y="96" width="214" height="54" rx="6" fill="#fdeef0" stroke="#b04a5a" stroke-width="1.2"/>
+  <text x="24" y="111" font-size="11.5" font-weight="bold" fill="#7a2f3b">Synthetic pool</text>
+  <text x="24" y="125" font-size="9.5" fill="#6d3540">Llama-3.1-8B-Inst (Qwen2.5-7B arm)</text>
+  <text x="24" y="137" font-size="9.5" fill="#6d3540">rejection-filtered: length/topic match</text>
+
+  <!-- C: mixer / dose grid -->
+  <rect x="246" y="34" width="254" height="116" rx="6" fill="#eef7ee" stroke="#4a8a4a" stroke-width="1.2"/>
+  <text x="254" y="50" font-size="11.5" font-weight="bold" fill="#255225">Mixer — fixed token budget</text>
+  <text x="254" y="64" font-size="9.5" fill="#2f5a2f">dose grid &#961; (%), log-spaced low end</text>
+  <!-- dose axis -->
+  <line x1="260" y1="96" x2="486" y2="96" stroke="#255225" stroke-width="1.2"/>
+  <g font-size="8" fill="#255225" text-anchor="middle">
+    <line x1="262" y1="91" x2="262" y2="101" stroke="#255225"/><text x="262" y="112">0</text>
+    <line x1="284" y1="91" x2="284" y2="101" stroke="#255225"/><text x="284" y="112">.5</text>
+    <line x1="306" y1="91" x2="306" y2="101" stroke="#255225"/><text x="306" y="112">1</text>
+    <line x1="328" y1="91" x2="328" y2="101" stroke="#255225"/><text x="328" y="112">2</text>
+    <line x1="350" y1="91" x2="350" y2="101" stroke="#255225"/><text x="350" y="112">5</text>
+    <line x1="372" y1="91" x2="372" y2="101" stroke="#255225"/><text x="372" y="112">10</text>
+    <line x1="394" y1="91" x2="394" y2="101" stroke="#255225"/><text x="394" y="112">20</text>
+    <line x1="416" y1="91" x2="416" y2="101" stroke="#255225"/><text x="416" y="112">35</text>
+    <line x1="438" y1="91" x2="438" y2="101" stroke="#255225"/><text x="438" y="112">50</text>
+    <line x1="460" y1="91" x2="460" y2="101" stroke="#255225"/><text x="460" y="112">75</text>
+    <line x1="484" y1="91" x2="484" y2="101" stroke="#255225"/><text x="484" y="112">100</text>
+  </g>
+  <text x="254" y="132" font-size="9" fill="#2f5a2f">denser seeds at &#961; &#8804; 5% (pre-registered unbalanced design)</text>
+  <text x="254" y="144" font-size="9" fill="#2f5a2f">ground-truth &#961; + mixture manifest logged per run</text>
+
+  <!-- D: displacement + canaries -->
+  <rect x="516" y="34" width="368" height="116" rx="6" fill="#fdf3e3" stroke="#b07d2e" stroke-width="1.2"/>
+  <text x="524" y="50" font-size="11.5" font-weight="bold" fill="#6e4c14">Displacement factor (absorbed B6.4) &#215; canary lacing</text>
+  <g font-size="9.5" fill="#5c451c">
+    <rect x="524" y="58" width="9" height="9" fill="#2f6ca8"/><text x="538" y="66">rare-targeted</text>
+    <rect x="620" y="58" width="9" height="9" fill="#7fae7f"/><text x="634" y="66">proportional</text>
+    <rect x="716" y="58" width="9" height="9" fill="#c9a35a"/><text x="730" y="66">common-targeted</text>
+  </g>
+  <text x="524" y="82" font-size="9" fill="#5c451c">at matched &#961; &#8712; {5, 25, 50}% · matched-pair displacement (length/quality)</text>
+  <text x="524" y="94" font-size="9" fill="#5c451c">duplication profiles matched · dup-matched human-resampling control (DiD)</text>
+  <text x="524" y="112" font-size="9.5" font-weight="bold" fill="#6e4c14">canaries: per stratum, dup {1, 4, 16}</text>
+  <text x="524" y="124" font-size="9" fill="#5c451c">identical sets across arms · &lt; 0.01% token mass</text>
+  <text x="524" y="140" font-size="9" fill="#5c451c">cap: rarity arms only at &#961; &#8804; 50% · stratum-exhaustion reported</text>
+
+  <!-- Band 1 arrows -->
+  <line x1="230" y1="61" x2="243" y2="61" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="230" y1="123" x2="243" y2="123" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="500" y1="92" x2="513" y2="92" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="600" y1="150" x2="600" y2="177" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+
+  <!-- ================= Band 2: training ================= -->
+  <rect x="16" y="180" width="664" height="86" rx="6" fill="#e9f6f2" stroke="#2f7d6d" stroke-width="1.2"/>
+  <text x="24" y="197" font-size="11.5" font-weight="bold" fill="#1d5248">Frozen-backbone continued pretraining — paired seeds</text>
+  <text x="24" y="213" font-size="9.5" fill="#255f53">Pythia-410M (primary) · Pythia-1.4B (scale arm) — Pile-trained, pre-ChatGPT · 1–2B tokens fixed budget</text>
+  <text x="24" y="228" font-size="9.5" fill="#255f53">controls: &#961;=0 CPT · no-CPT anchor · accumulate-regime arm (&#215;3 doses, Gerstgrasser contrast) · 160M from-scratch check</text>
+  <text x="24" y="243" font-size="9.5" fill="#255f53">sparse matrix A–F &#8776; 75 runs · &#8776; 1.1–1.3k A100-h (&#8776; 1 week on 8&#215;A100)</text>
+  <text x="24" y="258" font-size="9" fill="#3c6f64" font-style="italic">config hash + loss curves + manifests logged; thresholds frozen in hashed preregistration before unblinding</text>
+
+  <!-- training -> probes arrows -->
+  <line x1="170" y1="266" x2="170" y2="295" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="512" y1="266" x2="512" y2="295" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+
+  <!-- ================= Band 3: probe batteries ================= -->
+  <rect x="16" y="298" width="316" height="126" rx="6" fill="#fdf2e9" stroke="#b45f2e" stroke-width="1.2"/>
+  <text x="24" y="315" font-size="11.5" font-weight="bold" fill="#6e3a17">Capability / diversity / tail battery</text>
+  <g font-size="9.5" fill="#69401f">
+    <text x="24" y="333">&#8226; held-out PPL (primary) + WikiText-103</text>
+    <text x="24" y="348">&#8226; few-shot: LAMBADA · HellaSwag · ARC-E · PIQA</text>
+    <text x="24" y="363">&#8226; distinct-2/3 · Self-BLEU · embedding spread</text>
+    <text x="24" y="378">&#8226; rare-token recall · tail-decile PPL</text>
+    <text x="24" y="393">&#8226; generation NN differential entropy</text>
+  </g>
+  <text x="24" y="412" font-size="8.5" font-style="italic" fill="#8a5a33">discontinuous metrics always paired with continuous twins</text>
+
+  <rect x="348" y="298" width="332" height="126" rx="6" fill="#fbecec" stroke="#a83a3a" stroke-width="1.2"/>
+  <text x="356" y="315" font-size="11.5" font-weight="bold" fill="#6e1f1f">Memorization / privacy battery (absorbed axis)</text>
+  <g font-size="9.5" fill="#6b2a2a">
+    <text x="356" y="333">&#8226; canary exposure (secret-sharer) per stratum &#215; dup — primary</text>
+    <text x="356" y="348">&#8226; verbatim extraction: 50-token prefixes, &#8805;50-token match</text>
+    <text x="356" y="363">&#8226; Min-K%++ MIA AUC per stratum (frozen non-member splits)</text>
+    <text x="356" y="378">&#8226; manipulation check: realized rarity histograms per arm</text>
+  </g>
+  <text x="356" y="399" font-size="8.5" font-style="italic" fill="#8a4444">scissors claim requires manipulation-check figure first;</text>
+  <text x="356" y="411" font-size="8.5" font-style="italic" fill="#8a4444">G2 fallback: canaries-only at dup {16, 64}</text>
+
+  <!-- probes -> analysis arrows -->
+  <line x1="170" y1="424" x2="170" y2="451" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="512" y1="424" x2="400" y2="451" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+
+  <!-- ================= Band 4: analysis ================= -->
+  <rect x="16" y="454" width="414" height="150" rx="6" fill="#f2ecfa" stroke="#6b4fa0" stroke-width="1.2"/>
+  <text x="24" y="471" font-size="11.5" font-weight="bold" fill="#3f2d66">Dose-response curve estimation &amp; adjudication</text>
+  <g font-size="9.5" fill="#463366">
+    <text x="24" y="489">&#8226; disjoint families: flat / linear / convex / change-point</text>
+    <text x="24" y="504">&#8226; separation bands &#8658; unclassified (never forced)</text>
+    <text x="24" y="519">&#8226; LODO calibration gate · AICc · Davies · Jonckheere</text>
+    <text x="24" y="534">&#8226; TOST harmless region, &#948; = 0.5&#963;0 · Holm–Bonferroni</text>
+    <text x="24" y="549">&#8226; mixed-effects: dose &#215; displacement &#215; scale</text>
+  </g>
+  <text x="24" y="572" font-size="9" font-weight="bold" fill="#3f2d66">headline: privacy–capability scissors</text>
+  <text x="24" y="586" font-size="8.5" font-style="italic" fill="#5c4a80">rare-targeted arm: capability &#8595; while rare-data risk &#8593;</text>
+  <!-- mini scissors plot -->
+  <g>
+    <rect x="300" y="482" width="118" height="104" rx="4" fill="#ffffff" stroke="#9b8ac0" stroke-width="0.8"/>
+    <line x1="312" y1="574" x2="410" y2="574" stroke="#4a5568" stroke-width="1"/>
+    <line x1="312" y1="574" x2="312" y2="492" stroke="#4a5568" stroke-width="1"/>
+    <path d="M312,504 C340,508 366,522 408,566" fill="none" stroke="#2f6ca8" stroke-width="1.8"/>
+    <path d="M312,566 C346,562 376,540 408,500" fill="none" stroke="#a83a3a" stroke-width="1.8" stroke-dasharray="4,2"/>
+    <text x="318" y="500" font-size="7.5" fill="#2f6ca8">capability</text>
+    <text x="350" y="512" font-size="7.5" fill="#a83a3a">privacy risk</text>
+    <text x="404" y="584" font-size="7.5" fill="#4a5568" text-anchor="end">dose &#961;</text>
+  </g>
+
+  <rect x="446" y="454" width="234" height="150" rx="6" fill="#eef2f7" stroke="#4a6b8a" stroke-width="1.2"/>
+  <text x="454" y="471" font-size="11.5" font-weight="bold" fill="#2a4560">Forensic coupling</text>
+  <g font-size="9.5" fill="#33506b">
+    <text x="454" y="489">&#8226; detector sweep on all mixtures</text>
+    <text x="454" y="504">&#8226; calibration curve &#961;&#711;(&#961;), 2 detectors</text>
+    <text x="454" y="519">&#8226; re-fit all curves on &#961;&#711; (errors-in-vars)</text>
+    <text x="454" y="534">&#8226; report &#916;&#961;* + verdict flips</text>
+    <text x="454" y="549">&#8226; predicted: permissive bias at low dose</text>
+  </g>
+  <text x="454" y="572" font-size="8.5" font-style="italic" fill="#4f6a84">curators only observe &#961;&#711; — the policy-</text>
+  <text x="454" y="584" font-size="8.5" font-style="italic" fill="#4f6a84">relevant threshold is the &#961;&#711;-indexed one</text>
+
+  <!-- curve box -> forensic box -->
+  <line x1="430" y1="530" x2="443" y2="530" stroke="#4a5568" stroke-width="1.4" marker-end="url(#arr)"/>
+
+  <!-- dashed corridor: mixtures -> detector sweep -->
+  <polyline points="690,150 690,478 683,478" fill="none" stroke="#8a94a6" stroke-width="1.1" stroke-dasharray="5,4" marker-end="url(#arrd)"/>
+  <text x="694" y="330" font-size="8" fill="#8a94a6" transform="rotate(90 694,330)">document samples from every mixture</text>
+
+  <!-- ================= Gates sidebar ================= -->
+  <rect x="704" y="180" width="180" height="424" rx="6" fill="#f6f6f4" stroke="#7a7a72" stroke-width="1.2"/>
+  <text x="794" y="198" text-anchor="middle" font-size="11.5" font-weight="bold" fill="#3c3c34">Pilot gates (pre-registered)</text>
+
+  <rect x="714" y="210" width="160" height="88" rx="4" fill="#ffffff" stroke="#9a9a90" stroke-width="0.9"/>
+  <text x="722" y="226" font-size="10" font-weight="bold" fill="#3c3c34">G0 · novelty sweep</text>
+  <text x="722" y="240" font-size="8.5" fill="#55554b">2025–26 dose-sweep twins?</text>
+  <text x="722" y="252" font-size="8.5" fill="#55554b">verify capacity/rarity refs</text>
+  <text x="722" y="264" font-size="8.5" fill="#55554b">(Morris et al. 2505.24832)</text>
+  <text x="722" y="280" font-size="8.5" fill="#8a5a33" font-style="italic">twin w/ privacy axis &#8658; kill</text>
+
+  <rect x="714" y="308" width="160" height="88" rx="4" fill="#ffffff" stroke="#9a9a90" stroke-width="0.9"/>
+  <text x="722" y="324" font-size="10" font-weight="bold" fill="#3c3c34">G1 · low-dose power</text>
+  <text x="722" y="338" font-size="8.5" fill="#55554b">pilot seed-SD &#8594; power analysis</text>
+  <text x="722" y="350" font-size="8.5" fill="#55554b">min detectable effect &#8804; TOST &#948;</text>
+  <text x="722" y="366" font-size="8.5" fill="#8a5a33" font-style="italic">else: rebalance seeds/tokens</text>
+  <text x="722" y="378" font-size="8.5" fill="#8a5a33" font-style="italic">at &#961; &#8804; 5%, drop &#961; = 75%</text>
+
+  <rect x="714" y="406" width="160" height="88" rx="4" fill="#ffffff" stroke="#9a9a90" stroke-width="0.9"/>
+  <text x="722" y="422" font-size="10" font-weight="bold" fill="#3c3c34">G2 · privacy floor</text>
+  <text x="722" y="436" font-size="8.5" fill="#55554b">dup-16 canary exposure at &#961;=0</text>
+  <text x="722" y="448" font-size="8.5" fill="#55554b">must clear floor at 410M</text>
+  <text x="722" y="464" font-size="8.5" fill="#8a5a33" font-style="italic">else: canaries-only {16, 64},</text>
+  <text x="722" y="476" font-size="8.5" fill="#8a5a33" font-style="italic">drop extraction claim</text>
+
+  <rect x="714" y="504" width="160" height="88" rx="4" fill="#ffffff" stroke="#9a9a90" stroke-width="0.9"/>
+  <text x="722" y="520" font-size="10" font-weight="bold" fill="#3c3c34">G3 · manipulation check</text>
+  <text x="722" y="534" font-size="8.5" fill="#55554b">realized rarity profiles differ</text>
+  <text x="722" y="546" font-size="8.5" fill="#55554b">across arms as designed</text>
+  <text x="722" y="562" font-size="8.5" fill="#8a5a33" font-style="italic">else: rarity factor void &#8594;</text>
+  <text x="722" y="574" font-size="8.5" fill="#8a5a33" font-style="italic">fall back to pure dose curve</text>
+</svg>

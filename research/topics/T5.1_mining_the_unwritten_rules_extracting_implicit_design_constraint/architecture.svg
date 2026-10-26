@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555555"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="620" fill="#ffffff"/>
+  <text x="450" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1c2733">Mining the Unwritten Rules: From Review History to Agent-Patch Violation Measurement</text>
+
+  <!-- Panel 1: Mining -->
+  <rect x="20" y="52" width="272" height="448" rx="10" fill="#eef4fb" stroke="#7fa8d0" stroke-width="1.5"/>
+  <text x="156" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#24496e">1 · Review-History Mining</text>
+
+  <rect x="36" y="92" width="240" height="90" rx="6" fill="#ffffff" stroke="#8fa6bd"/>
+  <text x="46" y="110" font-size="12" font-weight="bold" fill="#24496e">M1 · Corpus collector</text>
+  <text x="46" y="128" font-size="11" fill="#333">GitHub PR review threads, anchored</text>
+  <text x="46" y="143" font-size="11" fill="#333">hunks, verdicts, follow-up commits</text>
+  <text x="46" y="158" font-size="11" fill="#333">change-inducing flag</text>
+  <text x="46" y="173" font-size="11" fill="#8a5a00">(spot-checked, n=100)</text>
+  <line x1="156" y1="182" x2="156" y2="204" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="36" y="207" width="240" height="90" rx="6" fill="#ffffff" stroke="#8fa6bd"/>
+  <text x="46" y="225" font-size="12" font-weight="bold" fill="#24496e">M2 · Constraint extractor</text>
+  <text x="46" y="243" font-size="11" fill="#333">frozen LLM prompt &#8594; candidates</text>
+  <text x="46" y="258" font-size="11" fill="#333">keyword/regex baseline in parallel</text>
+  <text x="46" y="273" font-size="11" fill="#333">temporal/runtime obligations</text>
+  <text x="46" y="288" font-size="11" fill="#8a5a00">&#8594; routed to trace-compliance line</text>
+  <line x1="156" y1="297" x2="156" y2="319" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="36" y="322" width="240" height="122" rx="6" fill="#ffffff" stroke="#8fa6bd"/>
+  <text x="46" y="340" font-size="12" font-weight="bold" fill="#24496e">M3 · Catalog builder</text>
+  <text x="46" y="358" font-size="11" fill="#333">embed + cluster (HDBSCAN)</text>
+  <text x="46" y="373" font-size="11" fill="#333">entailment-checked merging</text>
+  <text x="46" y="388" font-size="11" fill="#333">admit: &#8805;3 threads · &#8805;2 reviewers</text>
+  <text x="46" y="403" font-size="11" fill="#333">· &#8805;2 authors</text>
+  <text x="46" y="418" font-size="11" fill="#333">written-status: linter-expressible</text>
+  <text x="46" y="433" font-size="11" fill="#333">&#8743; doc-mentioned + tooling probe</text>
+
+  <text x="156" y="478" text-anchor="middle" font-size="11" font-style="italic" fill="#24496e">5 SWE-bench Verified repos, window W&#8321;</text>
+
+  <!-- arrow panel1 -> panel2 -->
+  <line x1="292" y1="276" x2="314" y2="276" stroke="#555555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Panel 2: Cards + validation -->
+  <rect x="316" y="52" width="272" height="448" rx="10" fill="#fdf6e7" stroke="#d8b45e" stroke-width="1.5"/>
+  <text x="452" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a5a10">2 · Constraint Cards + Validation</text>
+
+  <rect x="332" y="92" width="240" height="150" rx="6" fill="#ffffff" stroke="#c2a35a"/>
+  <text x="342" y="110" font-size="12" font-weight="bold" fill="#7a5a10">Constraint card (versioned)</text>
+  <text x="342" y="128" font-size="10.5" font-family="monospace" fill="#333">statement · scope · trigger</text>
+  <text x="342" y="143" font-size="10.5" font-family="monospace" fill="#333">category: EH | arch | API | other</text>
+  <text x="342" y="158" font-size="10.5" font-family="monospace" fill="#333">checkability + check_hint</text>
+  <text x="342" y="173" font-size="10.5" font-family="monospace" fill="#333">support + evidence links</text>
+  <text x="342" y="188" font-size="10.5" font-family="monospace" fill="#333">written_status · examples</text>
+  <text x="342" y="203" font-size="10.5" font-family="monospace" fill="#333">human_verified flag</text>
+  <text x="342" y="224" font-size="11" font-style="italic" fill="#7a5a10">per-repo catalog + quarantine tier</text>
+  <line x1="452" y1="242" x2="452" y2="264" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="332" y="267" width="240" height="150" rx="6" fill="#ffffff" stroke="#c2a35a"/>
+  <text x="342" y="285" font-size="12" font-weight="bold" fill="#7a5a10">Validation instruments (human-anchored)</text>
+  <text x="342" y="303" font-size="11" fill="#333">precision audit n=300, dual, &#954;</text>
+  <text x="342" y="318" font-size="11" fill="#333">cluster purity n=150 pairs</text>
+  <text x="342" y="333" font-size="11" fill="#333">recall proxy: held-out threads</text>
+  <text x="342" y="348" font-size="11" fill="#333">LLM vs keyword baseline (McNemar)</text>
+  <text x="342" y="363" font-size="11" fill="#333">judge &#954; &#8805; 0.6 per category</text>
+  <text x="342" y="381" font-size="11" fill="#8a5a00">blinding integrity &#8804; 0.60 bal. acc.</text>
+  <text x="342" y="399" font-size="11" fill="#8a5a00">all disagreement data released</text>
+
+  <rect x="332" y="432" width="240" height="52" rx="6" fill="#fbeecb" stroke="#c99b3f"/>
+  <text x="342" y="450" font-size="11.5" font-weight="bold" fill="#7a5a10">Artifact &#8594; T5.3 checker evaluation</text>
+  <text x="342" y="466" font-size="11" fill="#333">schema smoke test: reference semgrep</text>
+  <text x="342" y="479" font-size="11" fill="#333">runner executes every released card</text>
+  <line x1="452" y1="417" x2="452" y2="430" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- arrow panel2 -> panel3 -->
+  <line x1="588" y1="276" x2="610" y2="276" stroke="#555555" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Panel 3: Violation study -->
+  <rect x="612" y="52" width="272" height="448" rx="10" fill="#edf7ee" stroke="#7fbb85" stroke-width="1.5"/>
+  <text x="748" y="76" text-anchor="middle" font-size="14" font-weight="bold" fill="#25603a">3 · Green-Test Patch Evaluation</text>
+
+  <rect x="628" y="92" width="240" height="92" rx="6" fill="#ffffff" stroke="#84a98c"/>
+  <text x="638" y="110" font-size="12" font-weight="bold" fill="#25603a">Patch harness (SWE-bench Verified)</text>
+  <text x="638" y="128" font-size="11" fill="#333">agent patches: &#8805;3 systems, 300&#8211;500</text>
+  <text x="638" y="143" font-size="11" fill="#333">matched human gold, same tasks</text>
+  <text x="638" y="158" font-size="11" fill="#333">all verified green &#8212; every violation</text>
+  <text x="638" y="173" font-size="11" fill="#8a5a00">is invisible to the test oracle</text>
+  <line x1="748" y1="184" x2="748" y2="206" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="628" y="209" width="240" height="106" rx="6" fill="#ffffff" stroke="#84a98c"/>
+  <text x="638" y="227" font-size="12" font-weight="bold" fill="#25603a">Tiered adjudication</text>
+  <text x="638" y="245" font-size="11" fill="#333">mechanical/static rules + unit tests</text>
+  <text x="638" y="260" font-size="11" fill="#333">LLM judge (gated, other model family)</text>
+  <text x="638" y="275" font-size="11" fill="#333">human-only subsample</text>
+  <text x="638" y="290" font-size="11" fill="#333">applicability-normalized rates;</text>
+  <text x="638" y="305" font-size="11" fill="#333">every label carries its tier</text>
+  <line x1="748" y1="315" x2="748" y2="337" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="628" y="340" width="240" height="104" rx="6" fill="#ffffff" stroke="#84a98c"/>
+  <text x="638" y="358" font-size="12" font-weight="bold" fill="#25603a">Findings</text>
+  <text x="638" y="376" font-size="11" fill="#333">tests pass &#8743; norms violated:</text>
+  <text x="638" y="391" font-size="11" fill="#333">agent vs human, per category</text>
+  <text x="638" y="406" font-size="11" fill="#333">(matched McNemar, Holm&#8211;Bonf.)</text>
+  <text x="638" y="421" font-size="11" fill="#333">outcome linkage: mechanical tier on</text>
+  <text x="638" y="436" font-size="11" fill="#333">held-out human PRs (window W&#8322;)</text>
+
+  <text x="748" y="478" text-anchor="middle" font-size="11" font-style="italic" fill="#25603a">unwrittenness rate = headline claim</text>
+
+  <!-- Bottom strip: gates -->
+  <rect x="20" y="514" width="864" height="90" rx="10" fill="#f4f4f6" stroke="#b8b8c0" stroke-width="1.5"/>
+  <text x="34" y="536" font-size="13" font-weight="bold" fill="#3a3a44">Pilot gates &amp; descope ladder (FSE 2027 · submit Oct 2, 2026)</text>
+
+  <rect x="34" y="548" width="252" height="44" rx="8" fill="#fbeecb" stroke="#c99b3f"/>
+  <text x="44" y="566" font-size="11.5" font-weight="bold" fill="#7a5a10">G1 · ~Aug 28</text>
+  <text x="44" y="582" font-size="11" fill="#333">precision &#8805;0.5 raw / &#8805;0.7 admitted</text>
+
+  <line x1="286" y1="570" x2="308" y2="570" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="310" y="548" width="240" height="44" rx="8" fill="#fbeecb" stroke="#c99b3f"/>
+  <text x="320" y="566" font-size="11.5" font-weight="bold" fill="#7a5a10">G2 · ~Sep 11</text>
+  <text x="320" y="582" font-size="11" fill="#333">judge &#954; &#8805; 0.6 in every category</text>
+
+  <line x1="550" y1="570" x2="572" y2="570" stroke="#555555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="574" y="548" width="130" height="44" rx="8" fill="#fbeecb" stroke="#c99b3f"/>
+  <text x="584" y="566" font-size="11.5" font-weight="bold" fill="#7a5a10">G3 · ~Sep 18</text>
+  <text x="584" y="582" font-size="11" fill="#333">&#8805;300 patches</text>
+
+  <text x="716" y="560" font-size="10.5" fill="#3a3a44">descope: breadth probe &#8594; outcome</text>
+  <text x="716" y="574" font-size="10.5" fill="#3a3a44">linkage &#8594; 3 repos / 300 patches;</text>
+  <text x="716" y="588" font-size="10.5" fill="#3a3a44">headline claims sacrificed last</text>
+</svg>

@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="660" viewBox="0 0 920 660" font-family="Helvetica, Arial, 'Noto Sans CJK SC', 'WenQuanYi Zen Hei', sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#334155"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#b91c1c"/>
+    </marker>
+    <marker id="arrowDash" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="920" height="660" fill="#ffffff"/>
+  <text x="460" y="22" text-anchor="middle" font-size="15" font-weight="bold" fill="#0f172a">GovSpan-Adv: bidirectional register attacks on governance-constraint identification</text>
+
+  <!-- adaptive loop (dashed, top) -->
+  <path d="M 805 55 L 805 38 L 335 38 L 335 66" fill="none" stroke="#7c3aed" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arrowDash)"/>
+  <text x="570" y="34" text-anchor="middle" font-size="10.5" fill="#7c3aed">adaptive arm: ≤ 20 decision-only queries / item (confidence access = upper bound)</text>
+
+  <!-- A: context stream -->
+  <rect x="20" y="70" width="180" height="200" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="110" y="90" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Context stream</text>
+  <rect x="32" y="100" width="156" height="30" rx="4" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="110" y="113" text-anchor="middle" font-size="10" fill="#1e3a8a">system-policy span</text>
+  <text x="110" y="125" text-anchor="middle" font-size="9" fill="#1e3a8a">RULE (provenance label)</text>
+  <rect x="32" y="136" width="156" height="24" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="110" y="151" text-anchor="middle" font-size="10" fill="#475569">chit-chat span — CHATTER</text>
+  <rect x="32" y="166" width="156" height="30" rx="4" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="110" y="179" text-anchor="middle" font-size="10" fill="#1e3a8a">defense-rule span</text>
+  <text x="110" y="191" text-anchor="middle" font-size="9" fill="#1e3a8a">RULE (provenance label)</text>
+  <rect x="32" y="202" width="156" height="24" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="110" y="217" text-anchor="middle" font-size="10" fill="#475569">chit-chat span — CHATTER</text>
+  <text x="110" y="244" text-anchor="middle" font-size="9" fill="#64748b">TensorTrust defenses + policy pool</text>
+  <text x="110" y="256" text-anchor="middle" font-size="9" fill="#64748b">matched LMSYS-Chat-1M turns</text>
+
+  <!-- B: rewrite arm -->
+  <rect x="240" y="70" width="190" height="200" rx="8" fill="#fffbeb" stroke="#b45309" stroke-width="1.5"/>
+  <text x="335" y="90" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#78350f">Bidirectional register rewrite</text>
+  <rect x="252" y="100" width="166" height="66" rx="4" fill="#fee2e2" stroke="#b91c1c"/>
+  <text x="335" y="115" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#7f1d1d">Evade: rule → casual</text>
+  <text x="335" y="129" text-anchor="middle" font-size="9" fill="#7f1d1d">obligation preserved,</text>
+  <text x="335" y="141" text-anchor="middle" font-size="9" fill="#7f1d1d">register cues destroyed</text>
+  <text x="335" y="157" text-anchor="middle" font-size="9.5" font-style="italic" fill="#991b1b">target: miss-pin</text>
+  <rect x="252" y="174" width="166" height="66" rx="4" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="335" y="189" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#7c2d12">Spoof: chatter → imperative</text>
+  <text x="335" y="203" text-anchor="middle" font-size="9" fill="#7c2d12">no obligation introduced,</text>
+  <text x="335" y="215" text-anchor="middle" font-size="9" fill="#7c2d12">authority register injected</text>
+  <text x="335" y="231" text-anchor="middle" font-size="9.5" font-style="italic" fill="#9a3412">target: false-pin</text>
+  <text x="335" y="258" text-anchor="middle" font-size="9" fill="#92400e">rewriter family disjoint from all identifiers</text>
+
+  <!-- C: PCPL gate -->
+  <rect x="470" y="70" width="210" height="200" rx="8" fill="#f5f3ff" stroke="#6d28d9" stroke-width="1.8"/>
+  <text x="575" y="90" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#4c1d95">PCPL validity gate</text>
+  <text x="575" y="107" text-anchor="middle" font-size="9.5" fill="#4c1d95">8-field deontic contract:</text>
+  <text x="575" y="120" text-anchor="middle" font-size="8.5" fill="#5b21b6">provenance · addressee · action · force</text>
+  <text x="575" y="131" text-anchor="middle" font-size="8.5" fill="#5b21b6">scope · exceptions · quoted/reported</text>
+  <line x1="482" y1="139" x2="668" y2="139" stroke="#c4b5fd"/>
+  <text x="482" y="153" font-size="9.5" fill="#4c1d95">1. Blinded human validation:</text>
+  <text x="492" y="165" font-size="8.5" fill="#5b21b6">rewrite seen alone — does it carry</text>
+  <text x="492" y="176" font-size="8.5" fill="#5b21b6">an obligation? (agreement = gate)</text>
+  <text x="482" y="191" font-size="9.5" fill="#4c1d95">2. Disjoint-family NLI back-check:</text>
+  <text x="492" y="203" font-size="8.5" fill="#5b21b6">Evade must entail the obligation;</text>
+  <text x="492" y="214" font-size="8.5" fill="#5b21b6">Spoof must introduce none</text>
+  <text x="482" y="229" font-size="9.5" fill="#4c1d95">3. Register-shift check (separate)</text>
+  <text x="575" y="247" text-anchor="middle" font-size="9" fill="#6d28d9">ground truth = provenance only</text>
+  <text x="575" y="259" text-anchor="middle" font-size="9" fill="#6d28d9">~40 annotator-hours total</text>
+
+  <!-- reject loop -->
+  <path d="M 575 270 L 575 305 L 380 305 L 380 274" fill="none" stroke="#b91c1c" stroke-width="1.4" marker-end="url(#arrowRed)"/>
+  <text x="478" y="300" text-anchor="middle" font-size="9.5" fill="#b91c1c">reject 20–30% → regenerate</text>
+
+  <!-- D: identifier battery -->
+  <rect x="710" y="55" width="190" height="245" rx="8" fill="#f0f9ff" stroke="#0369a1" stroke-width="1.5"/>
+  <text x="805" y="74" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0c4a6e">Identifier battery (7 arms)</text>
+  <rect x="720" y="84" width="170" height="24" rx="3" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="726" y="100" font-size="9.5" fill="#0c4a6e">(a) deontic-cue regex heuristic</text>
+  <rect x="720" y="112" width="170" height="24" rx="3" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="726" y="128" font-size="9.5" fill="#0c4a6e">(b) DeBERTa, clean-trained</text>
+  <rect x="720" y="140" width="170" height="24" rx="3" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="726" y="156" font-size="9.5" fill="#0c4a6e">(b′) DeBERTa, adv-trained</text>
+  <rect x="720" y="168" width="170" height="24" rx="3" fill="#bae6fd" stroke="#0284c7"/>
+  <text x="726" y="184" font-size="9" font-weight="bold" fill="#0c4a6e">(c) LLM judge — primary, 3 prompts</text>
+  <rect x="720" y="196" width="170" height="24" rx="3" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="726" y="212" font-size="9.5" fill="#0c4a6e">(d) privilege/role baseline</text>
+  <rect x="720" y="224" width="170" height="24" rx="3" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="726" y="240" font-size="9.5" fill="#0c4a6e">(e) cumulative-context monitor</text>
+  <rect x="720" y="252" width="170" height="24" rx="3" fill="#e0f2fe" stroke="#38bdf8"/>
+  <text x="726" y="268" font-size="9.5" fill="#0c4a6e">(f) embedding-salience scorer</text>
+  <text x="805" y="292" text-anchor="middle" font-size="8.5" fill="#0369a1">pair metadata masked · frozen calibration</text>
+
+  <!-- top-row arrows -->
+  <line x1="200" y1="170" x2="236" y2="170" stroke="#334155" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="430" y1="170" x2="466" y2="170" stroke="#334155" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="680" y1="170" x2="706" y2="170" stroke="#334155" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="691" y="160" text-anchor="middle" font-size="8" fill="#334155">admitted</text>
+  <text x="691" y="184" text-anchor="middle" font-size="8" fill="#334155">pairs</text>
+
+  <!-- Deployment form box -->
+  <rect x="20" y="335" width="300" height="90" rx="8" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="7 4"/>
+  <text x="170" y="355" text-anchor="middle" font-size="12" font-weight="bold" fill="#134e4a">Deployment form (Stage 2)</text>
+  <text x="170" y="372" text-anchor="middle" font-size="9.5" fill="#115e59">joint localization + classification, no boundaries given</text>
+  <text x="170" y="386" text-anchor="middle" font-size="9.5" fill="#115e59">~100 transcripts, 8k–32k tokens, items at controlled depths</text>
+  <text x="170" y="400" text-anchor="middle" font-size="9.5" fill="#115e59">span-F1 (IoU ≥ 0.5), depth-stratified,</text>
+  <text x="170" y="413" text-anchor="middle" font-size="9.5" fill="#115e59">localization vs. classification error decomposed</text>
+  <path d="M 110 270 L 110 331" fill="none" stroke="#0f766e" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <path d="M 320 380 L 596 398" fill="none" stroke="#0f766e" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <text x="452" y="378" text-anchor="middle" font-size="9" fill="#0f766e">same battery + analysis</text>
+
+  <!-- E: paired directional analysis -->
+  <rect x="600" y="350" width="300" height="115" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.6"/>
+  <text x="750" y="370" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">Paired directional error analysis</text>
+  <text x="750" y="388" text-anchor="middle" font-size="9.5" fill="#334155">per-arm transition tables, original vs. rewrite</text>
+  <text x="750" y="402" text-anchor="middle" font-size="9.5" fill="#334155">McNemar exact + Holm · TOST margin Δ &lt; 3pp</text>
+  <text x="750" y="416" text-anchor="middle" font-size="9.5" fill="#334155">Δ = error(adversarial) − error(original), per direction</text>
+  <text x="750" y="430" text-anchor="middle" font-size="9.5" fill="#334155">pair-clustered bootstrap CIs · directions never collapsed</text>
+  <text x="750" y="447" text-anchor="middle" font-size="9" font-style="italic" fill="#64748b">+ blinded re-annotation of errors: failure vs. contested label</text>
+  <line x1="805" y1="300" x2="805" y2="346" stroke="#334155" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <text x="843" y="326" text-anchor="middle" font-size="8.5" fill="#334155">pin / no-pin decisions</text>
+
+  <!-- error taxonomy -->
+  <rect x="340" y="505" width="250" height="105" rx="8" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.6"/>
+  <text x="465" y="525" text-anchor="middle" font-size="12" font-weight="bold" fill="#7f1d1d">Miss-pin (漏保)</text>
+  <text x="465" y="543" text-anchor="middle" font-size="9.5" fill="#7f1d1d">true rule judged chatter</text>
+  <text x="465" y="557" text-anchor="middle" font-size="9.5" fill="#7f1d1d">governance silently dropped from</text>
+  <text x="465" y="570" text-anchor="middle" font-size="9.5" fill="#7f1d1d">the persistent store — compounds</text>
+  <text x="465" y="583" text-anchor="middle" font-size="9.5" fill="#7f1d1d">across all future sessions</text>
+  <text x="465" y="600" text-anchor="middle" font-size="9" font-style="italic" fill="#991b1b">M = P(rewrite → chatter | true rule)</text>
+
+  <rect x="620" y="505" width="280" height="105" rx="8" fill="#ffedd5" stroke="#c2410c" stroke-width="1.6"/>
+  <text x="760" y="525" text-anchor="middle" font-size="12" font-weight="bold" fill="#7c2d12">False-pin (错保)</text>
+  <text x="760" y="543" text-anchor="middle" font-size="9.5" fill="#7c2d12">chatter judged rule</text>
+  <text x="760" y="557" text-anchor="middle" font-size="9.5" fill="#7c2d12">junk pinned: finite pin budget exhausted,</text>
+  <text x="760" y="570" text-anchor="middle" font-size="9.5" fill="#7c2d12">untrusted content laundered into a</text>
+  <text x="760" y="583" text-anchor="middle" font-size="9.5" fill="#7c2d12">protected, high-authority position</text>
+  <text x="760" y="600" text-anchor="middle" font-size="9" font-style="italic" fill="#9a3412">F = P(rewrite → rule | true chatter)</text>
+
+  <line x1="690" y1="465" x2="500 " y2="501" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="770" y1="465" x2="770" y2="501" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- grade box -->
+  <rect x="40" y="505" width="260" height="105" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.6"/>
+  <text x="170" y="525" text-anchor="middle" font-size="12" font-weight="bold" fill="#14532d">Worst-direction robustness grade</text>
+  <text x="170" y="543" text-anchor="middle" font-size="9.5" fill="#166534">grade A–D from the worse directional</text>
+  <text x="170" y="556" text-anchor="middle" font-size="9.5" fill="#166534">95% upper bound (A ≤ .05 … D &gt; .20)</text>
+  <text x="170" y="572" text-anchor="middle" font-size="9.5" fill="#166534">headline rates with / without contested items</text>
+  <text x="170" y="588" text-anchor="middle" font-size="9.5" fill="#166534">= the reliability envelope pinning</text>
+  <text x="170" y="601" text-anchor="middle" font-size="9.5" fill="#166534">mechanisms (T3.1/T3.2) must assume</text>
+
+  <line x1="340" y1="557" x2="304" y2="557" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 760 610 L 760 636 L 170 636 L 170 614" fill="none" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>

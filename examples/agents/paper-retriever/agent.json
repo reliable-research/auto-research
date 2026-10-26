@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arch.literature.paper-retriever",
+  "version": "0.1.0",
+  "name": "Paper Retriever",
+  "description": "Retrieves, reranks, and locates scientific evidence without promoting claims.",
+  "maturity": "experimental",
+  "capabilities": ["literature.retrieve_papers"],
+  "scenarioTags": ["literature-review", "paper-reproduction", "full-research"],
+  "inputs": ["literature.query_plan.v1"],
+  "outputs": ["evidence.record_set.v1"],
+  "adapter": {
+    "type": "command",
+    "command": ["python3", "run_agent.py"]
+  },
+  "risk": "R1",
+  "permissions": {
+    "filesystem": {
+      "read": ["project:inputs", "project:papers"],
+      "write": ["attempt:artifacts"]
+    },
+    "network": {
+      "mode": "retrieval",
+      "hosts": ["api.semanticscholar.org", "export.arxiv.org"]
+    },
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": ["papers.search", "papers.parse", "papers.rerank"],
+  "evaluators": ["evidence.schema", "evidence.locator_resolution"],
+  "budgets": {
+    "maxWallSeconds": 900,
+    "maxToolCalls": 60,
+    "maxSources": 40,
+    "maxCostUsd": 5
+  },
+  "routing": {
+    "allowImplicit": false
+  }
+}

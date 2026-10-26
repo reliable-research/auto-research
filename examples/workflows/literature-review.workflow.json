@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0",
+  "id": "literature-review",
+  "version": "0.1.0",
+  "description": "Evidence-grounded scientific literature review.",
+  "stages": [
+    {
+      "id": "frame",
+      "capability": "research.frame_objective",
+      "dependsOn": [],
+      "risk": "R0",
+      "outputs": ["research.objective.v1"],
+      "gates": ["schema.valid"]
+    },
+    {
+      "id": "perspectives",
+      "capability": "literature.discover_perspectives",
+      "dependsOn": ["frame"],
+      "risk": "R1",
+      "outputs": ["literature.query_plan.v1"],
+      "gates": ["schema.valid"]
+    },
+    {
+      "id": "retrieve",
+      "capability": "literature.retrieve_papers",
+      "dependsOn": ["perspectives"],
+      "risk": "R1",
+      "outputs": ["evidence.record_set.v1"],
+      "gates": ["evidence.locator_resolution"]
+    },
+    {
+      "id": "synthesize",
+      "capability": "evidence.synthesize_claims",
+      "dependsOn": ["retrieve"],
+      "risk": "R1",
+      "outputs": ["claim.candidate_set.v1"],
+      "gates": ["claim.evidence_complete"]
+    },
+    {
+      "id": "audit",
+      "capability": "review.audit_integrity",
+      "dependsOn": ["synthesize"],
+      "risk": "R1",
+      "outputs": ["claim.promoted_set.v1"],
+      "gates": ["claim.promotion"]
+    },
+    {
+      "id": "write",
+      "capability": "publication.write_from_claims",
+      "dependsOn": ["audit"],
+      "risk": "R1",
+      "outputs": ["publication.report.v1"],
+      "gates": ["publication.reverse_links"]
+    }
+  ]
+}

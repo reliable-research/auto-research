@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="620" fill="#ffffff"/>
+  <text x="450" y="28" text-anchor="middle" font-size="16" font-weight="bold" fill="#111827">Selective Verification under a Scarce Trusted-Verifier Budget (B &#171; N&#183;M)</text>
+
+  <!-- A: Frozen trajectory pool -->
+  <rect x="24" y="48" width="192" height="140" rx="8" fill="#eef2f7" stroke="#64748b" stroke-width="1.5"/>
+  <text x="120" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Frozen trajectory pool</text>
+  <text x="120" y="90" text-anchor="middle" font-size="10.5" fill="#334155">M instances &#215; N = 16 samples</text>
+  <text x="120" y="106" text-anchor="middle" font-size="10.5" fill="#334155">sample once, replay forever</text>
+  <text x="120" y="128" text-anchor="middle" font-size="10.5" fill="#334155">&#8595; grouped into</text>
+  <text x="120" y="146" text-anchor="middle" font-size="10.5" fill="#334155">answer-equivalence classes</text>
+  <text x="120" y="162" text-anchor="middle" font-size="10.5" fill="#334155">(one call resolves a class)</text>
+
+  <!-- B: Cheap-signal extraction -->
+  <rect x="24" y="228" width="192" height="144" rx="8" fill="#eef7ee" stroke="#5a8a5a" stroke-width="1.5"/>
+  <text x="120" y="250" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Cheap signals (pre-call)</text>
+  <text x="34" y="270" font-size="10.5" fill="#334155">&#8226; mode share</text>
+  <text x="34" y="286" font-size="10.5" fill="#334155">&#8226; log-likelihood percentile</text>
+  <text x="34" y="302" font-size="10.5" fill="#334155">&#8226; verbalized confidence (gated)</text>
+  <text x="120" y="324" text-anchor="middle" font-size="10.5" fill="#2f5d2f">&#8595; dependency families</text>
+  <text x="120" y="340" text-anchor="middle" font-size="10.5" fill="#2f5d2f">(|&#961;| &#8805; 0.8 clustered,</text>
+  <text x="120" y="356" text-anchor="middle" font-size="10.5" fill="#2f5d2f">one vote per family)</text>
+
+  <line x1="120" y1="188" x2="120" y2="228" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- C: Allocation policy -->
+  <rect x="258" y="48" width="300" height="324" rx="8" fill="#eef1fb" stroke="#4f6bb0" stroke-width="1.5"/>
+  <text x="408" y="68" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Allocation policy (tiered, floor-gated)</text>
+  <rect x="272" y="78" width="272" height="24" rx="4" fill="#ffffff" stroke="#8fa3cc"/>
+  <text x="408" y="94" text-anchor="middle" font-size="10.5" fill="#334155">Tier 0 &#183; anchors: uniform / none / full</text>
+  <rect x="272" y="108" width="272" height="24" rx="4" fill="#ffffff" stroke="#8fa3cc"/>
+  <text x="408" y="124" text-anchor="middle" font-size="10.5" fill="#334155">Tier 1 &#183; static ranking (traj-joint | inst&#8594;class)</text>
+  <rect x="272" y="138" width="272" height="24" rx="4" fill="#ffffff" stroke="#8fa3cc"/>
+  <text x="408" y="154" text-anchor="middle" font-size="10.5" fill="#334155">Tier 1.5 &#183; &#949;-insurance mixture (&#949;&#183;B on consensus)</text>
+  <rect x="272" y="168" width="272" height="24" rx="4" fill="#ffffff" stroke="#8fa3cc"/>
+  <text x="408" y="184" text-anchor="middle" font-size="10.5" fill="#334155">Tier 2 &#183; sequential greedy reallocation</text>
+  <rect x="272" y="198" width="272" height="38" rx="4" fill="#ffffff" stroke="#8fa3cc"/>
+  <text x="408" y="213" text-anchor="middle" font-size="10.5" fill="#334155">Tier 3 &#183; value-based: actionability + robust gain,</text>
+  <text x="408" y="228" text-anchor="middle" font-size="10.5" fill="#334155">shadow price &#955; on opening calls, priority guard</text>
+  <rect x="272" y="244" width="272" height="24" rx="4" fill="#fbf7e8" stroke="#b09a4f"/>
+  <text x="408" y="260" text-anchor="middle" font-size="10.5" fill="#6b5518">consensus-probe reserve (&#949;_probe = 0.10)</text>
+  <text x="408" y="290" text-anchor="middle" font-size="10.5" fill="#3b4a72">sizing floors: &#8805; 80 labeled states, &#8805; 30 instances;</text>
+  <text x="408" y="306" text-anchor="middle" font-size="10.5" fill="#3b4a72">unmet &#8594; declared fallback ladder (Tier 1.5 / 2)</text>
+  <text x="408" y="330" text-anchor="middle" font-size="10.5" font-style="italic" fill="#3b4a72">deployed tier is declared per budget,</text>
+  <text x="408" y="346" text-anchor="middle" font-size="10.5" font-style="italic" fill="#3b4a72">dev spend charged to the same B</text>
+
+  <line x1="216" y1="110" x2="258" y2="110" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="216" y1="300" x2="258" y2="300" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- D: Trusted verifier -->
+  <rect x="612" y="48" width="264" height="122" rx="8" fill="#fdf1e7" stroke="#c07a3a" stroke-width="1.5"/>
+  <text x="744" y="70" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Scarce trusted verifier</text>
+  <text x="744" y="92" text-anchor="middle" font-size="10.5" fill="#334155">single metered budget B, globally coupled</text>
+  <text x="744" y="108" text-anchor="middle" font-size="10.5" fill="#334155">V(i,k) &#8712; {PASS, ELIMINATE}</text>
+  <text x="744" y="130" text-anchor="middle" font-size="10.5" fill="#334155">oracle lookup (pilot) &#8594; held-out</text>
+  <text x="744" y="146" text-anchor="middle" font-size="10.5" fill="#334155">test execution (code slice)</text>
+
+  <line x1="558" y1="100" x2="612" y2="100" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="585" y="90" text-anchor="middle" font-size="9.5" fill="#475569">call (i,k)</text>
+
+  <!-- E: Ledger & outcome accounting -->
+  <rect x="612" y="206" width="264" height="166" rx="8" fill="#f7eef5" stroke="#9a5a8a" stroke-width="1.5"/>
+  <text x="744" y="228" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Ledger &amp; outcome accounting</text>
+  <text x="744" y="248" text-anchor="middle" font-size="10.5" fill="#334155">class state: unresolved / passed / eliminated</text>
+  <text x="744" y="264" text-anchor="middle" font-size="10.5" fill="#334155">elimination removes class + its support</text>
+  <text x="744" y="288" text-anchor="middle" font-size="10.5" fill="#6b3a5c">&#8595; elimination-aware minimax-regret</text>
+  <text x="744" y="304" text-anchor="middle" font-size="10.5" fill="#6b3a5c">aggregator (total: decides after any history)</text>
+  <text x="744" y="328" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#1f2937">&#8594; one forced answer per instance</text>
+  <text x="744" y="352" text-anchor="middle" font-size="10.5" fill="#334155">naive vs. elimination-aware ablated at matched B</text>
+
+  <line x1="744" y1="170" x2="744" y2="206" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="758" y="192" font-size="9.5" fill="#475569">pass / eliminate</text>
+
+  <line x1="612" y1="250" x2="562" y2="250" stroke="#475569" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+  <text x="585" y="241" text-anchor="middle" font-size="9.5" fill="#475569">replan</text>
+
+  <!-- F: Baselines & ceilings -->
+  <rect x="24" y="412" width="400" height="150" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="224" y="434" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Accounting anchors &amp; ceilings</text>
+  <text x="36" y="456" font-size="10.5" fill="#334155">&#8226; uniform-random @ matched B &#183; self-consistency (B = 0)</text>
+  <text x="36" y="472" font-size="10.5" fill="#334155">&#8226; full verification A_full (normalization ceiling)</text>
+  <text x="36" y="488" font-size="10.5" fill="#334155">&#8226; OPT-static &amp; OPT-adaptive hindsight ceilings</text>
+  <text x="36" y="504" font-size="10.5" fill="#334155">&#8226; instance-level vs. trajectory-level baselines</text>
+  <text x="36" y="528" font-size="10.5" fill="#111827" font-weight="bold">budget&#8211;accuracy curve A(B), recovery fraction, AUBC</text>
+  <text x="36" y="546" font-size="10.5" fill="#334155">b &#8712; {5, 10, 25, 50, 100}% &#183; headline regime b &#8804; 10%</text>
+
+  <!-- G: Pilot gates -->
+  <rect x="452" y="412" width="424" height="150" rx="8" fill="#ffffff" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="664" y="434" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2937">Pilot gates (preregistered)</text>
+  <text x="464" y="456" font-size="10.5" fill="#334155">G1 &#183; dry run: base accuracy 30&#8211;70%, mode-share IQR &gt; 0.2;</text>
+  <text x="482" y="472" font-size="10.5" fill="#334155">difficulty ladder {GSM8K, MATH-500, L3&#8211;5, MBPP+}</text>
+  <text x="464" y="492" font-size="10.5" fill="#334155">G2 &#183; best signal AUROC lower CI &gt; 0.55, powered separation;</text>
+  <text x="482" y="508" font-size="10.5" fill="#334155">else pre-committed negative-result branch</text>
+  <text x="464" y="528" font-size="10.5" fill="#334155">G3 &#183; analysis plan frozen &#183; 5-seed dispersion &#183; artifact</text>
+  <text x="482" y="544" font-size="10.5" fill="#334155">release: frozen pools + replay harness</text>
+
+  <!-- E to F flow -->
+  <path d="M 700 372 L 700 392 L 224 392 L 224 412" fill="none" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="470" y="386" text-anchor="middle" font-size="9.5" fill="#475569">accuracy accounting vs. anchors and ceilings</text>
+</svg>

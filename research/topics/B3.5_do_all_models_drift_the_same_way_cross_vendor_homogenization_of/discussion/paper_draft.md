@@ -1,0 +1,262 @@
+# Rising Tide or Real Convergence? Testing Cross-Vendor LLM Behavioral Drift Against a Capability-Residualized Null
+
+> Assembled from the six confirmed stage outputs in `pipeline.md`, post-audit (`taste_audit.md`: 🟢). Status: **specification / paper draft — no experiments have been run.** All numbers below are pre-registered design targets, not results.
+
+## Abstract
+
+Organizations increasingly deploy multiple LLM vendors side by side — ensembling, fallback routing, A/B testing, LLM-as-judge panels — treating vendor diversity as a hedge against any single vendor's failures, biases, or outages. This practice silently assumes vendors' models evolve independently, but every vendor is also pulled toward one shared attractor: higher capability. Raw agreement in how vendors' models change over time therefore carries no information about shared pipelines on its own, since a universal capability attractor guarantees some positive drift correlation regardless of whether anything is actually shared. We isolate the component of inter-version behavioral drift on which vendor independence is genuinely testable: under independent development, the capability-orthogonal directions of drift — refusal posture, sycophancy, stance — should be exchangeable across vendors. We administer a fixed, axis-partitioned probe battery to dated version panels from multiple vendors, extract per-vendor drift vectors, and test their cross-vendor correlation against a permutation exchangeability null with the shared capability-improvement direction residualized out, checking robustness across two time-alignment conventions and across individual behavioral axes; in parallel we track a two-index cross-vendor behavioral-diversity trend, gated throughout by an empirically-measured noise floor. The outcome bears directly on a live deployment question: excess synchrony would undermine multi-vendor redundancy as a risk hedge, while a null result would give it its first quantitative support.
+
+## Introduction
+
+Large language model vendors ship successive versions on independent release schedules, and a growing body of deployment practice treats this vendor plurality itself as a safeguard. Ensembling across providers, routing a request to a fallback vendor when one is down or refuses, and convening a panel of judge models from different vendors are all built on an implicit premise: that different vendors' failures, biases, and idiosyncrasies are not the same failures, biases, and idiosyncrasies. This premise is cheap to act on and easy to believe, which is exactly why it deserves to be checked rather than assumed.
+
+Yet the premise itself — that vendors' models evolve *independently* — has never been tested longitudinally. The closest contemporaneous evidence, a preliminary embedding-similarity analysis reporting a statistically significant decline in cross-model output diversity across three years of releases [SimilarlyCreative2608], tracks the pooled population trend without ever asking whether any two vendors' version-to-version changes are correlated — it can show the space of model outputs narrowing, but not who is moving together. Concrete mechanisms exist by which independently-run vendors could nonetheless converge: a shared pool of AI-generated web text acts as a de facto cross-model data-sharing channel as each new generation of models is trained partly on the previous generation's outputs, and narrow, similarly-constructed preference-collection pipelines can push independently-trained models' RLHF-tuned behavior into the same corner of response space. If either mechanism operates across vendors over calendar time, the independence assumption behind multi-vendor redundancy breaks silently — the practice keeps looking diversified while no longer functioning as a hedge. Compounding the difficulty, every vendor is also pulled toward one trivial, uncontroversial shared attractor: models get more capable release over release. Any analysis that treats raw drift-vector agreement as evidence of shared pipelines cannot distinguish real homogenization from the unremarkable fact that everyone is improving together — the central asymmetry this paper is built around.
+
+The nearest existing work to this question is the Artificial Hivemind study, and its own stated boundary is exactly the gap this paper closes: it measures pronounced inter-model behavioral homogeneity — pairwise output-embedding cosine similarity of 71–82% across model pairs — but at a single point in calendar time, and it explicitly states that its analysis "falls short of establishing causality," with no notion of a trajectory across dated releases at all. The same single-snapshot ceiling applies to functional-similarity measures like CAPA, which show that improving models increasingly "think alike" in their mistakes, again without a temporal axis; a large-scale error-correlation audit spanning over 350 models sharpens the same point, finding that larger, more accurate models err together even across distinct providers and architectures [CorrelatedErrors2506] — the capability attractor at work in a single snapshot. A second cluster of related work studies homogenization as a property of training, not of deployment: algorithmic-monoculture analyses show that RLHF/DPO candidate responses sampled from similarly-trained models occupy a narrow region of response space, and separate studies of RL post-training show that correctness-only objectives collapse a single model's own output diversity as its accuracy improves. Both describe a real mechanism by which homogenization could arise, but neither measures whether it manifests as correlated drift across the version sequences of vendors that were never in the same training pipeline to begin with — the shared-synthetic-data and recursive-training analyses that could explain a cross-vendor channel are themselves validated only in controlled simulations on toy or single-family models, not by auditing deployed multi-vendor releases.
+
+Turning this gap into a measurable claim surfaces its own obstacles. Any drift or diversity finding is only as trustworthy as the probe battery that produced it, so the battery's coverage and its automated scorers need validation against human judgment before their deltas can be read as behavioral signal. The central difficulty, though, is separating genuine homogenization from the shared capability attractor: because every vendor's models improve over time regardless of what else they share, positive drift correlation is the default outcome of independent development, not evidence against it, unless the capability-driven component is explicitly identified and removed. Vendors also release on independent, asynchronous schedules, so there is no single natural notion of "the same point" in two vendors' trajectories, and a correlation estimate could depend on which time-alignment convention is chosen. Behavior space is high-dimensional, so any scalar correlation risks being carried by one arbitrarily-weighted axis rather than reflecting a broad pattern. And a claim about *diversity* converging over time is logically separate from a claim about drift *directions* being correlated — vendors could drift together while staying spread out, or narrow independently with no pairwise correlation at all — so a defensible diversity index has to be constructed and validated in its own right, not inferred from the correlation analysis.
+
+Our approach turns each obstacle into a specific, checkable design choice. Every automated axis scorer is validated against human labels before its deltas are trusted. The capability attractor is handled directly: behavioral axes are partitioned in advance into capability-loaded and capability-neutral groups, and cross-vendor drift correlation is tested on the capability-neutral group and again after residualizing out each vendor's shared, empirically-estimated capability-improvement direction — a homogenization claim survives only if correlation holds under both cuts, while a benign capability-only explanation predicts it will not. The correlation estimate is computed under two independent time-alignment conventions and re-estimated after dropping the single most-correlated axis, so a genuine finding cannot be an artifact of one alignment choice or one dominant dimension. A separate, two-index diversity trend — required to agree in sign across both index constructions — tracks the population-level question independently of the pairwise-correlation question. And an empirically-measured noise floor, built from repeated measurement of unchanged models, gates every other claim: nothing about correlation or diversity is interpreted until version-to-version change is shown to exceed ordinary measurement noise in the first place.
+
+We evaluate this design across dated version panels drawn from multiple commercial and open-weight vendors, using a fixed cross-domain probe battery and reporting against a permutation-based independence null throughout, with the capability attractor explicitly identified and controlled for rather than assumed away.
+
+In summary, we contribute:
+- A formalization of the specific asymmetry that makes "vendors' models change in correlated ways" an uninformative observation on its own: because every vendor is pulled toward the same capability attractor, only the capability-orthogonal component of drift is a valid signature of shared pipelines, and we state the exchangeability null this component must be tested against.
+- A capability-residualization procedure that separates genuine cross-vendor homogenization from correlated capability improvement, together with two independent robustness checks (across time-alignment convention and across individual behavioral axes) that a spurious finding could not survive.
+- A two-index, sign-consistency-gated diversity trend that tracks population-level convergence or divergence as a claim distinct from pairwise drift correlation, together with an empirically-measured noise floor that gates the entire analysis on models actually drifting measurably at all.
+- An empirical account of whether current LLM vendors' behavioral change is synchronized beyond what independent capability improvement predicts, and what this implies for treating multi-vendor deployment as an effective risk hedge.
+
+## Problem Definition
+
+**Formal setup.** Let vendors v ∈ V each maintain an ordered panel of dated releases (m_{v,1}, ..., m_{v,T_v}) with release dates τ_{v,t}. A fixed probe battery P is partitioned a priori into K behavioral axes, split into a capability-loaded subset K_cap (factuality, instruction/format compliance, reasoning) and a capability-neutral subset K_neu (refusal posture, sycophancy, political/moral stance); each axis k yields a score s_k(m) ∈ [0,1] for any model m, averaged over repeated samples per prompt. The **drift vector** for vendor v at step t is d_{v,t} = ( z_k( s_k(m_{v,t+1}) − s_k(m_{v,t}) ) )_{k=1..K}, z-normalized per axis across all vendor-steps so no axis dominates by scale alone. The **residualized drift** vector is d̃_{v,t} = d_{v,t} − proj_{ḡ}(d_{v,t}), where ḡ is the empirical mean drift direction across all vendors — the shared "rising tide" component every vendor's improvement contributes to regardless of what else it shares. A **noise floor** ν is the 95th percentile of ||d̂|| computed over same-snapshot re-probe deltas d̂; a version-step is only considered to have drifted at all if ||d_{v,t}|| > ν. The object of study is (i) whether mean pairwise cross-vendor correlation ρ̄ of {d_{v,t}} restricted to K_neu, and of {d̃_{v,t}}, exceeds a permutation-based exchangeability null, and (ii) whether a time-indexed diversity index D(τ) over vendors' behavioral profiles trends downward across calendar time τ.
+
+**Why this is hard.** Because every vendor's models are also expected to improve in raw capability release over release, positive correlation in unrestricted drift vectors is the default prediction of *independent* development, not evidence against it — the capability-loaded axes and the empirical mean direction ḡ have to be explicitly identified and projected out before a correlation on the remainder can be read as a homogenization signature at all. Vendors release on independent, asynchronous schedules, so no canonical mapping exists between "step t for vendor u" and "step t for vendor v"; a correlation computed under a calendar-time binning and one computed under a release-index correspondence encode different, equally defensible notions of alignment and can disagree. The behavioral axes themselves are only as trustworthy as the automated scorers that produce s_k, which must be validated against human judgment before any delta on them is treated as signal rather than scorer noise — and a same-model re-probe is needed to establish that ||d_{v,t}|| exceeds ν at all before any cross-vendor comparison is meaningful. Finally, a claim about the population-level diversity index D(τ) converging is not implied by, and does not imply, a claim about pairwise drift-vector correlation ρ̄: vendors could drift in correlated directions while the population stays spread out, or narrow independently with no pairwise correlation, so the two quantities must be measured and validated separately rather than treated as restatements of each other.
+
+## Method Overview
+
+At a conceptual level, the study is a single measurement pipeline with six cooperating parts, organized around one central move: separating the shared capability attractor from any capability-orthogonal signature of shared pipelines before drawing any conclusion about homogenization. Version panels and a fixed probe battery enter the pipeline; per-vendor drift vectors are extracted and gated by an empirically-measured noise floor; a capability/neutral axis partition and a residualization step turn the resulting sequence into a correlation test that a purely capability-driven explanation cannot pass; two independent robustness checks confirm the result is not an artifact of time-alignment convention or axis weighting; and a separately-validated, two-index diversity trend answers the population-level question this correlation test does not.
+
+The **probe battery construction and validation** component assembles the fixed, axis-partitioned battery and validates every automated scorer against human judgment before any drift is computed from it. The **capability-residualized correlation test** takes the resulting drift-vector sequence and computes cross-vendor correlation on the capability-neutral axes and again after projecting out the shared mean drift direction, so that a homogenization claim requires surviving both cuts. The **dual-alignment robustness check** re-computes the same correlation under an independent time-alignment convention to confirm the finding does not depend on an arbitrary alignment choice. The **axis-robustness check** re-computes the aggregate correlation with the single most-correlated axis removed, ruling out that one dimension alone carries the finding. The **two-index diversity trend** tracks the population-level convergence question with two independently constructed indices required to agree in sign. The **noise-floor gate** establishes, prior to and independently of all of the above, that measured inter-version change exceeds ordinary measurement noise in the first place.
+
+## Methodology
+
+### Probe Battery Construction and Validation
+
+**Challenge.** Any drift or correlation claim is only as trustworthy as the battery that produced it — an unvalidated or biased set of automated scorers would silently corrupt every downstream number.
+
+**Insight.** Construct validity has to be earned per axis against human judgment before deployment, not assumed from the scorer's design.
+
+**Method.** A fixed battery spans capability-loaded axes (factuality, instruction/format compliance, reasoning) and capability-neutral axes (refusal posture, sycophancy, political/moral stance), each scored by a dedicated automated instrument — a keyword-and-classifier refusal detector, opinion-agreement flip probes for sycophancy, IFEval-style verifiable constraint checks, a held-fixed factual-QA slice, and a fixed stance battery. Every automated scorer is validated against human labels on a held-out subset before being used in the main analysis; an axis whose scorer disagrees with human judgment beyond a pre-registered threshold is re-instrumented or dropped.
+
+### Capability-Residualized Correlation Test
+
+**Challenge.** Every vendor's models are expected to improve in raw capability over time regardless of what else they share, so unrestricted cross-vendor drift correlation is the default prediction of independent development, not evidence of shared pipelines.
+
+**Insight.** Partitioning axes into capability-loaded and capability-neutral groups, and separately projecting out the empirical shared mean drift direction, are the same underlying operation — removing the shared component — applied at two granularities; a benign capability-only explanation predicts correlation concentrated on the capability-loaded axes and attenuated after residualization, while genuine homogenization predicts correlation that survives both cuts.
+
+**Method.** Cross-vendor drift-vector correlation is computed on the capability-neutral axis subset and compared against the capability-loaded subset; separately, each vendor's drift vector is residualized against the empirical cross-vendor mean drift direction, and correlation is recomputed on the residual. A homogenization claim is only asserted if correlation on the capability-neutral axes is not explained away by the capability-loaded contrast, and if the residualized correlation is not substantially attenuated relative to the raw correlation.
+
+### Dual-Alignment Robustness Check
+
+**Challenge.** Vendors release on independent, asynchronous schedules, so there is no single natural notion of "the same version step" across vendors, and a correlation estimate could depend on an arbitrary alignment choice.
+
+**Insight.** If a correlation finding is genuine rather than an artifact of one alignment convention, its sign should not depend on which of two equally defensible conventions is used.
+
+**Method.** The cross-vendor correlation matrix is computed twice, using identical estimator and null machinery: once under calendar-time-bin alignment, once under release-index alignment. Agreement is assessed as sign consistency across the two schemes, not as a new statistical test in its own right.
+
+### Axis-Robustness Check
+
+**Challenge.** Behavior space is high-dimensional, so a single scalar correlation risks being carried entirely by one arbitrarily-weighted axis rather than reflecting a broad-spectrum pattern.
+
+**Insight.** A correlation that survives removing its single strongest contributing axis cannot be an artifact of that one dimension.
+
+**Method.** Per-axis pairwise correlation is reported alongside the aggregate correlation, and the aggregate is recomputed with the single most-correlated axis removed (leave-one-axis-out). The finding is treated as axis-robust only if it remains significant on a majority of individually-tested axes and survives this removal.
+
+### Two-Index Diversity Trend
+
+**Challenge.** A claim about population-level behavioral diversity converging or diverging over time is logically distinct from a claim about pairwise drift-vector correlation, and a diversity trend computed only one way is exactly what an arbitrary choice of index would produce.
+
+**Insight.** Requiring two independently constructed diversity indices to agree in sign is what makes a reported trend a property of the vendor population rather than of the specific index construction.
+
+**Method.** A primary diversity index is computed as the Vendi Score [VendiScore] over vendors' per-axis behavioral profiles at each calendar time bin; a secondary index is computed as the mean pairwise functional distance across vendors at the same bins, using a CAPA-style contemporaneous similarity measure. A Theil–Sen trend is fit to each index over calendar time, and the trend is reported as directionally supported only if both indices agree in sign.
+
+### Noise-Floor Gate
+
+**Challenge.** If version-to-version score deltas fall within the noise band of repeated measurement on an unchanged model, any cross-vendor drift correlation would reduce to correlated measurement noise, making the entire analysis moot.
+
+**Insight.** A noise floor has to be measured empirically from the same instrument applied to a model that is not changing — no analytic formula substitutes for actually observing how much a fixed model's scores move under repeated measurement.
+
+**Method.** Every pinned snapshot is re-probed twice — a split-half re-probe and a two-week test–retest re-probe — and the 95th percentile of the resulting same-model score-delta distribution defines the noise floor ν. A version-step is classified as having drifted only if its measured drift-vector magnitude exceeds ν; this gate is checked before any cross-vendor correlation or diversity claim is interpreted.
+
+## Experiments
+
+### Experimental Setup
+
+**Datasets.** IFEval supplies the capability-loaded instruction/format-compliance axis. TruthfulQA and SimpleQA together supply the capability-loaded factuality axis. A curated borderline-safety refusal set supplies the capability-neutral refusal axis. Anthropic sycophancy-eval-style opinion-flip probes supply the capability-neutral sycophancy axis. A GlobalOpinionQA-style stance battery supplies the capability-neutral political/moral-stance axis. NoveltyBench/INFINITY-CHAT-style open-ended prompts supply a separate diversity-computation prompt set: the Vendi Score computation needs open-ended generations with a large possible-response space to be meaningful, and the closed-form, single-correct-answer axis prompts used for drift-vector correlation would produce a degenerate, near-constant diversity index regardless of the true population spread — so the diversity trend is computed on its own prompt set, not on the correlation axes' prompts.
+
+**Baselines** (sanity-check comparators, not competitors to beat — this is a measurement study, and no research question here is framed as "our procedure beats baseline X"). A permutation / shuffled-vendor-pairing exchangeability null is the necessary control for every correlation claim. A single-vendor drift-only analysis is a degenerate no-cross-vendor baseline, confirming the correlation machinery reduces to nothing informative when there is nothing to correlate against. A CAPA/Artificial-Hivemind-style contemporaneous cross-model similarity check, borrowed as an instrument rather than as a number to beat, cross-checks that same-time similarity is not being silently substituted for drift-direction similarity.
+
+**Metrics.** Mean pairwise cross-vendor drift correlation (Pearson on aligned axes; cosine on full vectors), on both raw and residualized drift; per-axis correlation breakdown and leave-one-axis-out re-estimate; Vendi Score and mean pairwise CAPA-style distance per calendar time bin, and their Theil–Sen trend slopes; the empirically-measured noise floor ν and the proportion of version-steps exceeding it.
+
+**Power and pre-declared INCONCLUSIVE rule.** The accessible vendor population is small — with six vendors there are at most fifteen vendor pairs, and per-axis breakdowns thin each cell further — so per-cell power is bounded before any data are collected. The following rule is pre-registered rather than decided at verdict time: a pairwise or per-axis cell is declared INCONCLUSIVE — never scored as pass, fail, or silently dropped — whenever its bootstrap-over-prompts CI half-width exceeds 0.15 in native correlation units, or whenever fewer than four vendor pairs are available for a per-axis estimate. INCONCLUSIVE cells are excluded from aggregate vote counts, with the aggregation renormalized over powered cells only and the count of excluded cells reported alongside every headline number; if the central aggregate test is itself underpowered by this rule, the paper reports INCONCLUSIVE and narrows the claim to the powered subset rather than reporting a null.
+
+**Version-panel feasibility.** Retroactive access to closed vendors' early snapshots is the design's largest practical risk — deprecated API versions are routinely retired — so the longitudinal backbone is anchored on open-weight vendors with immutable checkpoints, and closed-vendor calendar coverage is treated as explicitly partial rather than assumed complete.
+
+**Research questions:**
+1. RQ1 — Do the automated axis scorers agree with human judgment?
+2. RQ2 — Is raw cross-vendor drift correlation higher on capability-loaded axes than capability-neutral axes?
+3. RQ3 — Does residualizing out the shared capability-improvement direction attenuate cross-vendor drift correlation?
+4. RQ4 — Is the sign of cross-vendor drift correlation stable across two independent time-alignment conventions?
+5. RQ5 — Is cross-vendor drift correlation robust to removing the single most-correlated behavioral axis?
+6. RQ6 — Does the primary (Vendi) cross-vendor diversity index show a declining trend?
+7. RQ7 — Is the diversity trend's sign consistent across two independently constructed indices?
+8. RQ8 — Does measured inter-version change exceed the empirically-measured noise floor?
+
+#### RQ1: Do the automated axis scorers agree with human judgment?
+
+**Setup.** For each of the six behavioral axes, score a held-out validation subset of at least 500 items with both the automated scorer and independent human annotators; compute Cohen's/Fleiss' κ per axis.
+
+**Expected outcome.** Every axis achieves κ ≥ 0.70 against human labels on its validation subset.
+
+**Falsification condition.** Refuted for any axis whose κ falls below 0.70 — that axis is re-instrumented or dropped from the main analysis before RQ2–RQ8 are run, rather than reported alongside axes that passed validation.
+
+**Hypothesis (plain language).** The automated scorers are a valid enough stand-in for human judgment to trust their deltas as behavioral signal, not scorer noise.
+
+**Metrics.** Per-axis inter-rater agreement (κ).
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ2: Is raw cross-vendor drift correlation higher on capability-loaded axes than capability-neutral axes?
+
+**Setup.** Compute mean pairwise cross-vendor drift correlation separately on the capability-loaded axis subset (K_cap) and the capability-neutral axis subset (K_neu), on unresidualized drift vectors, across all tested vendor pairs and both time-alignment schemes.
+
+**Expected outcome.** Correlation on K_cap is significantly higher than on K_neu — the signature a purely capability-driven, no-shared-pipeline explanation predicts.
+
+**Falsification condition.** Refuted (toward a genuine cross-vendor signal on capability-neutral axes) if K_neu correlation is statistically indistinguishable from, or exceeds, K_cap correlation — that would mean the capability-only explanation does not account for the observed pattern on its own.
+
+**Hypothesis (plain language).** If capability improvement alone were driving observed cross-vendor agreement, that agreement should concentrate on the axes capability improvement actually touches.
+
+**Metrics.** Mean pairwise Pearson/cosine drift correlation, K_cap vs. K_neu, with bootstrap CIs over prompts.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ3: Does residualizing out the shared capability-improvement direction attenuate cross-vendor drift correlation?
+
+**Setup.** Compute the empirical cross-vendor mean drift direction ḡ; project it out of each vendor's drift vector to obtain the residualized drift d̃; recompute mean pairwise cross-vendor correlation on d̃ and compare to the raw (unresidualized) correlation on the full vector.
+
+**Expected outcome.** If raw correlation was driven by the shared capability direction, residualized correlation is substantially attenuated relative to raw correlation; a homogenization claim requires that it is not.
+
+**Falsification condition.** Refuted (correlation is not a capability artifact) if residualized correlation on capability-neutral axes remains statistically indistinguishable from raw correlation, i.e., removing ḡ does not meaningfully reduce the estimate — in that case the correlation is not explained by the shared attractor and stands as an unexplained-by-capability signal requiring further scrutiny before being called homogenization.
+
+**Hypothesis (plain language).** Whatever cross-vendor agreement exists should mostly evaporate once the one thing every vendor unambiguously shares — getting better over time — is subtracted out, unless something else is also shared.
+
+**Metrics.** Raw vs. residualized correlation estimates and their ratio, with bootstrap CIs.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ4: Is the sign of cross-vendor drift correlation stable across two independent time-alignment conventions?
+
+**Setup.** Compute the full cross-vendor correlation matrix under calendar-time-bin alignment and, separately, under release-index alignment, using identical estimator and permutation-null machinery in both cases; compare signs across the two schemes for every tested vendor pair.
+
+**Expected outcome.** The sign of the correlation is identical under both alignment schemes for the majority of tested vendor pairs.
+
+**Falsification condition.** Refuted if the correlation sign flips between alignment schemes for the majority of vendor pairs — that would indicate the finding is an artifact of the alignment convention chosen rather than a property of the underlying drift.
+
+**Hypothesis (plain language).** A real effect should not depend on which of two equally reasonable ways of lining up vendors' independent release schedules is used.
+
+**Metrics.** Per-pair correlation sign agreement rate across the two alignment schemes.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ5: Is cross-vendor drift correlation robust to removing the single most-correlated behavioral axis?
+
+**Setup.** Compute per-axis pairwise correlation across all six behavioral axes; identify the single axis contributing the largest correlation; recompute the aggregate correlation with that axis removed (leave-one-axis-out) and compare to the full-axis-set aggregate.
+
+**Expected outcome.** The aggregate correlation remains significant on a majority (at least 3 of 6) of individually-tested axes, and remains significant after the single most-correlated axis is removed.
+
+**Falsification condition.** Refuted if the aggregate correlation is significant on only one axis, or if removing that one axis eliminates significance in the leave-one-axis-out re-estimate — either would mean the finding is an artifact of one arbitrarily-weighted dimension rather than a broad-spectrum pattern.
+
+**Hypothesis (plain language).** If cross-vendor homogenization is real, it should show up across more than one narrow behavioral dimension.
+
+**Metrics.** Per-axis correlation significance count; leave-one-axis-out aggregate correlation and its change relative to the full-axis-set estimate.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ6: Does the primary (Vendi) cross-vendor diversity index show a declining trend?
+
+**Setup.** Compute the Vendi Score over vendors' per-axis behavioral profiles at each calendar time bin across the studied window; fit a Theil–Sen trend to the resulting time series; test the slope's sign by permuting time-bin labels.
+
+**Expected outcome.** The Theil–Sen slope is significantly negative, with a total decline over the window of at least 10% of the window-initial index value — a direction for which contemporaneous pooled-population evidence already exists [SimilarlyCreative2608], so a flat or rising trend here would be a substantive disagreement worth reporting, not an empty null.
+
+**Falsification condition.** Refuted if the slope is non-negative (flat or increasing) at the pre-registered significance level, or if the total decline falls short of 10% of the window-initial value — either would mean the multi-vendor behavior space is not measurably narrowing over the studied window.
+
+**Hypothesis (plain language).** If independent vendors are converging on similar behavior, the spread of their behavioral profiles should shrink over calendar time, not merely stay flat.
+
+**Metrics.** Vendi Score time series; Theil–Sen slope and its permutation-based significance; percentage decline relative to window-initial value.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ7: Is the diversity trend's sign consistent across two independently constructed indices?
+
+**Setup.** Compute the secondary diversity index (mean pairwise CAPA-style functional distance across vendors) at the same calendar time bins as the primary Vendi index; fit a Theil–Sen trend to the secondary index; compare its sign to the primary index's trend sign.
+
+**Expected outcome.** The two indices' trend signs agree.
+
+**Falsification condition.** Refuted if the two indices' trends disagree in sign — that would mean the reported diversity trend is an artifact of the specific index construction rather than a property of the vendor population itself, and neither index's trend should be reported as a standalone finding.
+
+**Hypothesis (plain language).** A genuine population-level convergence or divergence trend should not depend on which of two reasonable ways of measuring "diversity" is used.
+
+**Metrics.** Sign agreement between the primary and secondary index trends.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ8: Does measured inter-version change exceed the empirically-measured noise floor?
+
+**Setup.** Re-probe every pinned snapshot twice (split-half and two-week test–retest) to build the same-model score-delta distribution and derive the noise floor ν as its 95th percentile; compare every true version-step's drift-vector magnitude against ν across the tested vendor panel.
+
+**Expected outcome.** At least two-thirds of true version-steps exceed ν.
+
+**Falsification condition.** Refuted if fewer than two-thirds of version-steps exceed ν — in that case, models are not measurably drifting under this battery within the studied window, and the correct reported finding is the noise-floor result itself (drift is below measurability), not a correlation or diversity claim computed on indistinguishable-from-noise deltas.
+
+**Hypothesis (plain language).** Models have to be shown to actually change measurably before any claim about how their changes relate to each other means anything.
+
+**Metrics.** Proportion of version-steps with ||d_{v,t}|| > ν; the empirically-measured value of ν itself.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+**Further evaluation.** With more time, a natural extension is to test whether the same capability-residualization procedure applied within a single vendor's own version sequence (rather than across vendors) shows the same rising-tide pattern, which would validate the residualization mechanism on a case where the answer is already known by construction — explicitly out of scope here because it is a validity check on the instrument itself, not a new empirical claim about cross-vendor behavior.
+
+## Related Work
+
+The single closest prior work to this paper is the Artificial Hivemind study [ArtificialHivemind], and its own stated boundary marks the precise gap this paper is built to close: it measures pronounced inter-model behavioral homogeneity — 71–82% pairwise output-embedding cosine similarity across model pairs — but only at one point in calendar time, and explicitly states that its analysis "falls short of establishing causality," with no version-sequence or trajectory component at all. This paper takes that same style of cross-model comparison and gives it a time axis, a capability-improvement control, and an explicit independence null — the three things a single snapshot cannot supply on its own.
+
+**Single-snapshot cross-model similarity.** The Artificial Hivemind study [ArtificialHivemind] and the CAPA functional-similarity metric [GreatModelsThinkAlike] both establish that models from different vendors are, at any given moment, behaviorally and functionally more alike than chance would predict — CAPA shows this manifests as correlated mistakes that undermine LLM-as-judge and weak-to-strong training, while Artificial Hivemind shows it directly in output-embedding similarity across a large open-ended query set. Neither, by construction, can say whether this similarity is growing, shrinking, or stable across each vendor's own release history, since neither collects more than one time point per model. [GreatModelsThinkAlike] additionally report, across 130 OpenLLM-Leaderboard models, that cross-developer mistake correlation (their κ_p) is itself rising with capability at a single snapshot in time — a cross-sectional analog of the trend this paper tests longitudinally. The Correlated Errors audit [CorrelatedErrors2506] extends this snapshot picture to over 350 models and makes the provider factor explicit: shared architectures and providers drive error correlation, yet the models that err together most are the largest and most accurate ones regardless of provider, and the measured consequences land on exactly the deployment practices this paper's motivation names — LLM-as-judge evaluation and applicant screening under algorithmic monoculture. It shares this paper's stake, vendor diversity as a hedge, but like CAPA and Artificial Hivemind it observes a single point in time and therefore cannot say whether that correlation is tightening across releases.
+
+**Longitudinal diversity-trend evidence.** Contemporaneous with this draft, a preliminary analysis of three years of model releases [SimilarlyCreative2608] provides the first longitudinal evidence in this space: using sentence-embedding similarity over responses to Infinity-Chat open-ended queries and the Alternate Uses Task, it reports a statistically significant decline in cross-model output diversity over time. We concede the shared object — a diversity trend across dated model releases — and note the directional agreement with this paper's RQ6 hypothesis. The deltas are the identification machinery this paper exists to supply: their trend is pooled across all models at each date, so it cannot separate between-vendor convergence from within-vendor narrowing (per-vendor version panels can); it rests on a single embedding-based index with no sign-consistency gate and no empirically-measured noise floor — exactly the index-artifact risks our two-index construction is built to exclude; and it contains no drift-vector correlation, no capability/neutral axis partition, and no residualization, so the pooled diversity question and the vendor-synchrony question remain distinct — and only the latter bears on whether multi-vendor redundancy works as a hedge.
+
+**Training-pipeline monoculture and diversity collapse.** A second line of work locates homogenization inside a single training pipeline rather than across vendors: algorithmic-monoculture analyses [CommunityAlignmentMonoculture] show that RLHF/DPO candidate responses sampled from similarly-trained models occupy a narrow region of response space, so human annotators never see diverse alternatives during preference collection — concretely, [CommunityAlignmentMonoculture] find 21 state-of-the-art LLMs' default responses align with only 41% of measured human preferences across five countries — while separate diversity-aware [DiversityAwarePO] and diversity-quality [DQO] post-training studies show that correctness-only RL objectives systematically collapse a single model's own output diversity even as its accuracy improves. Both describe real, well-evidenced narrowing mechanisms, but both operate on one model or one preference-collection pipeline at a time — neither measures convergence across the version sequences of vendors whose training pipelines were never shared to begin with.
+
+**Recursive-training homogenization mechanisms.** A third cluster offers a concrete causal story for how cross-vendor convergence could arise without any direct sharing of data or code: [MultiEntityRecursion] model multiple entities that train partly on a shared pool of each other's generated outputs and derive, via a linear-regression theory, exact conditions under which such data-mediated interaction homogenizes model behavior even as it can simultaneously improve task performance through complementary-knowledge transfer; [ModelCollapseMemorization] give a generalization-to-memorization account of model collapse explaining why this narrowing can be sharp rather than a slow asymptotic drift. Both are validated in controlled simulations or small-scale fine-tuning on toy or single-family models, not by auditing whether the effect is visible in real, deployed multi-vendor version sequences — exactly the audit this paper runs.
+
+**Communication-induced representational coupling.** Closest among the method-side instruments is a Jensen-Shannon-divergence-based Coupling Amplification Factor for multi-agent LLM systems [BoundarySyncRepCoupling2607], which measures whether inter-agent communication pushes model outputs toward a homogenized consensus (CAF < 1) or away from it (CAF > 1), isolating communication as the causal mechanism via a no-communication baseline. We concede the shared measurement primitive — both works quantify homogenization pressure between model instances on a divergence-based scale — but the setting is different in a way that matters: their coupling arises from agents reading each other's outputs within a single interaction, a mechanism this paper's cross-vendor, cross-release-cycle setting explicitly excludes (vendors' dated releases do not communicate with each other at inference time), and their metric is a direct design input for our secondary diversity index rather than a competing measurement of the same construct.
+
+**Measurement-theoretic diversity construction.** A measurement-theoretic framework for dataset diversity [MeasureDatasetDiversity] argues that "diversity" must be explicitly conceptualized, operationalized through validated indicators, and checked for reliability before being reported as a finding, rather than computed ad hoc. This paper adopts that discipline directly: the two-index, sign-consistency requirement for the diversity trend is exactly this kind of validation step, applied to a longitudinal cross-vendor behavioral population rather than to a static dataset.
+
+## Conclusion
+
+This work reframes a widely-practiced deployment assumption — that different LLM vendors' models fail and change independently, making multi-vendor redundancy an effective hedge — as a directly testable empirical question, rather than treating vendor plurality as self-evidently diversifying. The central methodological wager is that raw agreement in how vendors' models change is uninformative on its own, because every vendor is pulled toward the same capability attractor; only the capability-residualized, alignment-robust, axis-robust component of drift correlation is a genuine signature that independent development could not produce but shared training inputs or alignment recipes might fail to fully suppress. Whichever way the evidence falls, the finding is decision-relevant: a surviving positive correlation would mean multi-vendor redundancy is a weaker hedge than commonly assumed, while a null result — correlation fully explained by shared capability improvement, or indistinguishable from the exchangeability null once residualized — would give the practice its first quantitative support rather than leaving it an untested assumption. Two limitations bound this claim from the outset. First, a behavioral-correlation finding alone cannot establish that shared training data or alignment recipes are the causal mechanism behind any observed synchrony, since major vendors' training pipelines are closed to inspection — this paper reports correlation, not verified causation, the same limit the Artificial Hivemind study states for its own single-snapshot finding. Second, with a small number of accessible vendors, the cross-vendor correlation and diversity estimates carry real statistical-power limits; this paper reports effect sizes with bootstrap confidence intervals throughout rather than relying on point estimates or p-values alone, and treats the released probe battery and version panel as an instrument future work can extend as more vendors and versions accumulate.
+
+---
+
+## Pre-handoff checklist
+
+- **Organization/navigation** — narrative flows problem → method → experiments → related work without forward references to undefined terms.
+- **Terminology discipline** — "drift vector," "capability-neutral axis," "residualized drift," "noise floor," "diversity index" each defined at first use in Problem Definition, used consistently thereafter; no internal stage IDs (`sp_*`, `m_*`, `rq_*`) leaked into prose — checked directly against `pipeline.md`.
+- **Notation with worked example** — the formal setup section defines (v, t, T_v, τ_{v,t}, K, K_cap, K_neu, s_k, d_{v,t}, d̃_{v,t}, ḡ, ν, D(τ)) and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+- **RQ framing matches outcomes** — all 8 RQs are graded/quantitative (agreement coefficients, correlation contrasts, slopes, sign-consistency rates), each answered in its own subsection with an explicit falsifiable expected outcome and an explicit falsification condition, not a binary yes/no.
+- **No typesetting artifacts** — no `[CITE]`/`[TODO]` placeholders; only explicit `[placeholder — fill in after experiments are run]` markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+- **Artifact plan** — the probe battery, version-panel construction scripts, and drift/diversity computation pipeline are the natural release artifacts; not yet built, so not claimed as available.
+
+## Hand-off
+
+This is a Markdown draft, not a finished paper — experiments have not run. Natural next steps: `research-paper-writing` for LaTeX conversion and prose polish once a target venue is chosen, or back into this pipeline if a stage needs revision (e.g., if the walking-skeleton pilot shows fewer than two-thirds of version-steps exceed the noise floor, that is exactly the kind of cross-stage problem that becomes visible only once a draft exists, per `paper_assembly.md`).

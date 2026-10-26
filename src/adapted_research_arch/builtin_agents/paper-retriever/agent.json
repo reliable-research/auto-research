@@ -1,0 +1,8 @@
+{
+  "schemaVersion":"1.0","id":"arch.literature.paper-retriever","version":"0.1.0","name":"Paper Retriever",
+  "description":"Produces located scientific evidence records.","maturity":"stable",
+  "capabilities":["literature.retrieve_papers"],"inputs":["literature.query_plan.v1"],"outputs":["evidence.record_set.v1"],
+  "adapter":{"type":"command","command":["python3","{runtime_stub}"]},"risk":"R1",
+  "permissions":{"filesystem":{"read":[],"write":["attempt:artifacts"]},"network":{"mode":"disabled","hosts":[]},"process":true,"scheduler":false,"gpu":false,"externalWrite":false,"secretHandles":[]},
+  "tools":[],"evaluators":["schema.valid","evidence.locator_resolution"],"budgets":{"maxWallSeconds":60,"maxToolCalls":0,"maxSources":10,"maxCostUsd":0},"routing":{"allowImplicit":true}
+}

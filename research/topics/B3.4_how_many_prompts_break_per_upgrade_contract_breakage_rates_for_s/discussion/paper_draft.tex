@@ -1,0 +1,286 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{Passing Today, Broken Tomorrow:\\ Measuring Per-Upgrade Contract Breakage in Structured-Output LLM Pipelines}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic B3.4), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}). Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets, not results.}
+\end{quote}
+
+\begin{abstract}
+Production systems increasingly wrap large language models behind structured-output contracts --- JSON schemas, formatting conventions, few-shot templates --- that downstream code parses without ever re-examining the model underneath. Provider-side model upgrades are frequent, often loosely documented, and change exactly the thing these contracts silently depend on, yet how much of this contracted behavior survives a version jump has never been directly measured: teams currently learn about breakage reactively, from their own production incidents. We construct a stratified library of production-style contracts spanning JSON-schema conformance, machine-checkable formatting conventions, and few-shot templates mined from real conversations, each validated by a three-tier deterministic checker calibrated against hand labels. We measure breakage across successive versions of open-weight and closed-API model lineages only as an excess over a within-version resampling noise floor computed by the identical procedure, fit a multivariate model relating contract structure to fragility, compare its predictive power against a cheap distribution-shift detector to rule out generic confounds, and bound how much of the measured breakage two existing mitigations --- grammar-constrained decoding and per-version prompt recompilation --- remove. We report noise-adjusted breakage rates by contract type, validated structural fragility predictors, and the avoidable share of upgrade-induced breakage, offering engineering teams a basis for prioritizing regression testing before adopting a new model version.
+\end{abstract}
+
+\section{Introduction}
+
+Large language models are now routinely wrapped behind structured-output contracts: a JSON schema the downstream parser expects, a formatting convention a rendering pipeline depends on, a few-shot template that anchors a model into a specific output shape. Whoever writes that contract fixes what a passing output must look like, but not what actually produces it --- the behavior that must satisfy the contract belongs to whichever model version answers the request today. This arrangement is invisible until it isn't: provider-side model upgrades happen on a schedule the contract owner does not control, are often documented only loosely, and change precisely the thing every one of these contracts silently assumes stays put.
+
+Yet how much of this contracted behavior actually survives a version jump has never been directly measured. A contract that validated cleanly against last month's model and a contract that fails against this month's model are not different objects --- they are the same acceptance predicate applied to two different sources of output --- but nothing in how these systems are built today reports what fraction of a real contract library crosses that line on a given upgrade, or which contracts are the ones to expect trouble from. Teams currently find out reactively, from a production incident, rather than from a number they could check before adopting a new version.
+
+The nearest existing work approaches this gap from an adjacent but distinct angle. Chen, Zaharia, and Zou's study of ChatGPT's behavior over time is the closest prior work: it documents large, task-dependent behavior and format-compliance shifts between two GPT snapshots on a general task suite, establishing that ``the same'' deployed service can change meaningfully between releases. LogProbTracking sits right beside it, treating the detection of \emph{whether} an endpoint's response distribution has changed at all as an open, black-box monitoring problem. Between them, these two works establish that model behavior drifts and that the drift is detectable --- but neither one constructs a library of production-style contracts, computes a per-upgrade breakage rate against a validator, or asks which contract features predict fragility; the delta this paper closes is exactly that downstream, contract-level consequence of the drift both works otherwise document. Beyond this pair, other lines of work sit further out: input-side prompt-robustness studies hold the model fixed and vary the wording, the exact dual of the upgrade setting; instruction-verification and constrained-decoding work builds real validators and guarantees but applies them only within a single model snapshot, never across a version lineage; and a longitudinal-benchmark methodology exists for a different artifact class (malware concept drift) with no analogue yet for LLM contract behavior.
+
+Turning this gap into a measurable question surfaces its own obstacles. There is no ground truth for ``contract breakage'' handed down from anywhere --- JSON-schema conformance is mechanically checkable, but formatting-convention adherence and few-shot template-following admit graded compliance, so the pass/fail boundary is itself a design choice that has to be calibrated against what a real parser would do, not assumed. Provider-controlled endpoints are not reliably re-queryable after the fact: a named snapshot can change silently or be deprecated, which threatens to attribute an observed change to a version nobody can actually verify later. Even a real, non-noise change in pass/fail behavior is not automatically evidence of anything specific --- an individual contract's outcome is realized through a stochastic generation process, so genuine upgrade-induced breakage first has to be separated from ordinary within-version sampling variation, and then, separately, from generic, contract-agnostic distribution shift that a cheap monitoring signal might predict just as well. And identifying which structural features make a contract fragile requires enough independent version transitions and contract diversity for statistical power, while the natural features of a contract --- nesting depth, constraint count, field count --- are mutually correlated, so naive per-feature correlations would misattribute effects that a multivariate model is needed to disentangle.
+
+Our approach turns each of these obstacles into one coherent measurement design rather than a set of hedges, built around a single move: applying the identical pass/fail procedure to two different partitions of the same output pool --- once split by version, once split by resampling within a version --- so that ``is this real breakage'' becomes a checkable, apples-to-apples comparison instead of an assumption. A three-tier validator, calibrated against hand-labeled outputs and swept across its strict/lenient boundary, gives the ground-truth side of that comparison a defensible footing. A version-paired execution harness anchors its primary claims on permanently re-queryable open-weight model lineages, with a first-token logprob canary run beside every batch to catch and flag the closed-endpoint addressability failures that anchoring choice is designed around. A within-version split-half noise floor, computed by that same identical procedure, is the null every breakage claim is tested against. A multivariate fragility model, fit with grouped cross-validation over a pre-registered, decorrelated feature vector, turns contract structure into a validated predictor rather than a marginal correlation. A head-to-head comparison against a cheap distribution-shift detector checks that any measured fragility reflects a contract's own structure rather than a confound any generic monitor would already catch. And a tier-decomposed comparison of two existing mitigations against an unmitigated arm bounds how much of the measured breakage is a deployment choice rather than an inherent cost of upgrading.
+
+We evaluate this design across a stratified library of real-world JSON schemas, verifiable formatting rules, and few-shot templates mined from production-style conversations, run against successive versions of open-weight model lineages as the primary, reproducible anchor and dated closed-API snapshots as a secondary arm, alongside a cheap logprob-based detector and two existing mitigation techniques as comparators.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item A measurement design that reports upgrade-induced contract breakage only as an excess over a within-version noise floor computed by the identical validation procedure, rather than as a raw cross-version flip count --- the split-half null construction itself is standard paired-resampling practice; what is new is the estimand it is applied to, a per-upgrade breakage rate over a designed contract library.
+\item A calibrated three-tier contract validator and a version-paired execution harness --- anchored on permanently re-queryable open-weight lineages with a canary for closed-endpoint addressability failure --- that together give the breakage estimate a defensible ground truth and a citable version identity.
+\item A validated, multivariate fragility model relating contract-level structural features to breakage odds, together with a head-to-head comparison against a cheap distribution-shift detector that isolates contract-specific fragility from generic confounds.
+\item A tier-decomposed measurement of how much upgrade-induced breakage is removable by two existing mitigations, bounding the avoidable share of what would otherwise look like an inherent cost of adopting a new model version.
+\end{itemize}
+
+\section{Problem Definition}
+
+\noindent\textbf{Formal setup.} A contract is a triple $c = (T, D, A)$: a prompt template $T$, an input distribution $D$, and a deterministic acceptance predicate $A$ mapping an output to $\{0,1\}$. A version lineage $L = (v_0, v_1, \dots, v_k)$ is a sequence of individually addressable model versions. For a contract-version pair $(c, v)$, $n = 20$ i.i.d.\ samples are drawn under fixed decoding settings and scored by $A$, giving a pass probability $\hat{p}(c, v)$. A contract \emph{passes} at $v$ iff $\hat{p}(c, v) \geq 0.9$ and \emph{fails} at $v$ iff $\hat{p}(c, v) \leq 0.5$ (the intermediate band is excluded from the primary statistic and covered separately by sensitivity analysis). A contract \emph{breaks} on the transition $v \to v'$ iff it passes at $v$ and fails at $v'$. The breakage rate is $B(v{\to}v') = |\{c : \text{pass}@v \wedge \text{fail}@v'\}| / |\{c : \text{pass}@v\}|$; the companion fix rate $F(v{\to}v')$ is defined symmetrically, with net regression $B - F$. The noise floor $B_{\text{null}}(v)$ is computed by splitting each contract's 20 samples at version $v$ into two disjoint 10-sample halves and applying the identical breakage computation between the halves as if they were two versions. Because each half contains only 10 samples while the cross-version comparison uses all 20 per side --- and $\hat{p}$ at $n = 10$ carries roughly twice the variance and a coarser threshold granularity than $\hat{p}$ at $n = 20$ --- the cross-version statistic is additionally recomputed on disjoint 10-sample subsets per version, so that $B(v{\to}v')$ and $B_{\text{null}}$ share the same estimator granularity; this subsample-matched comparison is the primary test, with the full-sample cross-version rate reported alongside. The object of study is the excess $\Delta B = B(v{\to}v') - B_{\text{null}}$, and, over the library's pre-registered feature vector, which components predict per-contract breakage.
+
+\noindent\textbf{Why this is hard.} No externally supplied ground truth exists for what ``breakage'' means at the level of formatting-convention or few-shot-template adherence --- only JSON-schema conformance is mechanically decidable in the strict sense, so the acceptance predicate $A$ itself embeds a strictness choice that must be calibrated against real downstream-parser behavior rather than assumed correct by construction. The version lineage $L$ is only as trustworthy as its addressability: a closed-API version identifier can change silently within its own name or be deprecated entirely, so an observed pass$\to$fail flip risks being attributed to a version transition that cannot later be independently re-verified. Even granting a real, non-noise flip, each outcome's realization through a stochastic sampling process means a genuine cross-version effect must first clear the within-version noise floor $B_{\text{null}}$ before being attributed to the transition at all --- and clearing that bar is still not sufficient, because a flip that exceeds $B_{\text{null}}$ could still reflect a generic, contract-agnostic shift in the endpoint's output distribution rather than anything specific to $c$'s own structure, a distinct confound a noise-floor comparison alone cannot rule out. Finally, the feature vector that might explain fragility --- schema nesting depth, constraint density, few-shot example count, and related quantities --- is naturally collinear (deeper schemas tend to carry more fields and more constraints), so a credible feature-level claim requires a multivariate design with enough independent transitions and contract diversity for power, not a marginal correlation over however many contracts happen to be on hand.
+
+\section{Method Overview}
+
+At a conceptual level, the study is a single measurement pipeline with six cooperating parts, organized around one governing move: the same pass/fail procedure is applied to two different partitions of the same output pool --- a within-version resampling split and a cross-version split --- so that upgrade-induced breakage is reported only as whatever the cross-version comparison shows in excess of the within-version one.
+
+The \textbf{contract validator} turns each output into a deterministic pass/fail verdict, calibrated so that the ground-truth side of every later comparison is defensible rather than assumed. The \textbf{version-paired execution harness} collects the raw samples this verdict is computed over, anchored on lineages where every version stays individually addressable for the life of the study, with a canary that flags the closed-endpoint cases where that assumption would otherwise silently fail. The \textbf{noise-floor estimator} takes those collected samples and produces the null every breakage claim is measured against, by running the identical validator-based computation within a single version instead of across two. The \textbf{fragility predictor model} takes the resulting breakage events across many contracts and versions and relates them to each contract's structural features, controlling for the features' natural correlation with each other. The \textbf{cheap-signal specificity check} takes the same breakage events and asks whether a much cheaper, contract-agnostic distribution-shift detector already predicts them just as well, ruling out --- or not --- a generic confound the fragility model alone cannot address. And the \textbf{mitigation headroom bound} takes two existing techniques for reducing prompt-level fragility and measures, tier by tier, how much of the already-quantified breakage each one actually removes.
+
+\section{Methodology}
+
+\subsection{Contract Validator Construction}
+\textbf{Challenge.} JSON-schema conformance is mechanically checkable, but formatting-convention adherence and few-shot template-following admit graded compliance (e.g., correct fields but reordered keys, or a correct list rendered with a different bullet glyph), so any acceptance predicate risks being an arbitrary strictness choice that either flags benign variation or misses real downstream failures.
+
+\textbf{Insight.} The ambiguity cannot be resolved by picking a ``correct'' strictness level in the abstract, but it can be turned into an explicit calibration exercise against real parser behavior plus a sensitivity sweep, rather than a hidden design decision baked silently into the pipeline.
+
+\textbf{Method.} Each output is scored by a three-tier deterministic checker: a parse tier (does the output parse as the expected envelope --- valid JSON, expected code fence?), a schema tier (JSON Schema Draft 2020-12 validation against the contract's schema), and a convention tier (regex/rule checkers in the style of executable instruction-verification functions). A contract instance passes iff all applicable tiers pass. Before any measurement run, the validator is unit-tested against a held-out set of hand-constructed positive and negative example outputs, and the strict/lenient boundary (e.g., how much surrounding prose around a JSON block is tolerated) is a pre-registered constant, swept in a dedicated sensitivity analysis rather than fixed by a single arbitrary choice.
+
+\subsection{Version-Paired Execution Harness}
+\textbf{Challenge.} Provider-controlled model versions are not always cleanly enumerable or independently re-queryable after the fact --- closed endpoints can change silently within a named snapshot and old snapshots get deprecated --- making it hard to attribute an observed behavior change to a specific, citable, replicable version transition.
+
+\textbf{Insight.} Addressability failure on a closed endpoint cannot be fixed retroactively once it has happened, but it can be detected in real time, and the design can be built so its headline claims never depend on an endpoint where that failure is possible in the first place.
+
+\textbf{Method.} The contract library is executed against pinned, individually addressable versions --- dated closed-API snapshots and permanently archived open-weight checkpoints --- at fixed decoding settings, drawing $n = 20$ samples per (contract, version) pair. Alongside every collection batch, a first-token top-$k$ logprob canary probe runs against the same endpoint; if it detects a mid-collection distributional shift, the affected batch is flagged and re-collected. Primary claims are anchored on open-weight lineages (permanently downloadable checkpoints, individually addressable by construction), with dated closed-API snapshot chains treated as a secondary, addressability-bounded arm rather than a claim of equal strength.
+
+\subsection{Within-Version Noise-Floor Estimator}
+\textbf{Challenge.} A contract's pass/fail outcome is realized through a stochastic generation and serving process --- even at temperature 0, serving-stack nondeterminism perturbs outputs --- so a raw count of pass-to-fail flips across a version transition cannot, by itself, distinguish a genuine upgrade effect from ordinary resampling variation.
+
+\textbf{Insight.} The same breakage-computation procedure, applied to a within-version split instead of a cross-version split, produces exactly the null distribution the cross-version claim needs to be compared against --- turning ``is this real or noise'' into an apples-to-apples statistical comparison rather than an assumed baseline.
+
+\textbf{Method.} For each version, the 20 samples collected per contract are split into two disjoint 10-sample halves, and the breakage computation is run between the halves exactly as it would be between two versions, yielding a pseudo-breakage rate that serves as the noise floor. To keep the two sides of the comparison at the same estimator granularity, the cross-version breakage statistic is additionally computed on disjoint 10-sample subsets per version --- matching the halves' $n = 10$ --- and this subsample-matched excess is the primary test statistic, with the full-sample ($n = 20$) cross-version rate reported alongside. Under the temperature-0 primary arm, the within-version variation this floor captures is serving-stack nondeterminism --- batching, kernel, and routing effects --- rather than sampling temperature; because such nondeterminism need not be exchangeable over time, the two halves are interleaved in collection order and a temporal-half floor (first 10 vs.\ last 10 samples) is computed alongside the split-half floor, and if the two diverge materially every breakage claim degrades to the larger, temporal-half floor as the conservative null. A version transition's breakage is reported only as the excess of the cross-version rate over this within-version floor, tested by a paired, multiple-comparison-corrected procedure across transitions and contract types.
+
+\subsection{Fragility Predictor Model}
+\textbf{Challenge.} Contract-level structural features that might explain fragility are mutually correlated --- a schema with deeper nesting tends to also carry more fields and more constraints --- so a naive per-feature correlation with breakage risks attributing an effect to the wrong feature entirely.
+
+\textbf{Insight.} A multivariate model that accounts for all candidate features jointly, evaluated with cross-validation that never lets near-duplicate contracts leak across folds, is what lets a per-feature claim survive both this collinearity and the inflation that comes from testing many features at once.
+
+\textbf{Method.} A mixed-effects logistic regression relates the per-contract breakage event to a pre-registered structural feature vector --- schema nesting depth, field count, required-field ratio, constraint count, few-shot example count, instruction token length, and delimiter/casing rule count --- plus contract type, with random intercepts for version transition and model family. Predictive utility is assessed separately via a gradient-boosted classifier under grouped cross-validation, with contracts grouped by family so near-duplicates never straddle a fold, and additionally under a leave-one-model-family-out split to test whether the fitted predictors generalize beyond the families they were fit on. The contract library's stratified sampling design deliberately spans the joint feature grid so that depth and constraint count are not perfectly correlated by construction.
+
+\subsection{Cheap-Signal Specificity Check}
+\textbf{Challenge.} Even a breakage effect that clears the within-version noise floor is not automatically evidence that a contract's own structure matters --- it could equally reflect a generic, contract-agnostic distributional shift in the endpoint that a much cheaper signal would predict just as well, which would make the constructed contract library redundant with existing cheap monitoring.
+
+\textbf{Insight.} The two signals answer genuinely different questions --- one is contract-agnostic and near-free to compute, the other is contract-specific and expensive to construct --- so only a direct, head-to-head predictive comparison on the same data can show whether the expensive signal is carrying information the cheap one misses, rather than asserting the distinction.
+
+\textbf{Method.} A first-token top-$k$ logprob two-sample detector is run on the same (contract, version) pairs used to fit the fragility model, and its own predictive AUC for per-contract breakage is computed. This AUC is compared directly against the structural fragility model's AUC on the same held-out data; contract-specific fragility is treated as isolated from the generic confound only if the structural model's AUC exceeds the cheap detector's by a pre-registered margin.
+
+\subsection{Mitigation Headroom Bound}
+\textbf{Challenge.} Existing mitigations for prompt-level fragility only guarantee part of what a contract requires --- grammar-constrained decoding, for instance, guarantees the schema tier by construction but leaves convention-tier and semantic-envelope failures untouched, and format restriction itself has been shown to shift task performance \citep{Tam2024LetMeSpeak}, so a constrained-decoding arm's tier-level delta bundles the structural guarantee with any such performance shift --- so a single aggregate mitigation number would conflate tiers that respond very differently to the same fix.
+
+\textbf{Insight.} Because the two candidate mitigations are different techniques answering the same underlying question --- how much of the measured breakage is a deployment choice rather than an inherent cost --- the informative comparison is a shared, tier-decomposed protocol run against the same unmitigated arm for both, not two independent, incomparable evaluations.
+
+\textbf{Method.} On the open-weight anchor lineages, the contract library is additionally executed under a grammar-constrained decoding arm (guaranteeing the schema tier while leaving the convention tier free to fail) and under a per-version prompt-recompilation arm, each compared, tier by tier, against the unmitigated arm on identical contracts via a paired statistical test.
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Datasets.} SchemaStore (schemastore.org) --- real-world JSON schemas, sampled and stratified by nesting depth and constraint count, sourcing the schema-contract genre with a naturally occurring feature distribution. JSONSchemaBench --- approximately 10{,}000 real-world JSON schemas, scaling the schema-contract genre beyond SchemaStore's coverage for the fragility model's power requirement. IFEval --- programmatically verifiable instruction constraints, sourcing the format-convention contract genre with an established, machine-checkable rule set. FollowBench --- multi-constraint instructions stratified by constraint count, sourcing contracts at the high end of the constraint-density range so that feature has enough variance in the library for its odds ratio to be estimable, since SchemaStore and JSONSchemaBench schemas alone skew toward moderate constraint counts. WildChat-1M --- real user--LLM conversations mined for production-style few-shot and structured-output templates, sourcing the few-shot-template genre from genuinely in-the-wild usage rather than authored examples. Berkeley Function Calling Leaderboard v3 --- function-calling structured-action contracts, extending coverage to the function-calling genre. Model version chains: dated OpenAI snapshots spanning the gpt-4o $\to$ gpt-4.1 $\to$ gpt-5 lineage as a secondary, addressability-bounded arm; Llama 2 $\to$ 3 $\to$ 3.1 $\to$ 3.3 and Qwen2 $\to$ Qwen2.5 $\to$ Qwen3 as the primary, permanently re-queryable open-weight anchor lineages.
+
+\textbf{Budget (design targets, not results).} The pilot stage implies 300 contracts $\times$ 3 versions $\times$ 20 samples $\approx$ 18{,}000 generations --- single-node vLLM-class inference, on the order of a GPU-day at production-style prompt lengths. The scale-up implies approximately 3{,}000 contracts $\times$ ${\sim}13$ versions $\times$ 20 samples $\approx$ 780{,}000 open-weight generations, plus the two mitigation arms re-run over their open-weight subsets and a closed-API secondary arm whose dollar cost is bounded by pre-registering a fixed contract subsample for that arm rather than executing the full library against paid endpoints. Any (transition $\times$ contract-type) cell whose collection cost would exceed this envelope is pre-declared INCONCLUSIVE-by-budget --- consistent with the pre-registered power/INCONCLUSIVE rule --- rather than silently dropped or partially collected.
+
+\textbf{Baselines} (sanity-check comparators, not competitors to beat --- this is a measurement study, and no research question here is framed as ``our procedure beats baseline X''). The within-version split-half noise floor is the necessary null every breakage claim is tested against. A first-token top-$k$ logprob detector, in the style of prior endpoint-change monitoring work, is the cheap-signal comparator: if it predicts breakage as well as the structural fragility model, the contract library adds nothing beyond what cheap monitoring already gives. A grammar-constrained decoding arm, implemented with an autoregressive-compatible constrained-decoding tool on the open-weight chains (borrowing the decoding-time-guarantee concept from prior constrained-decoding work for diffusion models, not its implementation, since the anchor lineages here are autoregressive), is the schema-tier mitigation upper bound. A declarative prompt-recompilation arm, in the style of prior per-version prompt-compilation work, is the recompilation mitigation baseline.
+
+\textbf{Metrics.} The noise-adjusted breakage rate $\Delta B$ and its statistical test outcome, per contract type; mixed-effects odds ratios with 95\% confidence intervals and grouped/leave-one-family-out predictive AUC for the fragility model; AUC for the cheap-signal detector; validator-vs-hand-label agreement; canary-triggered re-collection counts by lineage type; and tier-decomposed mitigated-vs-unmitigated breakage rates.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.6em]
+\item RQ1 --- Does the contract validator's pass/fail verdict agree with hand labels closely enough to serve as ground truth?
+\item RQ2 --- Is version addressability actually a risk that differs between closed-API and open-weight lineages?
+\item RQ3 --- Does measured breakage exceed the within-version noise floor, and does it vary by contract type?
+\item RQ4 --- Which contract-level structural features predict fragility?
+\item RQ5 --- Does measured fragility reflect contract-specific structure, or a generic distribution shift a cheap detector already predicts?
+\item RQ6 --- How much schema-tier breakage does grammar-constrained decoding remove?
+\item RQ7 --- How much total breakage does per-version prompt recompilation remove?
+\end{enumerate}
+
+\noindent\emph{Numbering note.} The pre-registered protocol headlines three research questions, H-RQ1--H-RQ3; they appear here as RQ3 (H-RQ1: breakage beyond the noise floor), RQ4 (H-RQ2: fragility predictors), and RQ6--RQ7 (H-RQ3: avoidable breakage, one numbered question per mitigation arm). RQ1, RQ2, and RQ5 promote the protocol's pre-registered instrument-validity checks --- validator calibration (A1), version addressability (A3), and the cheap-signal rival explanation (B-alt) --- into numbered questions of their own rather than leaving them as unnumbered assumption checks.
+
+\subsubsection{RQ1: Does the contract validator's pass/fail verdict agree with hand labels closely enough to serve as ground truth?}
+\textbf{Setup.} Before any measurement run, a held-out calibration set of hand-constructed positive and negative example outputs is scored by all three validator tiers (parse, schema, convention) and compared against the hand labels.
+
+\textbf{Expected outcome.} Validator-vs-hand-label agreement is at least 0.95, across all three tiers.
+
+\textbf{Falsification condition.} Refuted if agreement on the calibration set falls below 0.95 on any tier --- meaning the acceptance predicate does not track what a real downstream parser would decide closely enough for downstream breakage numbers to be trusted, and the strict/lenient boundary needs recalibration before any other RQ's results are meaningful.
+
+\textbf{Hypothesis (plain language).} The validator's pass/fail decision is a trustworthy stand-in for what a real downstream parser would do, not an arbitrary strictness choice.
+
+\textbf{Metrics.} Per-tier and overall validator-vs-hand-label agreement rate.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ2: Is version addressability actually a risk that differs between closed-API and open-weight lineages?}
+\textbf{Setup.} Across the full collection window, the first-token logprob canary probe is run beside every collection batch on both the open-weight anchor lineages and the closed-API dated-snapshot chains; the count of canary-flagged re-collection events is tallied per lineage type.
+
+\textbf{Expected outcome.} Open-weight anchor lineages trigger zero canary-flagged re-collection events across the collection window, while at least one closed-API dated-snapshot chain triggers at least one.
+
+\textbf{Falsification condition.} Refuted if canary-flagged events occur equally often (or more often) on open-weight lineages than on closed-API chains --- meaning the addressability risk this design anchors its primary claims around on open-weight lineages is not actually differentiating, and the choice to treat closed-API results as a secondary, addressability-bounded arm needs re-justifying.
+
+\textbf{Hypothesis (plain language).} Closed API endpoints carry a real, detectable addressability risk that permanently archived open-weight checkpoints do not.
+
+\textbf{Metrics.} Canary-flagged re-collection event count, per lineage type.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ3: Does measured breakage exceed the within-version noise floor, and does it vary by contract type?}
+\textbf{Setup.} Pilot stage: 300 contracts (100 schema, 100 format-convention, 100 few-shot-template), one open-weight lineage with at least three pinned successive versions, $n = 20$ samples per (contract, version), temperature-0 primary arm. Scale-up: approximately 3{,}000 contracts across at least ten version transitions and three model families. Per transition: two-sided paired-permutation test of $B(v{\to}v')$ against $B_{\text{null}}$ over contracts, Benjamini--Hochberg corrected across all (transition $\times$ contract-type) cells, $\alpha = 0.05$.
+
+\textbf{Sample-size rationale.} The pilot's 300 paired pass/fail observations per transition give a two-sided exact paired test over 0.9 power to separate $B = 5\%$ from $B_{\text{null}} = 1\%$ at $\alpha = 0.05$; the scale-up's approximately 3{,}000 contracts across ten-plus transitions is sized for the fragility model's power requirement in RQ4, not solely for this RQ.
+
+\textbf{Expected outcome.} For at least half of tested version transitions, $B(v{\to}v')$ significantly exceeds $B_{\text{null}}$; the pooled point estimate $\Delta B$ is at least 3 percentage points; and strict-envelope contract types (schema, convention) show larger $\Delta B$ than few-shot-template contracts, whose demonstrations redundantly anchor the output format.
+
+\textbf{Falsification condition.} Refuted if, across all tested transitions and contract types, $B(v{\to}v')$ is statistically indistinguishable from $B_{\text{null}}$ after correction --- i.e., if apparent cross-version breakage is no larger than same-version resampling variance, the central claim that upgrades measurably break contracts beyond noise is false, and the paper's finding would instead be a noise-adjusted upper bound on breakage rather than a demonstrated effect.
+
+\textbf{Hypothesis (plain language).} A real, non-noise fraction of contracts newly fails per upgrade, and it differs by how tightly a contract's format is constrained.
+
+\textbf{Metrics.} $B(v{\to}v')$, $B_{\text{null}}$, $\Delta B$ and its paired-test $p$-value, per contract type.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ4: Which contract-level structural features predict fragility?}
+\textbf{Setup.} Mixed-effects logistic regression of the per-contract breakage event on the pre-registered seven-feature vector plus contract type, with random intercepts for version transition and model family, fit over all scale-up breakage events; Wald tests on each feature, Benjamini--Hochberg corrected; predictive AUC assessed under grouped 5-fold cross-validation (grouped by contract family) and under a leave-one-model-family-out split.
+
+\textbf{Sample-size rationale.} Approximately 3{,}000 contracts across at least ten version transitions gives at least 0.8 power to detect a per-feature odds ratio of 1.3, per the pre-registered analysis plan.
+
+\textbf{Expected outcome.} At least one of \{schema nesting depth, constraint density\} has an odds ratio at least 1.3 with a 95\% confidence interval excluding 1 after correction; few-shot example count has an odds ratio below 1; leave-one-family-out predictive AUC is at least 0.65.
+
+\textbf{Falsification condition.} Refuted if no pre-registered feature attains a significant odds ratio after correction, or if grouped-cross-validation or leave-one-family-out AUC is indistinguishable from 0.5 --- meaning fragility is unpredictable from the proposed structural features and contract-design guidance cannot be derived from them, which would itself be an actionable negative result (regression testing cannot be prioritized by contract structure and must be treated as exhaustive).
+
+\textbf{Hypothesis (plain language).} How fragile a contract is to a version upgrade can be predicted, at least in part, from properties of the contract that are knowable before any model is ever queried.
+
+\textbf{Metrics.} Per-feature odds ratios with 95\% confidence intervals; grouped 5-fold and leave-one-family-out predictive AUC.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ5: Does measured fragility reflect contract-specific structure, or a generic distribution shift a cheap detector already predicts?}
+\textbf{Setup.} The first-token logprob two-sample detector is run on the same (contract, version) pairs used to fit the RQ4 fragility model; its own breakage-prediction AUC is computed on the same held-out split and compared directly against the structural model's AUC.
+
+\textbf{Expected outcome.} The structural fragility model's breakage-prediction AUC exceeds the cheap logprob detector's AUC by a pre-registered margin of at least 0.10.
+
+\textbf{Falsification condition.} Refuted if the AUC gap is below 0.10, or negative --- meaning breakage carries no detectable structure beyond what a near-free, contract-agnostic distribution-shift signal already predicts, which would undercut the practical case for building and maintaining the expensive contract library at all.
+
+\textbf{Hypothesis (plain language).} Knowing a contract's own structure adds real predictive power beyond simply knowing that the endpoint changed.
+
+\textbf{Metrics.} AUC gap between the structural model and the cheap detector, on identical held-out data.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ6: How much schema-tier breakage does grammar-constrained decoding remove?}
+\textbf{Setup.} On the open-weight anchor lineages, the schema-contract subset is re-run under a grammar-constrained decoding arm and compared, tier by tier, against the unmitigated arm on identical contracts via a paired permutation test.
+
+\textbf{Expected outcome.} Grammar-constrained decoding removes at least 90\% of schema-tier breakage, reflecting that it guarantees schema conformance essentially by construction, while convention-tier breakage on the same contracts remains largely untouched.
+
+\textbf{Falsification condition.} Refuted if the schema-tier breakage reduction is below 90\%, or non-significant --- meaning schema-tier breakage is not, in fact, dominated by failures a decoding-time guarantee can eliminate, undercutting the case for this mitigation as a near-complete fix for that tier.
+
+\textbf{Hypothesis (plain language).} Most schema-tier breakage is avoidable by a decoding-time guarantee, not an inherent property of the model's behavior.
+
+\textbf{Metrics.} Schema-tier $B_{\text{mitigated}}$ versus $B_{\text{unmitigated}}$, paired over identical contracts.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ7: How much total breakage does per-version prompt recompilation remove?}
+\textbf{Setup.} On the open-weight anchor lineages, the full contract library is re-run with a per-version, declaratively recompiled prompt and compared against the unmitigated, frozen-prompt arm on identical contracts via a paired permutation test on total $B(v{\to}v')$.
+
+\textbf{Expected outcome.} Per-version prompt recompilation yields at least a 25\% relative reduction in total $B(v{\to}v')$, significant at $\alpha = 0.05$.
+
+\textbf{Falsification condition.} Refuted if the relative reduction is below 25\%, or non-significant --- meaning re-optimizing the prompt per version does not meaningfully offset upgrade-induced breakage, and the residual breakage would need to be attributed to failure modes neither decoding-time guarantees nor prompt re-optimization reach.
+
+\textbf{Hypothesis (plain language).} Re-deriving the prompt for each new model version meaningfully, but only partially, reduces breakage relative to keeping the same prompt frozen across versions.
+
+\textbf{Metrics.} Total $B_{\text{mitigated}}$ versus $B_{\text{unmitigated}}$ under recompilation, paired over identical contracts.
+
+\textbf{Result.} \ph
+
+\vspace{0.5em}
+\noindent\textbf{Further evaluation.} With more time, a natural extension is a live, continuously updated monitoring deployment that runs the validator and noise-floor comparison automatically against each new provider release as it ships, rather than the fixed set of pre-selected version transitions studied here --- explicitly out of scope in this design because it would require solving version-addressability and canary-triggered re-collection as an always-on operational system rather than a bounded measurement study, a different engineering problem from the one this paper's harness is built to answer.
+
+\section{Related Work}
+
+The closest prior work to this paper is Chen, Zaharia, and Zou's study of ChatGPT's behavior over time \citep{ChatGPTDrift2307}, with the LogProbTracking endpoint-monitoring work \citep{LogProbTracking} as a close second, and it is worth stating the delta plainly before surveying the wider landscape: the ChatGPT-behavior study already documents large, task-dependent behavior and format-compliance shifts between two model snapshots, and LogProbTracking already treats detecting whether an endpoint's response distribution has changed at all as an open monitoring problem --- but neither one constructs a library of production-style contracts, computes a per-upgrade breakage rate against a validator, or asks which contract features predict fragility, which is precisely the downstream, contract-level measurement this paper is built to close.
+
+\textbf{Endpoint-behavior drift and monitoring.} The ChatGPT-behavior study \citep{ChatGPTDrift2307} evaluates successive snapshots of the ``same'' deployed service on a fixed task suite and documents substantial, task-dependent shifts; LogProbTracking \citep{LogProbTracking} instead treats change detection itself as the object of study, repeatedly querying an endpoint with a fixed minimal prompt and applying a nonparametric two-sample test over first-token logprobs to flag when the underlying serving stack has changed. Both establish that model behavior drifts and that the drift is detectable, but neither yields a per-upgrade breakage \emph{rate} over a designed contract library, a per-contract-type decomposition, or fragility predictors --- the downstream consequence of the drift both works document remains, in each case, unmeasured; LogProbTracking still ranks as the closer second (over EPC, below) because it targets the same broad artifact class this paper does --- raw LLM API responses --- rather than a narrower downstream artifact. A closely related versioned-protocol design, EPC \citep{EPCEvaluatorPreference0297}, standardizes measurement of silent version-to-version drift for a different, narrower artifact --- LLM-as-judge evaluator preferences, anchored to model version identifiers and expiration dates --- rather than structured-output contract pass rates; its versioned-protocol discipline is nonetheless the closest mechanism-level analogue to this paper's version-paired harness outside the endpoint-monitoring literature proper. A broader organizational-risk framework \citep{RiskArchitectureAI1421} independently motivates this gap from the deployment side, arguing that conventional threshold-based alerting is blind to exactly the ``behavior drifts silently, no process detects it'' failure mode this paper measures directly.
+
+\textbf{Input-side prompt robustness.} Work on intrinsic prompt-noise resistance and sharpness-aware prompt evolving \citep{CoIPO,TARE} both study the dual direction of this paper's setting: the model is held fixed while the prompt's wording is perturbed, and robustness is scored against that perturbation. The upgrade setting studied here is the exact converse --- the prompt is held fixed while the model varies underneath --- so neither work's robustness scores can be read as predictions of upgrade survival; the confound this duality creates for causal attribution is exactly what this paper's cheap-signal specificity check is built to isolate. A structured-output-specific instance of the same duality appears in work on column-type-annotation prompt robustness \citep{RobustLLMBased2742}, which shows prompt-template sensitivity persists even after fine-tuning on a fixed model; complementing this, work on few-shot example count in LLM-based generation \citep{EnhancingLLMBased4120} reports a non-monotonic, occasionally catastrophic relationship between few-shot count and generation stability (a small increase in example count can collapse success rate), which directly informs and complicates this paper's use of few-shot example count as a fragility-predictor feature rather than a simple monotonic covariate.
+
+\textbf{Constraint verification and constrained decoding.} Work building executable, programmatic constraint checkers for instruction-following \citep{RECAST,AutoIF}, and work extending constrained decoding to guarantee structural conformance at the decoder level \citep{DiffusionCFG}, both supply real machinery this paper's validator and mitigation arms build on. But the constraint-verification work applies its checkers only at a single, fixed model snapshot as a training-time reward or filter signal, never longitudinally across successive versions of the same model; and the constrained-decoding work's published guarantees are specific to the model family it targets, so its role here is as a conceptual lineage for the decoding-time-guarantee mitigation arm rather than a directly reused implementation. A related multi-agent tool-use data-synthesis approach \citep{CloseLoopSynthesizing3611} shares this paper's schema-conformance concern (strict JSON/MCP adherence) but as a training-data objective rather than a longitudinal measurement target. Neither applies its machinery to the longitudinal breakage question this paper measures.
+
+\textbf{Prompt compilation and weight-space version fragility.} Declarative prompt-compilation work \citep{DSPy} argues, in its own stated motivation, that hand-written prompt templates are brittle and do not transfer cleanly across models, offering re-compilation as a mitigation --- but it never quantifies the breakage phenomenon itself, leaving the cost and benefit of recompiling per model version asserted rather than measured, which is exactly what this paper's mitigation-headroom arm tests directly. Separately, work on compression-aware, robust adapters for evolving base models \citep{CARLoRA} establishes that \emph{weight-space} downstream artifacts (trained adapters) degrade when a base checkpoint changes --- a different artifact class from the prompt- and contract-space fragility this paper measures, which is where most production LLM integrations actually live.
+
+\textbf{Longitudinal measurement methodology.} A longitudinal benchmark for malware concept drift \citep{LAMDA} supplies the methodological template this paper's version-paired protocol borrows --- a consistent representation and a temporally structured evaluation across many time points --- but for a different artifact class (Android malware) with no analogue yet for LLM contract behavior across model versions; this paper's version-paired harness and noise-floor design is the adaptation of that template to this setting. Two further exemplars ground the noise-floor design specifically: paired-seed variance-reduction analysis for comparing two stochastic system variants \citep{WhenDoesPairing4145} supplies directly transferable statistics for isolating a true effect from within-run sampling noise, and a composite-reliability-score study for open-source LLMs \citep{BeyondHallucinationsComposite4058} demonstrates, via bootstrap confidence intervals, the same discipline this paper's noise floor enforces --- that small score differences are not automatically meaningful differences. To state the positioning plainly: the split-half within-version null is conceded as standard paired-resampling practice in this lineage, not claimed as new machinery --- the contribution is the estimand this null is put in service of, a per-upgrade contract breakage rate that no work in any of the strands above computes.
+
+\section{Threats to Validity}
+
+\textbf{Construct validity.} The breakage/pass/fail construct rests on the three-tier validator's strictness boundary, which is itself a calibrated design choice rather than a mechanically given fact for the convention and few-shot tiers; RQ1's $\geq 0.95$ hand-label agreement threshold, checked before any other RQ is interpreted, is the mitigation, and a sensitivity sweep over the strictness boundary is pre-registered as a companion check rather than a single untested cutoff.
+
+\textbf{Internal validity.} The central confound --- mistaking ordinary within-version sampling variation for a genuine upgrade effect --- is addressed by construction: every breakage claim is reported only as an excess over $B_{\text{null}}$, computed by applying the identical validator to a within-version split-half rather than assumed as a fixed baseline (Section~3.3). A second, distinct confound --- a real cross-version effect that is nonetheless generic and contract-agnostic rather than contract-specific --- is addressed by the RQ5 head-to-head comparison against a cheap logprob-based detector, not left as an unexamined alternative explanation.
+
+\textbf{External validity.} Primary claims are anchored on open-weight model lineages precisely because closed-API version identifiers are not reliably re-queryable after the fact (Section~3.2); this means the headline breakage estimate may not transfer unchanged to the closed-API-dominant deployments many production teams actually run, where the addressability problem this design sidesteps is unavoidable. Closed-API results are reported only as a secondary, addressability-bounded arm rather than folded into the primary estimate, so this limitation is disclosed rather than hidden, but it does bound how directly the headline number generalizes to the most common production setting. Separately, the fragility model's seven-feature vector is necessarily a fixed, finite list (Conclusion); a feature that matters in practice but was not pre-registered cannot be detected by this design.
+
+\textbf{Conclusion validity.} Every per-transition, per-contract-type, and per-feature test is Benjamini--Hochberg corrected for multiple comparisons (Sections~4.3.3--4.3.4), and any (transition $\times$ contract-type) cell that falls short of its pre-declared power target is reported as \textsc{inconclusive} rather than folded into a null or a positive verdict, per the pre-registered power/INCONCLUSIVE rule --- an underpowered cell is never silently treated as evidence of no effect.
+
+\section{Conclusion}
+
+This work reframes a silent engineering assumption --- that a structured-output contract's behavior survives whatever the provider does to the model underneath --- as a directly measurable quantity with a precise identifiability structure, rather than something teams discover only after it breaks in production. The central methodological wager is that ``did the upgrade break this contract'' and ``did this contract flip on ordinary resampling'' are the same measurement applied to two different partitions of the same output pool, so a credible breakage number can only ever be an excess over that within-version comparison, never a raw flip count; a design that skips this step risks mistaking sampling noise for an upgrade effect. Whichever noise-adjusted rate is actually measured, the finding is decision-relevant either way: a rate indistinguishable from noise would mean structured-output contracts are considerably more upgrade-robust than the endpoint-drift literature implies, while a rate that clears the noise floor --- together with validated structural predictors and a bounded avoidable share --- gives engineering teams a concrete basis for deciding which contracts to re-test before adopting a new model version, rather than treating regression testing as either unnecessary or exhaustive. Two limitations bound this claim from the outset and are natural next steps rather than afterthoughts: closed-API version chains can be deprecated or changed silently mid-study, which is why primary claims are anchored on open-weight lineages and closed-API results are reported only as a secondary, addressability-bounded arm; and the fragility model's feature set, while pre-registered and decorrelated by the library's sampling design, is necessarily a fixed, finite list --- a richer or learned feature representation is the natural next methodological target if the pre-registered seven features prove insufficiently predictive.
+
+{\small\bibliography{refs}}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section*{Pre-handoff checklist}
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Organization/navigation} --- narrative flows problem $\to$ method $\to$ experiments $\to$ related work without forward references to undefined terms.
+\item \textbf{Terminology discipline} --- ``contract,'' ``breakage rate,'' ``noise floor,'' ``fragility,'' ``addressability'' each defined at first use in Problem Definition, used consistently thereafter; no internal stage IDs (\texttt{sp\_*}, \texttt{m\_*}, \texttt{rq\_*}) leaked into prose --- checked directly against the discussion pipeline log.
+\item \textbf{Notation with worked example} --- the formal setup section defines $(c, T, D, A, L, v, \hat{p}, B, B_{\text{null}}, \Delta B)$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+\item \textbf{RQ framing matches outcomes} --- all 7 RQs are graded/quantitative (rates, odds ratios, AUC gaps, agreement proportions), each answered in its own subsection with an explicit falsifiable expected outcome and a distinct falsification condition, not a binary yes/no.
+\item \textbf{No typesetting artifacts} --- only explicit placeholder markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+\item \textbf{Artifact plan} --- the contract library, validators, execution harness, and archived raw model outputs are the natural release artifacts; not yet built, so not claimed as available.
+\end{itemize}
+
+\section*{Hand-off}
+This is a draft, not a finished paper --- experiments have not run. Natural next steps: prose polish and venue-specific LaTeX formatting once a target venue is chosen, or revising an earlier stage if piloting surfaces a problem (e.g., if the validator-agreement rate in RQ1 is much lower than expected).
+
+\end{document}

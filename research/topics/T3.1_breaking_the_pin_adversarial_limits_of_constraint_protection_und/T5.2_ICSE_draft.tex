@@ -1,0 +1,321 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{balance}
+
+% ---- placeholder + hypothesis-comment machinery ----
+% \ph{...}  = pre-registered result slot, filled only after the run; bound to a hypothesis in the pre-registration.
+% \wj{...}  = standpoint comment: what we expect, why, and what each outcome would mean. Stripped before camera-ready.
+\newcommand{\ph}[1]{\colorbox{yellow!35}{\small$\langle$\textsf{#1}$\rangle$}}
+\newcommand{\wj}[1]{{\color{blue}\footnotesize\textbf{[WJ:} #1\textbf{]}}}
+\newcommand{\dmsr}{\mathrm{DMSR}}
+\newcommand{\fsr}{\mathrm{FSR}}
+\newcommand{\fms}{\mathrm{FMS}}
+\newcommand{\eqb}{\mathrm{EQ}_B}
+
+\begin{document}
+
+\title{Why Tests Cannot See Design:\\A Structural Account of What Test Suites Fail to Express}
+
+\author{\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockA{Anonymous Institution(s)\\anonymous@example.org}}
+
+\maketitle
+
+\begin{abstract}
+A test verdict is near-constant on each functional-equivalence class of programs, yet design conventions---naming, module layering, event ordering---vary \emph{within} those classes: a behavior-preserving convention violation is therefore a candidate for a structural blind spot that no added functional test can close. We formalize this boundary and measure it. A dual-oracle procedure isolates \emph{certified design mutants}---program variants certified functionally equivalent by differential execution independent of the suite under study, and certified convention-violating by machine-readable rule checkers independent of both---and gates them through the unmodified test suites of \ph{N=12} mature open-source Java and Python systems. A seeded behavioral-mutant calibration arm attaches an empirical false-equivalence bound to every survival number; a matched convention-neutral control separates design-specific blindness from the generic equivalent-mutant effect; and a capability-matched suite-augmentation arm, analyzed as a pre-registered equivalence test rather than a failure-to-reject, distinguishes a structural expressiveness limit from a quantity limit. Certified design mutants survive at \ph{DMSR=XX\%} against a functional survival rate of \ph{FSR=YY\%} on the same suites (\ph{$\Delta$=ZZ} points; mixed-effects OR \ph{OR}, 95\% CI \ph{CI}); survival is \ph{design-specific / equivalence-driven}, \ph{structured by non-locality / undifferentiated}, and \ph{bounded within $\pm$0.10 of unchanged / reduced} under a stronger suite. \ph{PP\%} of surviving design mutants sit in code the suite demonstrably \emph{verifies} under checked coverage---the suite checks the computation and still cannot see the violation. The result is a mechanical, per-category account of which design properties a green test suite cannot certify: the precondition for using tests to gate coding-agent changes.
+\end{abstract}
+
+\begin{IEEEkeywords}
+mutation testing, test adequacy, design conformance, software architecture, coding agents, empirical software engineering
+\end{IEEEkeywords}
+
+% =====================================================================
+\section{Introduction}\label{sec:intro}
+
+Coding agents now propose, and increasingly commit directly, changes to production codebases, and in most teams the decision to accept such a change rests on a single signal: does the existing test suite still pass. The gate is cheap to run and unambiguous to read---a red build is a decision, and the suite already exists. Precisely because it is so convenient, it is worth asking what the gate can and cannot see, rather than assuming it sees everything that matters.
+
+A test verdict is, in practice, almost entirely a function of a program's observable input/output behavior, and is therefore near-constant across an entire class of programs that behave identically. Design conventions---how things are named, which module may call which, in what order two operations must run---are free to vary \emph{within} that same behavior-equivalence class. A change that renames a class against a documented convention, routes a call across a layering boundary it must not cross, or reorders two operations whose final output is unaffected, can be behaviorally invisible to the suite while being exactly the kind of change a codebase's design intent forbids. This is an asymmetry, not a truism: real suites \emph{do} leak structure-sensitivity---literal-identifier assertions, mock call-order checks, reflection---which is exactly why the boundary's \emph{location} must be measured rather than assumed. Whether the gap is real, and which categories of design property fall inside it, has never been directly measured---only asserted, in one direction or the other.
+
+Classical adequacy measures cannot answer this, because each was built for behavior. Mutation testing scores a suite by whether it kills \emph{behavior-changing} mutants~\cite{jia2011analysis}; a variant that is functionally right but design-wrong is an equivalent mutant by definition---outside the model, not merely unscored. Test-generation methods trained with a discrimination reward score a suite by its ability to reject \emph{functionally incorrect} code~\cite{utrl}, so a convention-violating but behaviorally identical variant is, by that reward's own construction, always accepted rather than flagged. The nearest instrument, checked coverage~\cite{schuler2011checked}, measures the fraction of executed code whose computed result a suite actually \emph{verifies}---but it is scoped to what a single execution's output--assertion pair checks, and cannot speak to a property that is invisible across an entire behavior-equivalence class rather than merely unchecked within one run; in Section~\ref{sec:results-cc} we measure this contrast directly rather than asserting it. Architecture-conformance tools and static checkers \emph{can} flag design violations~\cite{murphy2001reflexion}, but they are studied as separate machinery precisely because the suite is presumed unable to check design---never turned around to measure, through the suite itself, how much of that space is invisible to it. And a growing empirical cluster documents that code quality erodes \emph{under} passing test gates in agentic workflows~\cite{slopcodebench,constraintdecay}; that work measures agent behavior downstream of the gate, whereas the question of what the gate can express \emph{at all}, agent-free, remains open. As a result, the field has no mechanical answer to a basic question: \textbf{which categories of design property are structurally invisible to ordinary test suites, and by how much?}
+
+We answer it by isolating a new experimental object---the \emph{certified design mutant}---and measuring the boundary directly. A design mutant is a program variant admitted to the measured set only when two oracles \emph{independent of the suite under study} agree: a bounded differential-execution check, against an input corpus generated independently of the suite and validated by a seeded behavioral-mutant calibration arm, certifies it behavior-preserving; and a machine-readable rule checker shipped with the subject project certifies it convention-violating. Because admission is never decided by the instrument being evaluated, ``the suite missed this'' becomes a claim about the suite, not about the certifier. We construct such mutants across three categories---naming (NAM), layering/cross-cutting (LAY), and temporal/ordering (TMP)---by rule-guided transformation of each project's own convention configurations, run each system's unmodified suite against them, and report per-category Design-Mutant Survival Rate ($\dmsr$) against the same suite's functional survival rate ($\fsr$). Three pre-registered contrasts separate effects usually conflated: the $\dmsr$-vs-$\fsr$ contrast asks whether the suite is \emph{specifically} weaker on design than on function; a matched convention-neutral control asks whether survival is design-specific or merely the generic equivalent-mutant effect; and a capability-matched augmentation arm---analyzed as an equivalence test, not a failure-to-reject---asks whether the gap is structural or would close under stronger functional tests. A category is reported as a genuine, design-specific, structural blind spot only when all three conditions hold jointly, each mapped to a binary hypothesis with pre-committed fallback wording fixed before any data existed.
+
+Across \ph{N=12} mature open-source Java and Python systems shipping machine-readable conventions, certified design mutants survive the unmodified suite at \ph{DMSR=XX\%}, against a functional survival rate of \ph{FSR=YY\%} on the same suites---a gap of \ph{$\Delta$=ZZ points} (mixed-effects OR \ph{OR}, 95\% CI \ph{CI}, design-vs-functional effect significant at $\alpha{=}0.05$). The gap is design-specific: kill probability differs from the matched convention-neutral control by \ph{<5 pts}. It is structural: after a capability-matched augmentation raising functional mutation score by \ph{$\geq$10 pts}, the survival reduction for non-local categories is bounded within \ph{$\pm\delta$, $\delta{=}0.10$} by a two-one-sided-tests procedure. Survival is \ph{structured by non-locality}: \ph{$\dmsr_{\mathrm{TMP}} \approx \dmsr_{\mathrm{LAY}} > \dmsr_{\mathrm{NAM}}$}, with naming caught largely incidentally (incidental-kill fraction \ph{IKF=MM\%}). And \ph{PP\%} of surviving design mutants sit in code that checked coverage rates as \emph{verified}---the suite checks the computation there and still cannot see the violation.
+
+This is not a new leaderboard for test generation; it is the measurement of an expressiveness boundary. The deployment implication is direct: a green suite remains a useful functional gate, but it should not be read as a certificate of design compliance for a coding agent's change unless the relevant design properties are backed by oracles independent of the suite.
+
+\textbf{Contributions.}
+\begin{enumerate}[leftmargin=1.4em]
+\item \textbf{The certified design mutant and its dual-oracle admission criterion}: a program variant certified simultaneously behavior-preserving and convention-violating from sources independent of the suite under study, with an empirically calibrated false-equivalence bound---turning ``the suite missed this'' into a claim about the suite rather than the certifier, and preventing the measurement from collapsing into either ordinary mutation testing or static design checking.
+\item \textbf{An empirical map of the design blind spot}: across NAM/LAY/TMP categories over \ph{N} systems in two ecosystems, which design properties mature suites cannot see, at what rate, with what category structure---\ph{non-local categories surviving XX pts more than naming}---and the demonstration that \ph{PP\%} of the surviving violations sit in code the suite verifiably checks.
+\item \textbf{A matched convention-neutral control} isolating design-specific blindness from the generic difficulty of killing any equivalent mutant.
+\item \textbf{An equivalence-test (TOST) formulation of the structural-vs-quantity question}, replacing an unfalsifiable failure-to-reject with a positive, powered claim that the gap is bounded under a capability-matched stronger suite; plus an extension of the classical output-diff kill criterion to trace-order assertions, making temporal violations measurable at all.
+\item \textbf{A fully pre-registered design} with binary hypotheses, pre-committed fallbacks, outcome-independent exclusion rules, and a released harness, corpus, and rule sets.
+\end{enumerate}
+
+% =====================================================================
+\section{Motivating Example}\label{sec:motivation}
+
+A coding agent is asked to modify a mature codebase. It produces a patch, the project's tests pass, and the change looks safe to merge. Functionally, the conclusion is sound: the checked inputs still produce the expected outputs. But the patch introduces a dependency from the UI layer straight into the persistence layer, renames a factory class against local convention, and reorders a logging and a validation step in a way that leaves the final output identical while contradicting the project's intended protocol. None of these alters any output the suite observes. Each is exactly the kind of change a human reviewer routinely rejects---and the green suite reports none of them.
+
+The gate is load-bearing precisely as its blind spot becomes consequential. When a human authored a patch, tests were one signal among several: maintainers also inspected naming, modularity, architecture, and consistency with local convention. As agents author and modify code at volume, teams reach for executable tests as the main \emph{scalable} gate, and the surrounding human signals thin out. If suites cannot express whole classes of design constraint, a green run supplies false assurance---the patch is behaviorally acceptable but design-incompatible---and, unlike a functional regression, a convention violation that ships leaves no failing test behind to catch it later.
+
+``Tests miss design'' is folklore until it is measured. Architecture-conformance tools exist \emph{because} the suite is presumed blind to layering; specification-and-proof pipelines exist \emph{because} tests are presumed to under-express intent---but presuming is not measuring, and none reports, through the suite itself, \emph{which} property classes are invisible and by how much. The difference between ``tests miss some design properties'' and ``tests miss temporal ordering at $\dmsr = \ph{XX\%}$ while catching naming largely incidentally'' is the difference between a slogan and an instrument a team can act on. Replacing the impression with a per-category, effect-sized boundary is the contribution; the mutation machinery is only how we locate it.
+
+Two things make a suite-independent measurement feasible now. First, mature systems increasingly ship their conventions as \emph{machine-readable configurations} (Checkstyle, ArchUnit, flake8, import-linter), giving a violation oracle independent of the suite and grounded in the project's own documented intent rather than invented ad hoc. Second, differential execution against an independently generated input corpus gives a bounded equivalence oracle disjoint from what the suite exercises---and, critically, one whose error rate can itself be \emph{measured} by seeding known behavioral changes through the same pipeline (Section~\ref{sec:oracle-fort}). Requiring both certifications from outside the instrument removes the fatal circularity: without independence, ``the suite didn't kill it'' and ``it was never actually a violation'' are indistinguishable and every survival number is uninterpretable.
+
+% =====================================================================
+\section{Problem Definition}\label{sec:problem}
+
+\textbf{Formal setup.} Consider a subject program $P$ with an existing, unmodified test suite $T$, and a candidate mutant $m$ of $P$ belonging to a design-constraint category $c \in \{\text{NAM}, \text{LAY}, \text{TMP}\}$. Let $K_T(m) \in \{0,1\}$ denote whether $T$ kills $m$ (some test fails; the TMP kill criterion is extended to trace-order assertions, Section~\ref{sec:tmp-kill}). Let $\eqb(m) \in \{0,1\}$ denote \emph{bounded functional equivalence}---certified against $P$ by differential execution over an input corpus of budget $B$ generated independently of $T$---and let $V(m) \in \{0,1\}$ denote whether an independent, machine-readable rule checker (the naming/layering/trace-order rules shipped with the subject project) flags $m$ as violating its target convention.
+
+The \textbf{admitted design-mutant set} is
+$D_c = \{m : \mathrm{op}(m) \in c,\ \eqb(m)=1,\ V(m)=1\}$;
+the \textbf{matched neutral set}
+$N_c = \{m : \mathrm{op}(m) \in c,\ \eqb(m)=1,\ V(m)=0\}$
+shares operator family and locality footprint but violates no declared rule. The per-category \textbf{Design-Mutant Survival Rate} is
+\[
+\dmsr_c \;=\; \frac{|\{m \in D_c : K_T(m)=0\}|}{|D_c|},
+\]
+contrasted against $T$'s Functional Mutation Score $\fms$ under default operators (survival $\fsr = 1-\fms$).
+
+\textbf{Estimand.} The quantity of interest is the per-category contrast $\dmsr_c - \fsr$, together with its response to (i) the matched neutral control and (ii) a capability-matched suite augmentation. Unit of analysis: one admitted mutant, nested in (category $\times$ system). Reference population: mature open-source Java/Python systems shipping machine-readable convention configurations with $\fms \geq 0.40$. The decision it feeds: whether ``a green test suite certifies design compliance'' is a licensed inference for gating coding-agent changes, per category and overall.
+
+\textbf{When a blind spot is claimed.} A category is reported as a genuine, design-specific, \emph{structural} blind spot only if three conditions jointly hold: (a) $\dmsr_c$ clears a pre-registered gap over $\fsr$; (b) the gap is not reproduced when comparing kill probability between $D_c$ and $N_c$ (ruling out the generic equivalent-mutant effect); and (c) the survival reduction after capability-matched augmentation is bounded within a pre-registered equivalence margin (ruling out a quantity-limited explanation). Failing (a): not classifiable as a blind spot. Failing (b) alone: equivalence-driven, not design-specific. Failing (c) alone: quantity-limited, not structural.
+
+\textbf{Why this is hard.} Certifying membership in $D_c$ requires that both $\eqb$ and $V$ come from sources independent of $T$---otherwise ``$T$ failed to kill $m$'' and ``$m$ was never actually a violation (or never equivalent)'' cannot be told apart. $\eqb$ is decidable only up to budget $B$, never absolutely; its residual error must therefore be \emph{measured}, not assumed (Section~\ref{sec:oracle-fort}). LAY requires operators that move a call relative to a module boundary while leaving the call multiset---hence observable behavior---unchanged. TMP exposes a gap in the classical kill criterion itself: an output-diff kill cannot, by construction, register an ordering violation that leaves final output unchanged. And every $m \in D_c$ is by definition also a classical equivalent mutant, so a raw $\dmsr$-over-$\fsr$ gap alone cannot distinguish design-blindness from generic equivalent-mutant difficulty---which is exactly what the matched-neutral comparison is for.
+
+% =====================================================================
+\section{Study Design}\label{sec:design}
+
+The measurement is one pipeline governed by one rule: a candidate variant enters the measured record only once two ground-truth sources outside the suite under study agree it belongs there. This section specifies each component; every threshold below was fixed before any mutant was generated, and the full pre-registration (hypotheses, fallbacks, exclusion rules, analysis code) is in the artifact.
+
+\subsection{Rule-Guided Mutant Generation}\label{sec:generation}
+
+\textbf{Challenge.} If candidate mutants were proposed by a learned model, a selection effect would enter before admission ever runs: the generator would propose only violations of kinds it ``knows,'' biasing the category profile at the source.
+
+\textbf{Design.} Generation is \emph{rule-guided and generator-free}: the violation oracle's own rule set defines the operator space. For each machine-readable rule $r$ in the project's shipped configuration, we derive the operator that minimally falsifies $r$ while preserving behavior:
+\begin{itemize}[leftmargin=1.2em]
+\item \textbf{NAM}: rename-only refactorings that break a documented identifier rule (e.g., rename a \texttt{*Factory} class to a non-conforming name, propagating all references)---behavior-identical, Checkstyle-visible.
+\item \textbf{LAY}: relocate or reroute a call across a declared module/layer boundary while preserving the call multiset (e.g., a UI-layer method invoking a persistence class directly)---ArchUnit/import-linter-visible.
+\item \textbf{TMP}: reorder two output-commutative operations whose required order is declared (e.g., \texttt{validate(); log();} $\to$ \texttt{log(); validate();})---trace-monitor-visible.
+\end{itemize}
+Candidate sites are enumerated \emph{exhaustively per rule} where the site count permits, and \emph{uniformly random-sampled} to the per-cell candidate budget otherwise; no model curates or ranks candidates. The mapping from rule to operator, the enumeration order, and the sampling seed are all fixed in the pre-registration, so the category profile is a property of the project's own declared conventions, not of any generator's prior.
+
+\subsection{Dual-Oracle Admission}\label{sec:dualoracle}
+
+\textbf{Challenge.} Neither behavioral equivalence nor convention violation has a ground-truth source inside the object being measured.
+
+\textbf{Design.} A candidate is admitted iff (i) $\eqb(m)=1$: differential execution over an input corpus of budget $B \geq 10{,}000$ inputs per system, generated by tools disjoint from the subject suite (EvoSuite, Randoop, fuzzing), observes no behavioral difference from $P$; and (ii) $V(m)=1$: the project's own rule checker flags the target rule. Both oracle verdicts, with the full $(\eqb, V, K_T)$ triple per mutant, are machine-readable and released; no human sits in the verdict loop. Checker validity is gated: rules are grounded in the project's shipped configuration, thresholds refined on a held-out calibration subsample before the audit sample is drawn, then validated against \emph{two independent human raters} on a stratified sample ($n \geq 300$ across categories), requiring precision $\geq 0.90$ \emph{and} $\kappa \geq 0.7$, with disagreement structure inspected for adjacent-rule (acceptable) versus collapsed (unacceptable) confusion. The rule set is hash-frozen before scale-up. A category failing any part of this gate is demoted to exploratory.
+
+\subsection{Fortifying the Equivalence Oracle}\label{sec:oracle-fort}
+
+\textbf{Challenge.} The single existential threat to the whole design: a surviving ``design mutant'' may be an untested behavioral regression, because differential execution over a finite corpus is a bounded oracle. If the oracle's error is unknown, every survival number is uninterpretable.
+
+\textbf{Design---three layers, each pre-registered.}
+\begin{enumerate}[leftmargin=1.4em]
+\item \textbf{Local coverage target.} Because each mutant is a local edit, the oracle need only be strong \emph{at the mutated region}, not globally. The differential corpus must achieve \ph{$\geq$95\%} branch coverage of the mutated region (the edited method(s) plus their direct callers); corpus generation iterates until the target is met or the candidate is discarded as \emph{uncertifiable} (reported, never silently dropped).
+\item \textbf{Seeded behavioral-mutant calibration arm.} On every subject system we inject $n_{\mathrm{cal}} = \ph{200}$ known behavior-\emph{changing} mutants (default PIT/mutmut operators, verified non-equivalent by a distinguishing input) through the \emph{identical} differential pipeline, and report the catch rate $\mathrm{CR}$: the fraction the oracle correctly flags as non-equivalent. This attaches an empirical false-equivalence bound to every survival figure: at most $(1-\mathrm{CR})$ of surviving design mutants could be misclassified behavioral changes. Every $\dmsr$ in this paper is reported alongside its system's $\mathrm{CR}$, and the headline contrast is additionally recomputed under the worst-case correction $\dmsr_c^{\downarrow} = \max(0, \dmsr_c - (1-\mathrm{CR}))$. \wj{This is the load-bearing defense. Standpoint: CR should land \ph{$\geq$0.95} for the structurally-guaranteed operator families (pure renames, verified-commutative swaps) because those edits are near-trivially distinguishable when they do change behavior; if CR falls below 0.90 on any system, that system's mutants are re-filtered to the structurally-guaranteed subfamilies and, failing that, demoted to exploratory---the same symmetric treatment the violation checker gets. A reviewer attack of ``your survivors are just untested bugs'' is answered with a number, not an argument.}
+\item \textbf{Independent second check on a subsample.} For a stratified \ph{10\%} subsample of admitted mutants (all categories, all systems), equivalence is re-certified by an independent differential-fuzzing equivalence tool~\cite{dristi2026}, and the disagreement rate reported. Additionally, 100 randomly sampled \emph{surviving} mutants per ecosystem are manually audited; a mislabel rate $\geq 5\%$ on any system triggers the same subfamily-restriction-then-demotion ladder as layer 2.
+\end{enumerate}
+
+\subsection{Extended Temporal Kill Criterion}\label{sec:tmp-kill}
+
+\textbf{Challenge.} The classical kill is a final-output difference; an ordering violation between output-commutative operations is, by that definition, invisible to any test.
+
+\textbf{Design.} TMP mutants count as killed if any test fails, \emph{including} tests whose assertions constrain trace order (mock call-order verification, event-sequence assertions), detected via an instrumentation monitor independent of the suite's own machinery. This extension is what makes the TMP category measurable at all; without it, $\dmsr_{\mathrm{TMP}}$ would be inflated by construction. \wj{Standpoint: the extension biases \emph{against} our hypothesis (it gives the suite every chance to catch orderings), which is the direction a measurement paper wants its instrument biased.}
+
+\subsection{Controls}\label{sec:controls}
+
+\textbf{B0 --- functional-mutation reference.} The identical unmodified suite is run against default PIT/mutmut mutants on the same systems, yielding $\fms$/$\fsr$. If suites also failed to kill ordinary functional mutants ($\fms < 0.40$), surviving design mutants would show only that the suite is weak; B0 therefore gates admission of every system and supplies the contrast term in H1.
+
+\textbf{B-alt --- matched convention-neutral control.} For every admitted design mutant, a matched mutant from the same operator family and locality footprint is constructed that is equally behavior-preserving but violates no declared rule (convention-\emph{conforming} renames; order swaps breaking no rule; relocations within a layer). The rival explanation this isolates: \emph{design mutants survive merely because they are behavior-preserving---the generic equivalent-mutant effect---so the study measures behavior-preservation, not design-specific invisibility.} Pre-registered check: $|P(K_T{=}1 \mid m \in D_c) - P(K_T{=}1 \mid m \in N_c)| < 0.05$ per category supports the structural account (kill probability carries no information about violation status); a gap $\geq 0.05$ toward killing violators would show suites partially \emph{do} sense conventions, decomposed via the incidental-kill fraction.
+
+\subsection{Augmentation Arm as an Equivalence Test}\label{sec:augment}
+
+\textbf{Challenge.} ``The gap is structural, not quantity-limited'' must not rest on a failure to reject: an under-powered non-significant McNemar result proves nothing, and this is the design's most expensive cell.
+
+\textbf{Design.} Each subject suite is augmented with a discrimination-optimized generated test set (EvoSuite; LLM-generated tests as a pre-committed substitute) whose capability is validated by a hard gate: the augmented suite must raise $\fms$ by $\geq 10$ points, else the arm is invalid-as-designed for that system and reported as such. The structural claim is then formulated as a \textbf{two-one-sided-tests (TOST) equivalence hypothesis}: for TMP and LAY, the post-augmentation survival change $\Delta\dmsr_c$ lies within a pre-registered margin $\pm\delta$, $\delta = 0.10$, at $\alpha = 0.05$. The design is powered at $\geq 0.8$ to establish equivalence at this margin given the per-cell mutant floor (Section~\ref{sec:stats}); any (category $\times$ system) cell whose realized power falls below 0.8 is routed to the same pre-declared INCONCLUSIVE status as thin cells---never scored as support for the structural claim. \wj{Standpoint: this reframe converts the paper's weakest inferential move into its strongest. ``Survival reduction is bounded within $\delta$'' is a positive, falsifiable structural claim; ``we didn't detect a reduction'' is not. If TOST instead \emph{rejects} equivalence (the reduction exceeds $\delta$), the pre-committed fallback holds: the blind spot is quantity-limited, and we quantify the exchange rate ($\Delta\dmsr$ per $\Delta\fms$ point)---still a publishable, useful result. NAM is exploratory in this arm: a drop via literal-identifier assertions is predicted and does not bear on the structural claim.}
+
+\subsection{Checked-Coverage Contrast}\label{sec:cc-design}
+
+\textbf{Challenge.} The delta against the nearest prior instrument---checked coverage measures what a suite fails to \emph{verify} within one execution; we measure what it cannot \emph{express} across an equivalence class---is rhetorical until measured.
+
+\textbf{Design.} For a stratified subsample of surviving design mutants (\ph{$n\geq$300}, all categories), we compute checked coverage~\cite{schuler2011checked} on the mutated regions and report the fraction of survivors sitting in code that checked coverage rates as \emph{verified}. \wj{Standpoint: we expect this fraction to be high (\ph{$\geq$60\%}): the suite demonstrably checks the computation at the mutated site and still cannot see the violation, because the violation lives in the equivalence class, not in any single execution's checked value. A high number converts the nearest-twin concession into a demonstration that the twin's instrument is blind to our object---the most rebuttal-proof sentence the paper can own. A low number would itself be informative: it would say surviving violations cluster in \emph{unverified} code, i.e., the blind spot partially reduces to an oracle-quality gap, and we would report that honestly as scoping the structural claim.}
+
+% =====================================================================
+\section{Experimental Setup}\label{sec:setup}
+
+\subsection{Subject Systems and Admission Gates}\label{sec:subjects}
+
+Subjects are mature open-source systems satisfying, before any mutant generation: (i) a machine-readable convention configuration is shipped (Checkstyle and/or ArchUnit for Java; flake8 and/or import-linter for Python); (ii) $\fms \geq 0.40$ under default operators (B0 gate); (iii) suite determinism: $3\times$ rerun agreement $\geq 98\%$, with flaky tests quarantined and reported. Target corpus: \ph{12} systems (\ph{8} Java from the Defects4J-adjacent ecosystem with ArchUnit examples, \ph{4} Python), mined by a pre-registered project search whose query and inclusion log are released. A held-out set of \ph{3} additional systems, drawn after the primary corpus is frozen, is reserved for the split-half replication check. Table~\ref{tab:subjects} lists the corpus. \wj{If the mining pilot finds fewer than 12 qualifying systems, the pre-registered response is scope shrinkage with claims re-scoped---never quiet relaxation of gate (i) or (ii).}
+
+\begin{table}[t]
+\centering
+\caption{Subject systems (pre-registered slots; filled after the corpus-mining gate).}
+\label{tab:subjects}
+\begin{tabular}{@{}lllrrr@{}}
+\toprule
+System & Lang. & Conv.\ config & KLoC & Tests & $\fms$ \\
+\midrule
+\ph{S1} & Java & Checkstyle+ArchUnit & \ph{--} & \ph{--} & \ph{--} \\
+\ph{S2} & Java & Checkstyle+ArchUnit & \ph{--} & \ph{--} & \ph{--} \\
+\ph{\dots} & \dots & \dots & \dots & \dots & \dots \\
+\ph{S12} & Python & flake8+import-linter & \ph{--} & \ph{--} & \ph{--} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Pilot as Go/No-Go}\label{sec:pilot}
+
+The design's untested premise is that certified design mutants can be constructed \emph{at volume}: candidates must pass both oracles, and the joint admission rate is unknown a priori. Before any scale-up, a pre-registered pilot runs on 2 systems (one Java/ArchUnit-family, one Python/import-linter-family): $\approx 30$ candidates per category, measuring per-category admission rate, per-mutant wall-clock, and rerun determinism. \textbf{Go criterion}: overall admission $\geq 60\%$ \emph{and} non-zero admission in every category. TMP is the expected bottleneck---behavior-preserving reorderings are the hardest to certify, and the pre-registered category ordering depends on that cell. \textbf{Pre-committed pivot}: if admission collapses, the paper becomes an instrument-limits study---``certified design mutants are hard to construct, and here is the failure taxonomy''---declared here, before the run, so the pivot is a finding rather than a rescue. Scale-up must be a configuration change only: adding systems, operator families, and the augmentation arm may touch config lists, never harness code; this property is itself verified by adding the second pilot system via config-only diff.
+
+\subsection{Procedure}\label{sec:procedure}
+
+Per system: (1) B0 functional run establishes $\fms$; (2) rule-guided generation enumerates candidates per category (Section~\ref{sec:generation}); (3) dual-oracle admission with the three-layer equivalence fortification (Sections~\ref{sec:dualoracle}--\ref{sec:oracle-fort}) yields $D_c$ and matched $N_c$; (4) the unmodified suite runs against $D_c \cup N_c$, recording per-mutant $(\eqb, V, K_T)$ triples; (5) the augmented suite re-runs against the same mutants (paired design); (6) the checked-coverage contrast is computed on the survivor subsample. Target: $\geq 150$ admitted mutants per (category $\times$ system) cell; $B \geq 10{,}000$ differential inputs per system.
+
+\subsection{Metrics}\label{sec:metrics}
+
+Per-category $\dmsr_c$ with 95\% CIs and the worst-case-corrected $\dmsr_c^{\downarrow}$; $\fms$/$\fsr$; the B-alt conditional-kill gap $|P(K_T{=}1 \mid D_c) - P(K_T{=}1 \mid N_c)|$; post-augmentation $\Delta\dmsr_c$ with TOST bounds; equivalence-oracle catch rate $\mathrm{CR}$ and second-check disagreement; checker precision and $\kappa$; incidental-kill fraction $\mathrm{IKF}_c$ (killed design mutants whose failing assertion references a literal identifier/value rather than behavior, via a pattern classifier with an audited subsample); checked-coverage-verified fraction of survivors; split-half agreement of the category-level classification.
+
+\subsection{Statistical Analysis and Power}\label{sec:stats}
+
+The primary inference engine is a mixed-effects logistic model, $\text{kill} \sim \text{mutant\_type} + \text{category} + (1 \mid \text{system})$, with likelihood-ratio tests on fixed effects, odds ratios with 95\% CIs, Holm correction within each hypothesis family, and bootstrap CIs (10{,}000 resamples, system-level blocks) on absolute $\dmsr$ differences. At the pre-registered floor of 150 admitted mutants per cell, the per-system two-proportion contrast in H1 has power $\geq 0.90$ at $\alpha=0.05$ to detect the pre-registered effect floor $\dmsr_c - \fsr \geq 0.25$, and the TOST procedure in H3 has power $\geq 0.8$ to establish equivalence at $\delta = 0.10$; the 150 floor is these power requirements' consequence, not a round number.
+
+\textbf{Exclusion rules, fixed and outcome-independent.} Any (category $\times$ system) cell below 150 admitted mutants after filtering, and any augmentation cell whose realized TOST power falls below 0.8, is pre-declared \textsc{Inconclusive}: excluded from the ``$\geq 9$ of 12 systems'' vote in H1 and from H3's equivalence verdict, never scored as a null, never silently dropped from a denominator. All exclusion rules were fixed---and the checker rule sets hash-frozen---before any suite verdict was observed, and every excluded cell's diagnostics (observed $n$, shortfall reason, realized power, raw verdicts) are reported in the appendix. A pre-registered exclusion that hides its excluded data looks like laundering; one that shows it is the discipline the pre-registration is for.
+
+\subsection{Hypotheses}\label{sec:hypotheses}
+
+\textbf{H1 (blind spot exists; three conjuncts, all required).} Pooled $\dmsr \geq 0.50$ \emph{and} per-system $\dmsr - \fsr \geq 0.25$ in $\geq 9$ of 12 systems \emph{and} the design-vs-functional fixed effect is significant at $\alpha = 0.05$. \wj{Standpoint: we expect H1 to hold because the asymmetry is structural---but the three-conjunct form means ``50\% survival'' alone can never carry the claim on noise. Pre-committed fallback FB1 if H1 fails: suites kill behavior-preserving design violations at a rate indistinguishable from functional mutants; we then report the first certified corpus showing suites encode substantially \emph{more} design intent than the folklore assumes, largely via incidental structural coupling (IKF as the mechanism), feeding the global pivot F-G1 if H2 also fails.}
+
+\textbf{H2 (category structure).} Category fixed effect significant (LRT, $\alpha = 0.05$) \emph{and} pooled $\dmsr_{\mathrm{TMP}} \geq \dmsr_{\mathrm{NAM}} + 0.15$ \emph{and} $\dmsr_{\mathrm{LAY}} \geq \dmsr_{\mathrm{NAM}} + 0.15$, Holm-corrected across the two ordering contrasts. \wj{Standpoint: predicted ordering TMP $\approx$ LAY $>$ NAM, mechanism being non-locality/temporality---naming violations are incidentally killable by literal-identifier assertions (tracked by IKF$_{\mathrm{NAM}}$), while trace-order and cross-boundary properties have no single-execution observable for an assertion to latch onto. Fallback FB2: survival uniform across categories $\Rightarrow$ blindness is undifferentiated, the non-locality account is unsupported, and the blind spot is better modeled as a single behavior-equivalence effect.}
+
+\textbf{H3 (structural, not quantity-limited; TOST form).} For TMP and LAY, on every system passing the augmentation-validity gate ($\Delta\fms \geq +10$ pts): the post-augmentation survival change lies within $\pm\delta$, $\delta = 0.10$, by TOST at $\alpha = 0.05$, in $\geq 4$ subject systems with realized power $\geq 0.8$. \wj{Standpoint: the structural claim is now a bounded-change claim, not an absence claim. Fallback FB3 if TOST rejects equivalence: the blind spot is quantity-limited; we report the exchange rate ($\Delta\dmsr$ per added test / per $\Delta\fms$ point) as the actionable finding.}
+
+\textbf{H\textsubscript{spec} (design specificity).} Per category, $|P(K_T{=}1 \mid D_c) - P(K_T{=}1 \mid N_c)| < 0.05$. \wj{Standpoint: a convention-blind suite's kill probability should carry no information about violation status once behavior-preservation and locality are matched. A violation-directed gap $\geq 0.05$ would show partial convention-sensing---reported via the IKF decomposition, and scoping H1's interpretation rather than falsifying the measurement.}
+
+\textbf{Global fallback F-G1.} If H1 $\wedge$ H2 fail, the archetype pivots from empirical characterization to measurement instrument: we release the design-mutation score---a dual-oracle-certified adequacy criterion over behavior-preserving convention violations---and report, contrary to folklore, that mature suites detect a measurable fraction of design violations through quantifiable structural coupling.
+
+% =====================================================================
+\section{Results}\label{sec:results}
+
+\emph{All numeric values in this section are pre-registered slots (\ph{$\cdot$}), to be bound by the analysis scripts released with the artifact; every slot traces to a hypothesis in Section~\ref{sec:hypotheses}, and a failed hypothesis replaces its paragraph with the pre-committed fallback wording, never a hand-edited number.}
+
+\subsection{RQ1: Is the Instrument Trustworthy?}\label{sec:results-rq1}
+
+Table~\ref{tab:oracle} reports the validity gates. The equivalence oracle's seeded-calibration catch rate is $\mathrm{CR} = \ph{XX}$ pooled (per-system range \ph{--}), bounding false equivalence at $\leq \ph{1-XX}$ per survival figure; the independent second check disagrees on \ph{X\%} of the subsample; the manual audit of survivors finds \ph{X\%} mislabels. The violation checker reaches precision \ph{$\geq$0.90} and $\kappa = \ph{$\geq$0.7}$ with \ph{adjacent-only} confusion. Admission yield is \ph{XX\%} overall and non-zero in every category (pilot gate: pass at \ph{XX\%}). \wj{If CR or checker validity fails for a category/system, the demotion ladder of Sections~\ref{sec:dualoracle}--\ref{sec:oracle-fort} applies and downstream results for that cell are labeled exploratory---this section is written so that a partial instrument failure narrows scope rather than invalidating the paper.}
+
+\begin{table}[t]
+\centering
+\caption{Instrument validity (RQ1). All thresholds pre-registered.}
+\label{tab:oracle}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Gate & Threshold & Observed \\
+\midrule
+Equivalence catch rate $\mathrm{CR}$ & report; demote $<0.90$ & \ph{--} \\
+Second-check disagreement & report & \ph{--} \\
+Survivor audit mislabel & $<5\%$ & \ph{--} \\
+Checker precision & $\geq 0.90$ & \ph{--} \\
+Checker $\kappa$ (2 raters, $n\geq300$) & $\geq 0.7$ & \ph{--} \\
+Admission yield (pilot) & $\geq 60\%$, all cats $>0$ & \ph{--} \\
+Rerun determinism & $\geq 98\%$ & \ph{--} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ2: Does the Blind Spot Exist? (H1)}\label{sec:results-rq2}
+
+Pooled across \ph{N} systems, certified design mutants survive at $\dmsr = \ph{XX\%}$ (worst-case corrected $\dmsr^{\downarrow} = \ph{XX\%}$) against $\fsr = \ph{YY\%}$; the per-system gap exceeds 0.25 in \ph{K} of \ph{N$'$} conclusive systems, and the design-vs-functional odds ratio is \ph{OR} (95\% CI \ph{--}, $p = \ph{--}$). \ph{J} cells are \textsc{Inconclusive} (appendix Table~\ph{A1}). H1 \ph{holds / fails $\to$ FB1}. Table~\ref{tab:main} gives the per-system breakdown.
+
+\begin{table}[t]
+\centering
+\caption{Design-mutant vs.\ functional survival per system (RQ2).}
+\label{tab:main}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+System & $|D|$ & $\dmsr$ & $\dmsr^{\downarrow}$ & $\fsr$ & $\Delta$ \\
+\midrule
+\ph{S1} & \ph{--} & \ph{--} & \ph{--} & \ph{--} & \ph{--} \\
+\ph{\dots} & \dots & \dots & \dots & \dots & \dots \\
+\midrule
+Pooled & \ph{--} & \ph{--} & \ph{--} & \ph{--} & \ph{--} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ3: Is Survival Design-Specific? (H\textsubscript{spec})}\label{sec:results-rq3}
+
+The conditional-kill gap between admitted design mutants and their matched neutral counterparts is \ph{X.X pts} (NAM), \ph{X.X} (LAY), \ph{X.X} (TMP)---\ph{below / above} the 0.05 threshold. \wj{Below threshold in all categories $\Rightarrow$ kill probability carries no information about violation status: the structural account stands and RQ2's gap is design-blindness, not an equivalence artifact. Any category above threshold, with sign toward killing violators, is decomposed via IKF: the suite partially senses that convention through incidental structural coupling, and H1's interpretation for that category is scoped accordingly.}
+
+\subsection{RQ4: Is the Blind Spot Structured by Category? (H2)}\label{sec:results-rq4}
+
+Per-category survival is $\dmsr_{\mathrm{NAM}} = \ph{--}$, $\dmsr_{\mathrm{LAY}} = \ph{--}$, $\dmsr_{\mathrm{TMP}} = \ph{--}$ (category LRT $p = \ph{--}$; ordering contrasts Holm-corrected). $\mathrm{IKF}_{\mathrm{NAM}} = \ph{MM\%}$ of killed naming mutants trace to literal-identifier assertions. H2 \ph{holds / fails $\to$ FB2}.
+
+\subsection{RQ5: Structural or Quantity-Limited? (H3, TOST)}\label{sec:results-rq5}
+
+The augmentation raises $\fms$ by \ph{+CC pts} on \ph{K} of \ph{N} systems (validity gate); on those, the post-augmentation survival change is $\Delta\dmsr_{\mathrm{TMP}} = \ph{--}$ and $\Delta\dmsr_{\mathrm{LAY}} = \ph{--}$, with TOST establishing equivalence within $\pm0.10$ in \ph{K$'$} systems at realized power \ph{$\geq$0.8}. \ph{J$'$} augmentation cells are \textsc{Inconclusive} on power grounds (appendix). H3 \ph{holds / fails $\to$ FB3}. NAM (exploratory) drops by \ph{--}, consistent with the literal-assertion mechanism.
+
+\subsection{RQ6: Are Survivors in Code the Suite Verifies?}\label{sec:results-cc}
+
+Of the stratified survivor subsample, \ph{PP\%} sit in mutated regions that checked coverage rates as \emph{verified}: the suite demonstrably checks the computation there and still cannot see the violation. \wj{This is the measured version of the nearest-twin delta. High PP $\Rightarrow$ the blind spot is orthogonal to oracle quality: not ``the suite forgot to assert'' but ``no assertion on this execution's values could have seen it.'' Low PP $\Rightarrow$ the structural claim is partially an oracle-quality gap; we scope it and say so.}
+
+% =====================================================================
+\section{Discussion and Implications}\label{sec:discussion}
+
+\textbf{For gating coding-agent changes.} \ph{If H1--H3 hold:} a green suite certifies functional behavior and, measurably, does not certify \ph{TMP/LAY} conformance; agent-gating pipelines should attach the project's own machine-readable convention checkers---the same artifacts this study uses as oracles---as first-class gates beside the suite, since they are already shipped, cheap, and independent. The per-category map says where: \ph{naming largely self-protects via incidental assertions; layering and ordering do not}.
+
+\textbf{For test adequacy theory.} The design-mutation score extends adequacy from behavior to declared design conformance without touching the classical equivalent-mutant problem---it \emph{inhabits} it: the mutants classical theory discards as unkillable noise are exactly the measurement objects here.
+
+\textbf{For the erosion literature.} Work documenting quality degradation under passing gates in agentic settings~\cite{slopcodebench,constraintdecay} measures what agents do downstream of the gate; this paper measures what the gate can express at all, agent-free. \ph{Our result} supplies the mechanism those studies presuppose: degradation persists under green suites \emph{because} the degraded properties live outside the suite's expressible set.
+
+% =====================================================================
+\section{Threats to Validity}\label{sec:threats}
+
+\textbf{Construct.} Constructed mutants may not represent naturally occurring violations. Mitigation: operators are derived from each project's own shipped rules (Section~\ref{sec:generation}), generation is exhaustive-per-rule or uniformly sampled with no model curation, and the incidental-kill fraction makes ``caught for the wrong reason'' visible. The checked-coverage contrast (RQ6) further ties survivors to code the suite genuinely engages.
+
+\textbf{Internal.} Bounded equivalence is the central threat; it is met with measurement rather than argument: the local coverage target, the seeded-calibration catch rate attached to every figure (with worst-case-corrected $\dmsr^{\downarrow}$), the independent second check, and the survivor audit with its demotion ladder (Section~\ref{sec:oracle-fort}). Differential inputs are generated disjointly from each suite, removing the circularity confound.
+
+\textbf{External.} Findings cover two ecosystems and machine-checkable conventions; tacit conventions are explicitly out of scope---a stated boundary, not a silent one. Per-system profiles, system random effects, the held-out replication set, and the split-half check estimate rather than assume generalization.
+
+\textbf{Conclusion.} Multiplicity is Holm-controlled within families; every cell has a pre-registered power floor; thin and under-powered cells are \textsc{Inconclusive} by outcome-independent rules with full appendix diagnostics; H3 is an equivalence test, not a failure-to-reject.
+
+% =====================================================================
+\section{Related Work}\label{sec:related}
+
+\textbf{Mutation testing and adequacy.} The mutation score is the canonical functional-adequacy criterion, with the equivalent-mutant problem its central obstacle~\cite{jia2011analysis}. That framing is behavior-complete: an equivalent mutant is unkillable noise, full stop. We invert the role: dual-oracle-certified equivalent mutants \emph{are} the measurement objects, and their survival is the signal.
+
+\textbf{Oracle quality.} Checked coverage~\cite{schuler2011checked} exposes executed-but-unverified code within single executions. Our object is disjoint: RQ6 shows \ph{PP\%} of surviving design violations sit in code checked coverage rates as verified---the property is invisible across the equivalence class, not unchecked within a run.
+
+\textbf{Test discrimination.} Binary code--test matrices formalize which \emph{functionally wrong} variants a test set distinguishes~\cite{binarymatrix}; a design mutant is an all-pass row, outside that model. Discrimination-reward test generation~\cite{utrl} optimizes rejection of functionally incorrect programs, so convention-violating equivalents are accepted by construction---which is precisely why it serves as our capability-matched augmentation, not a competitor.
+
+\textbf{Design conformance.} Reflexion models and architecture checkers~\cite{murphy2001reflexion} build separate machinery because suites are presumed design-blind; specification-carrying benchmarks~\cite{verina} add formal specs beside tests for the same tacit reason. Neither measures, through the suite, how much conformance space is invisible to it---the quantity this paper supplies.
+
+\textbf{Agent-era erosion.} Benchmarks and studies of quality decay under passing gates~\cite{slopcodebench,constraintdecay} document that degradation happens \emph{under} test gates in agentic workflows. They are downstream of our question: we measure the gate's expressible set itself, agent-free, providing the mechanism their findings presuppose and the map that says which added oracles would close which part of the gap.
+
+% =====================================================================
+\section{Conclusion}\label{sec:conclusion}
+
+We formalized and measured a boundary that has until now been folklore: which design properties a test suite structurally cannot express. The certified design mutant---behavior-preserving by a calibrated, independence-guaranteed differential oracle; convention-violating by the project's own shipped rules---turns ``tests miss design'' into a per-category, effect-sized, pre-registered measurement, with controls separating design-specific blindness from the equivalent-mutant effect and a TOST-formulated augmentation arm separating structural from quantity limits. Across \ph{N} systems, \ph{headline: DMSR vs FSR gap, category ordering, boundedness under augmentation, and PP\% of survivors in verified code}. For teams gating coding-agent changes on a green suite, the map is actionable today: the same machine-readable convention configurations this study uses as oracles are the gates that close the measured gap. The harness, corpus, rule sets, and per-mutant $(\eqb, V, K_T)$ triples are released for audit and extension.
+
+% =====================================================================
+\begin{thebibliography}{9}
+\bibitem{jia2011analysis} Y. Jia and M. Harman, ``An analysis and survey of the development of mutation testing,'' \emph{IEEE Trans. Softw. Eng.}, 37(5), 2011.
+\bibitem{schuler2011checked} D. Schuler and A. Zeller, ``Assessing oracle quality with checked coverage,'' in \emph{Proc. ICST}, 2011.
+\bibitem{murphy2001reflexion} G. C. Murphy, D. Notkin, and K. J. Sullivan, ``Software reflexion models: Bridging the gap between design and implementation,'' \emph{IEEE Trans. Softw. Eng.}, 27(4), 2001.
+\bibitem{utrl} Anonymous, ``Learning to generate unit tests via adversarial reinforcement learning,'' OpenReview:VqjNYF9nbP. \ph{pin venue/year}
+\bibitem{binarymatrix} Anonymous, ``How many code and test cases are enough? Evaluating test case generation from a binary-matrix perspective,'' OpenReview:RomWar2kVN. \ph{pin venue/year}
+\bibitem{verina} Anonymous, ``VERINA: Benchmarking verifiable code generation,'' OpenReview:0A4Uf88pog. \ph{pin venue/year}
+\bibitem{slopcodebench} Anonymous, ``SlopCodeBench,'' \ph{pin: full citation from verification round}. \wj{unpinned---resolve before submission per B3 discipline}
+\bibitem{constraintdecay} Anonymous, ``Constraint decay under iterative agent modification,'' \ph{pin}. \wj{unpinned---resolve before submission}
+\bibitem{dristi2026} Dristi and Dwyer, ``Differential-fuzzing equivalence checking,'' 2026. \ph{pin exact title/venue} \wj{surfaced via SlopCodeBench references; verify it does what layer 3 needs before freeze}
+\end{thebibliography}
+
+\balance
+\end{document}

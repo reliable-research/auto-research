@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adapted-research-arch"
+version = "0.1.0"
+description = "Local-first, evidence-grounded runtime for composable research agents"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+ara = "adapted_research_arch.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+adapted_research_arch = ["builtin_agents/**/*.json", "builtin_agents/**/*.md", "builtin_agents/*.py"]

@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M1,1 L8,4.5 L1,8 Z" fill="#5f6368"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="620" fill="#ffffff"/>
+  <text x="450" y="28" text-anchor="middle" font-size="17" font-weight="bold" fill="#202124">Budgeted Cross-Axis Probe Selection for Version-Drift Breakage Prediction</text>
+
+  <!-- Panel A: probe universe -->
+  <rect x="20" y="46" width="220" height="390" rx="8" fill="#eef3fb" stroke="#4a6fa5" stroke-width="1.4"/>
+  <text x="130" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a3d6d">1. Probe universe (black-box)</text>
+
+  <rect x="34" y="78" width="192" height="34" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="130" y="92" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Capability</text>
+  <text x="130" y="106" text-anchor="middle" font-size="9.5" fill="#5f6368">MMLU/GSM8K items &#183; &#916; correctness</text>
+
+  <rect x="34" y="120" width="192" height="34" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="130" y="134" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Refusal-boundary</text>
+  <text x="130" y="148" text-anchor="middle" font-size="9.5" fill="#5f6368">XSTest/OR-Bench &#183; refusal-rate shift</text>
+
+  <rect x="34" y="162" width="192" height="34" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="130" y="176" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Format</text>
+  <text x="130" y="190" text-anchor="middle" font-size="9.5" fill="#5f6368">IFEval/JSON schema &#183; validity shift</text>
+
+  <rect x="34" y="204" width="192" height="34" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="130" y="218" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Calibration</text>
+  <text x="130" y="232" text-anchor="middle" font-size="9.5" fill="#5f6368">labeled items &#183; &#916; ECE</text>
+
+  <rect x="34" y="246" width="192" height="34" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="130" y="260" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Safety</text>
+  <text x="130" y="274" text-anchor="middle" font-size="9.5" fill="#5f6368">OffTopicEval/over-refusal strata</text>
+
+  <line x1="130" y1="280" x2="130" y2="298" stroke="#5f6368" stroke-width="1.4" marker-end="url(#arr)"/>
+
+  <rect x="34" y="300" width="192" height="122" rx="6" fill="#fdecea" stroke="#c5221f" stroke-width="1.4" stroke-dasharray="5,3"/>
+  <text x="130" y="320" text-anchor="middle" font-size="12" font-weight="bold" fill="#a50e0e">2. Instrument gate (G1)</text>
+  <text x="44" y="340" font-size="10" fill="#202124">&#8226; drift &gt; within-version noise floor</text>
+  <text x="44" y="356" font-size="10" fill="#202124">&#8226; k &#8805; 3 repeats, fixed decoding</text>
+  <text x="44" y="372" font-size="10" fill="#202124">&#8226; rank-stable over &#8805; 3 paraphrases</text>
+  <text x="44" y="392" font-size="10" font-style="italic" fill="#a50e0e">fail &#8594; family excluded,</text>
+  <text x="44" y="406" font-size="10" font-style="italic" fill="#a50e0e">instrument negative reported</text>
+
+  <!-- A -> B arrow -->
+  <line x1="240" y1="130" x2="262" y2="130" stroke="#5f6368" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- Panel B: version-pair evaluation -->
+  <rect x="266" y="46" width="368" height="180" rx="8" fill="#e9f5ec" stroke="#2e7d46" stroke-width="1.4"/>
+  <text x="450" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e5631">3. Version-pair evaluation</text>
+
+  <rect x="280" y="86" width="130" height="56" rx="4" fill="#ffffff" stroke="#2e7d46"/>
+  <text x="345" y="108" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">version pair v_i</text>
+  <text x="345" y="126" text-anchor="middle" font-size="10.5" fill="#5f6368">(m_old &#8594; m_new)</text>
+  <text x="345" y="158" text-anchor="middle" font-size="9.5" fill="#5f6368">open-weight checkpoints /</text>
+  <text x="345" y="171" text-anchor="middle" font-size="9.5" fill="#5f6368">dated API snapshots</text>
+
+  <line x1="410" y1="100" x2="438" y2="93" stroke="#5f6368" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="410" y1="126" x2="438" y2="160" stroke="#5f6368" stroke-width="1.4" marker-end="url(#arr)"/>
+
+  <rect x="442" y="76" width="178" height="44" rx="4" fill="#ffffff" stroke="#2e7d46"/>
+  <text x="531" y="94" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Probe drift features x(i, f)</text>
+  <text x="531" y="110" text-anchor="middle" font-size="9.5" fill="#5f6368">per-family drift scores, outputs only</text>
+
+  <rect x="442" y="146" width="178" height="66" rx="4" fill="#ffffff" stroke="#2e7d46"/>
+  <text x="531" y="163" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Contract corpus (B3.4)</text>
+  <text x="531" y="179" text-anchor="middle" font-size="10" fill="#202124">&#8594; breakage rates b(i, k)</text>
+  <text x="531" y="196" text-anchor="middle" font-size="9" fill="#5f6368">schema &#183; parser &#183; template &#183;</text>
+  <text x="531" y="207" text-anchor="middle" font-size="9" fill="#5f6368">tool-call &#183; answer-equivalence</text>
+
+  <!-- B -> C arrows -->
+  <line x1="500" y1="226" x2="470" y2="246" stroke="#5f6368" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="560" y="240" font-size="9.5" fill="#5f6368">features + targets</text>
+
+  <!-- Panel C: selection and prediction -->
+  <rect x="266" y="250" width="368" height="186" rx="8" fill="#fdf6e3" stroke="#b07c1a" stroke-width="1.4"/>
+  <text x="450" y="270" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a5311">4. Selection &amp; prediction layer (nested per fold)</text>
+
+  <rect x="282" y="282" width="336" height="30" rx="4" fill="#ffffff" stroke="#b07c1a"/>
+  <text x="450" y="301" text-anchor="middle" font-size="10.5" fill="#202124">Item clustering on drift profiles (clusters may cross families)</text>
+
+  <rect x="282" y="318" width="336" height="30" rx="4" fill="#ffffff" stroke="#b07c1a"/>
+  <text x="450" y="337" text-anchor="middle" font-size="10.5" fill="#202124">Greedy budgeted selection: max conditional &#916;AUC per query</text>
+
+  <rect x="282" y="354" width="336" height="30" rx="4" fill="#ffffff" stroke="#b07c1a"/>
+  <text x="450" y="373" text-anchor="middle" font-size="10.5" fill="#202124">Bootstrap-over-pairs stability &#8805; 70% &#8594; minimal set S*</text>
+
+  <rect x="282" y="390" width="336" height="30" rx="4" fill="#ffffff" stroke="#b07c1a"/>
+  <text x="450" y="409" text-anchor="middle" font-size="10.5" fill="#202124">Regularized hierarchical model + partial correlations (co-movement)</text>
+
+  <!-- C -> D arrow -->
+  <line x1="634" y1="340" x2="656" y2="340" stroke="#5f6368" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- Panel D: outputs -->
+  <rect x="660" y="46" width="220" height="390" rx="8" fill="#f3eefb" stroke="#6b4fa1" stroke-width="1.4"/>
+  <text x="770" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#46307a">5. Prediction outputs</text>
+
+  <text x="770" y="86" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Cross-axis matrix M(f, k)</text>
+  <!-- 5x5 grid, cell 21, at x=706,y=94 -->
+  <g stroke="#6b4fa1" stroke-width="0.8">
+    <rect x="706" y="94"  width="21" height="21" fill="#bdbdbd"/><rect x="727" y="94"  width="21" height="21" fill="#c8e6c9"/><rect x="748" y="94"  width="21" height="21" fill="#a5d6a7"/><rect x="769" y="94"  width="21" height="21" fill="#e8f5e9"/><rect x="790" y="94"  width="21" height="21" fill="#c8e6c9"/>
+    <rect x="706" y="115" width="21" height="21" fill="#e8f5e9"/><rect x="727" y="115" width="21" height="21" fill="#bdbdbd"/><rect x="748" y="115" width="21" height="21" fill="#c8e6c9"/><rect x="769" y="115" width="21" height="21" fill="#a5d6a7"/><rect x="790" y="115" width="21" height="21" fill="#e8f5e9"/>
+    <rect x="706" y="136" width="21" height="21" fill="#a5d6a7"/><rect x="727" y="136" width="21" height="21" fill="#e8f5e9"/><rect x="748" y="136" width="21" height="21" fill="#bdbdbd"/><rect x="769" y="136" width="21" height="21" fill="#c8e6c9"/><rect x="790" y="136" width="21" height="21" fill="#a5d6a7"/>
+    <rect x="706" y="157" width="21" height="21" fill="#c8e6c9"/><rect x="727" y="157" width="21" height="21" fill="#e8f5e9"/><rect x="748" y="157" width="21" height="21" fill="#c8e6c9"/><rect x="769" y="157" width="21" height="21" fill="#bdbdbd"/><rect x="790" y="157" width="21" height="21" fill="#e8f5e9"/>
+    <rect x="706" y="178" width="21" height="21" fill="#e8f5e9"/><rect x="727" y="178" width="21" height="21" fill="#a5d6a7"/><rect x="748" y="178" width="21" height="21" fill="#e8f5e9"/><rect x="769" y="178" width="21" height="21" fill="#c8e6c9"/><rect x="790" y="178" width="21" height="21" fill="#bdbdbd"/>
+  </g>
+  <g stroke="#7a7a7a" stroke-width="1.1">
+    <line x1="709" y1="97"  x2="724" y2="112"/><line x1="724" y1="97"  x2="709" y2="112"/>
+    <line x1="730" y1="118" x2="745" y2="133"/><line x1="745" y1="118" x2="730" y2="133"/>
+    <line x1="751" y1="139" x2="766" y2="154"/><line x1="766" y1="139" x2="751" y2="154"/>
+    <line x1="772" y1="160" x2="787" y2="175"/><line x1="787" y1="160" x2="772" y2="175"/>
+    <line x1="793" y1="181" x2="808" y2="196"/><line x1="808" y1="181" x2="793" y2="196"/>
+  </g>
+  <text x="700" y="150" text-anchor="middle" font-size="8.5" fill="#5f6368" transform="rotate(-90 700 150)">probe family</text>
+  <text x="758" y="211" text-anchor="middle" font-size="8.5" fill="#5f6368">breakage category</text>
+  <text x="770" y="226" text-anchor="middle" font-size="9.5" font-style="italic" fill="#46307a">diagonal excluded (tautology);</text>
+  <text x="770" y="239" text-anchor="middle" font-size="9.5" font-style="italic" fill="#46307a">off-diagonal = headline claim</text>
+
+  <text x="770" y="264" text-anchor="middle" font-size="11" font-weight="bold" fill="#202124">Budget&#8211;retention curve</text>
+  <!-- curve axes -->
+  <line x1="692" y1="352" x2="692" y2="276" stroke="#5f6368" stroke-width="1.2"/>
+  <line x1="692" y1="352" x2="848" y2="352" stroke="#5f6368" stroke-width="1.2"/>
+  <polyline points="692,348 712,322 732,304 756,292 786,286 820,283 846,282" fill="none" stroke="#2e7d46" stroke-width="2"/>
+  <line x1="692" y1="284" x2="848" y2="284" stroke="#b07c1a" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="756" cy="292" r="4" fill="#c5221f"/>
+  <text x="762" y="305" font-size="9.5" fill="#c5221f">S* (&#8804; 40% budget, within &#949;)</text>
+  <text x="770" y="366" text-anchor="middle" font-size="8.5" fill="#5f6368">query budget B</text>
+  <text x="686" y="314" text-anchor="middle" font-size="8.5" fill="#5f6368" transform="rotate(-90 686 314)">LOPO AUC</text>
+
+  <text x="770" y="388" text-anchor="middle" font-size="10" fill="#202124">S* + calibrated breakage-risk score</text>
+  <text x="770" y="404" text-anchor="middle" font-size="10" font-weight="bold" fill="#46307a">&#8594; module for B3.3 / B3.4 audits</text>
+  <text x="770" y="420" text-anchor="middle" font-size="9" fill="#5f6368">(family ranking = severity weights)</text>
+
+  <!-- arrows into bottom strip -->
+  <line x1="450" y1="436" x2="450" y2="452" stroke="#5f6368" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- Bottom strip: validation discipline -->
+  <rect x="20" y="456" width="860" height="148" rx="8" fill="#f1f3f4" stroke="#5f6368" stroke-width="1.3"/>
+  <text x="450" y="476" text-anchor="middle" font-size="13" font-weight="bold" fill="#202124">6. Held-out validation discipline &amp; pre-registered pilot gates</text>
+
+  <rect x="34" y="486" width="198" height="58" rx="4" fill="#ffffff" stroke="#5f6368"/>
+  <text x="133" y="502" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#202124">LOPO (version axis)</text>
+  <text x="133" y="517" text-anchor="middle" font-size="9" fill="#5f6368">leave-one-pair-out; selection</text>
+  <text x="133" y="529" text-anchor="middle" font-size="9" fill="#5f6368">re-run inside every training fold</text>
+  <text x="133" y="541" text-anchor="middle" font-size="9" fill="#5f6368">permutation nulls, bootstrap CIs</text>
+
+  <rect x="246" y="486" width="198" height="58" rx="4" fill="#ffffff" stroke="#5f6368"/>
+  <text x="345" y="502" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#202124">LOCO (contract axis)</text>
+  <text x="345" y="517" text-anchor="middle" font-size="9" fill="#5f6368">leave-one-contract-class-out +</text>
+  <text x="345" y="529" text-anchor="middle" font-size="9" fill="#5f6368">real third-party pipeline check</text>
+  <text x="345" y="541" text-anchor="middle" font-size="9" fill="#5f6368">breaks corpus circularity</text>
+
+  <rect x="458" y="486" width="198" height="58" rx="4" fill="#ffffff" stroke="#5f6368"/>
+  <text x="557" y="502" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#202124">Frozen temporal holdout</text>
+  <text x="557" y="517" text-anchor="middle" font-size="9" fill="#5f6368">S* frozen at selection time;</text>
+  <text x="557" y="529" text-anchor="middle" font-size="9" fill="#5f6368">evaluated on later-shipping pairs</text>
+  <text x="557" y="541" text-anchor="middle" font-size="9" fill="#5f6368">(holdout grows for free)</text>
+
+  <rect x="670" y="486" width="198" height="58" rx="4" fill="#ffffff" stroke="#5f6368"/>
+  <text x="769" y="502" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#202124">Baseline arms</text>
+  <text x="769" y="517" text-anchor="middle" font-size="9" fill="#5f6368">random budget-matched &#183; tiny-</text>
+  <text x="769" y="529" text-anchor="middle" font-size="9" fill="#5f6368">Benchmarks compression &#183; change-</text>
+  <text x="769" y="541" text-anchor="middle" font-size="9" fill="#5f6368">detection gate &#183; direct testing</text>
+
+  <rect x="34" y="554" width="198" height="38" rx="19" fill="#fdecea" stroke="#c5221f" stroke-width="1.2"/>
+  <text x="133" y="570" text-anchor="middle" font-size="10" font-weight="bold" fill="#a50e0e">G1 instrument gate</text>
+  <text x="133" y="584" text-anchor="middle" font-size="8.5" fill="#a50e0e">&#8805;2 families beat noise floor</text>
+
+  <rect x="246" y="554" width="198" height="38" rx="19" fill="#fdecea" stroke="#c5221f" stroke-width="1.2"/>
+  <text x="345" y="570" text-anchor="middle" font-size="10" font-weight="bold" fill="#a50e0e">G2 signal gate</text>
+  <text x="345" y="584" text-anchor="middle" font-size="8.5" fill="#a50e0e">LOPO AUC &#8805; 0.70 (LB &#8805; 0.60)</text>
+
+  <rect x="458" y="554" width="198" height="38" rx="19" fill="#fdecea" stroke="#c5221f" stroke-width="1.2"/>
+  <text x="557" y="570" text-anchor="middle" font-size="10" font-weight="bold" fill="#a50e0e">G3 minimality gate</text>
+  <text x="557" y="584" text-anchor="middle" font-size="8.5" fill="#a50e0e">&#8804;40% budget within &#949; (scale-up)</text>
+
+  <rect x="670" y="554" width="198" height="38" rx="19" fill="#fdecea" stroke="#c5221f" stroke-width="1.2"/>
+  <text x="769" y="570" text-anchor="middle" font-size="10" font-weight="bold" fill="#a50e0e">G4 beyond-detection gate</text>
+  <text x="769" y="584" text-anchor="middle" font-size="8.5" fill="#a50e0e">&#916;AUC &#8805; 0.05 vs shift detector</text>
+</svg>

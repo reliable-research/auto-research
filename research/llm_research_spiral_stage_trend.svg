@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">Research spiral stage trend, 2022 to 2025</title>
+  <desc id="desc">Line chart showing S4 intervention/design dominant from 2022 to 2025 while S1 measurement rises from 6.2 percent to 21.0 percent.</desc>
+  <rect width="960" height="420" fill="#fbfaf7"/>
+  <text x="48" y="42" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#252525">Research Spiral Stage Trend</text>
+  <text x="48" y="70" font-family="Arial, sans-serif" font-size="14" fill="#68655f">Share of LLM-related IdeaSeed proposals by inferred year</text>
+
+  <g font-family="Arial, sans-serif" font-size="12" fill="#77736c">
+    <line x1="90" y1="300" x2="820" y2="300" stroke="#c9c6bd"/>
+    <line x1="90" y1="237.5" x2="820" y2="237.5" stroke="#e4e1d9"/>
+    <line x1="90" y1="175" x2="820" y2="175" stroke="#e4e1d9"/>
+    <line x1="90" y1="112.5" x2="820" y2="112.5" stroke="#e4e1d9"/>
+    <line x1="90" y1="50" x2="820" y2="50" stroke="#e4e1d9"/>
+    <line x1="90" y1="50" x2="90" y2="300" stroke="#c9c6bd"/>
+    <text x="50" y="304">0%</text>
+    <text x="42" y="242">25%</text>
+    <text x="42" y="179">50%</text>
+    <text x="42" y="117">75%</text>
+    <text x="34" y="55">100%</text>
+    <text x="76" y="326">2022</text>
+    <text x="306" y="326">2023</text>
+    <text x="536" y="326">2024</text>
+    <text x="766" y="326">2025</text>
+  </g>
+
+  <polyline points="90,81.25 320,138 550,147.25 780,142.75" fill="none" stroke="#e34948" stroke-width="3"/>
+  <polyline points="90,284.5 320,263 550,248 780,247.5" fill="none" stroke="#2a78d6" stroke-width="3" stroke-dasharray="8 5"/>
+  <polyline points="90,292.25 320,272.5 550,280.5 780,284.5" fill="none" stroke="#1baf7a" stroke-width="3" stroke-dasharray="4 4"/>
+  <polyline points="90,292.25 320,283.5 550,291.25 780,287.25" fill="none" stroke="#4a3aa7" stroke-width="3" stroke-dasharray="2 6"/>
+
+  <g>
+    <circle cx="90" cy="81.25" r="4.5" fill="#e34948"/><circle cx="320" cy="138" r="4.5" fill="#e34948"/><circle cx="550" cy="147.25" r="4.5" fill="#e34948"/><circle cx="780" cy="142.75" r="4.5" fill="#e34948"/>
+    <circle cx="90" cy="284.5" r="4.5" fill="#2a78d6"/><circle cx="320" cy="263" r="4.5" fill="#2a78d6"/><circle cx="550" cy="248" r="4.5" fill="#2a78d6"/><circle cx="780" cy="247.5" r="4.5" fill="#2a78d6"/>
+    <circle cx="90" cy="292.25" r="4.5" fill="#1baf7a"/><circle cx="320" cy="272.5" r="4.5" fill="#1baf7a"/><circle cx="550" cy="280.5" r="4.5" fill="#1baf7a"/><circle cx="780" cy="284.5" r="4.5" fill="#1baf7a"/>
+    <circle cx="90" cy="292.25" r="4.5" fill="#4a3aa7"/><circle cx="320" cy="283.5" r="4.5" fill="#4a3aa7"/><circle cx="550" cy="291.25" r="4.5" fill="#4a3aa7"/><circle cx="780" cy="287.25" r="4.5" fill="#4a3aa7"/>
+  </g>
+
+  <g font-family="Arial, sans-serif" font-size="13" fill="#37342f">
+    <rect x="90" y="355" width="12" height="12" rx="2" fill="#e34948"/><text x="110" y="366">S4 intervention/design</text>
+    <rect x="270" y="355" width="12" height="12" rx="2" fill="#2a78d6"/><text x="290" y="366">S1 measurement/benchmark</text>
+    <rect x="505" y="355" width="12" height="12" rx="2" fill="#1baf7a"/><text x="525" y="366">S2 mechanism/explanation</text>
+    <rect x="735" y="355" width="12" height="12" rx="2" fill="#4a3aa7"/><text x="755" y="366">S6 governance/audit</text>
+  </g>
+</svg>

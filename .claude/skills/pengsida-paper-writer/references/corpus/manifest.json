@@ -1,0 +1,255 @@
+[
+  {
+    "id": "2306.05422",
+    "venue": "ICCV 2023",
+    "award": "Best Student",
+    "field": "CV",
+    "title": "Tracking Everything Everywhere All at Once",
+    "status": "OK",
+    "abstract_chars": 1045
+  },
+  {
+    "id": "2310.02557",
+    "venue": "ICLR 2024",
+    "award": "Outstanding",
+    "field": "ML",
+    "title": "Generalization in Diffusion Models from Geometry-Adaptive Harmonic Representations",
+    "status": "OK",
+    "abstract_chars": 1581
+  },
+  {
+    "id": "2211.11559",
+    "venue": "CVPR 2023",
+    "award": "Best Paper",
+    "field": "CV",
+    "title": "Visual Programming",
+    "status": "OK",
+    "abstract_chars": 1049
+  },
+  {
+    "id": "2305.08846",
+    "venue": "NeurIPS 2023",
+    "award": "Outstanding",
+    "field": "ML",
+    "title": "Privacy Auditing with One Training Run",
+    "status": "OK",
+    "abstract_chars": 476
+  },
+  {
+    "id": "2404.02905",
+    "venue": "NeurIPS 2024",
+    "award": "Best Paper",
+    "field": "CV",
+    "title": "Visual Autoregressive Modeling",
+    "status": "OK",
+    "abstract_chars": 1455
+  },
+  {
+    "id": "2212.10156",
+    "venue": "CVPR 2023",
+    "award": "Best Paper",
+    "field": "CV/Robotics",
+    "title": "Planning-oriented Autonomous Driving (UniAD)",
+    "status": "OK",
+    "abstract_chars": 1384
+  },
+  {
+    "id": "2310.16834",
+    "venue": "ICML 2024",
+    "award": "Best Paper",
+    "field": "ML",
+    "title": "Discrete Diffusion by Estimating Ratios of the Data Distribution",
+    "status": "OK",
+    "abstract_chars": 1344
+  },
+  {
+    "id": "2406.04327",
+    "venue": "ACL 2024",
+    "award": "Best Paper",
+    "field": "NLP",
+    "title": "Causal Estimation of Memorisation Profiles",
+    "status": "OK",
+    "abstract_chars": 1326
+  },
+  {
+    "id": "2310.06114",
+    "venue": "ICLR 2024",
+    "award": "Outstanding",
+    "field": "ML/RL",
+    "title": "Learning Interactive Real-World Simulators",
+    "status": "OK",
+    "abstract_chars": 1591
+  },
+  {
+    "id": "2304.02643",
+    "venue": "ICCV 2023",
+    "award": "Best Honorable Mention",
+    "field": "CV",
+    "title": "Segment Anything",
+    "status": "OK",
+    "abstract_chars": 792
+  },
+  {
+    "id": "2304.15004",
+    "venue": "NeurIPS 2023",
+    "award": "Outstanding",
+    "field": "ML",
+    "title": "Are Emergent Abilities of LLMs a Mirage?",
+    "status": "OK",
+    "abstract_chars": 1584
+  },
+  {
+    "id": "2403.03206",
+    "venue": "ICML 2024",
+    "award": "Best Paper",
+    "field": "CV",
+    "title": "Scaling Rectified Flow Transformers",
+    "status": "OK",
+    "abstract_chars": 1411
+  },
+  {
+    "id": "2406.02507",
+    "venue": "NeurIPS 2024",
+    "award": "Best Runner-Up",
+    "field": "CV",
+    "title": "Guiding a Diffusion Model with a Bad Version of Itself",
+    "status": "OK",
+    "abstract_chars": 1037
+  },
+  {
+    "id": "2210.14707",
+    "venue": "NeurIPS 2022",
+    "award": "Outstanding",
+    "field": "ML/Theory",
+    "title": "Is Out-of-distribution Detection Learnable?",
+    "status": "OK",
+    "abstract_chars": 1308
+  },
+  {
+    "id": "2305.16264",
+    "venue": "NeurIPS 2023",
+    "award": "Outstanding Runner-Up",
+    "field": "ML/NLP",
+    "title": "Scaling Data-Constrained Language Models",
+    "status": "OK",
+    "abstract_chars": 1208
+  },
+  {
+    "id": "2404.17546",
+    "venue": "ICML 2024",
+    "award": "Best Paper",
+    "field": "ML/NLP",
+    "title": "Probabilistic Inference via Twisted Sequential Monte Carlo",
+    "status": "OK",
+    "abstract_chars": 1387
+  },
+  {
+    "id": "2206.00364",
+    "venue": "NeurIPS 2022",
+    "award": "Outstanding",
+    "field": "ML",
+    "title": "Elucidating the Design Space of Diffusion-Based Generative Models (EDM)",
+    "status": "OK",
+    "abstract_chars": 957
+  },
+  {
+    "id": "2309.07906",
+    "venue": "CVPR 2024",
+    "award": "Best Paper",
+    "field": "CV",
+    "title": "Generative Image Dynamics",
+    "status": "OK",
+    "abstract_chars": 892
+  },
+  {
+    "id": "2404.16019",
+    "venue": "NeurIPS 2024",
+    "award": "D&B Best",
+    "field": "NLP",
+    "title": "The PRISM Alignment Dataset",
+    "status": "OK",
+    "abstract_chars": 1052
+  },
+  {
+    "id": "2401.06416",
+    "venue": "ACL 2024",
+    "award": "Best Paper",
+    "field": "NLP",
+    "title": "Mission: Impossible Language Models",
+    "status": "OK",
+    "abstract_chars": 1475
+  },
+  {
+    "id": "2302.05543",
+    "venue": "ICCV 2023",
+    "award": "Best Paper",
+    "field": "CV",
+    "title": "Adding Conditional Control to Text-to-Image Diffusion Models",
+    "status": "OK",
+    "abstract_chars": 950
+  },
+  {
+    "id": "2305.18290",
+    "venue": "NeurIPS 2023",
+    "award": "Outstanding Runner-Up",
+    "field": "ML/NLP",
+    "title": "Direct Preference Optimization",
+    "status": "OK",
+    "abstract_chars": 1604
+  },
+  {
+    "id": "2402.15391",
+    "venue": "ICML 2024",
+    "award": "Best Paper",
+    "field": "ML/RL",
+    "title": "Genie: Generative Interactive Environments",
+    "status": "OK",
+    "abstract_chars": 909
+  },
+  {
+    "id": "2205.11487",
+    "venue": "NeurIPS 2022",
+    "award": "Outstanding",
+    "field": "CV",
+    "title": "Photorealistic Text-to-Image Diffusion (Imagen)",
+    "status": "OK",
+    "abstract_chars": 1323
+  },
+  {
+    "id": "2311.16493",
+    "venue": "CVPR 2024",
+    "award": "Best Student",
+    "field": "CV",
+    "title": "Mip-Splatting",
+    "status": "OK",
+    "abstract_chars": 923
+  },
+  {
+    "id": "2308.04079",
+    "venue": "SIGGRAPH 2023",
+    "award": "Best Paper",
+    "field": "CG",
+    "title": "3D Gaussian Splatting",
+    "status": "OK",
+    "abstract_chars": 1390
+  },
+  {
+    "id": "6Mxhg9PtDE",
+    "venue": "ICLR 2025",
+    "award": "Outstanding",
+    "field": "ML/Safety",
+    "title": "Safety Alignment Should Be More Than Just a Few Tokens Deep",
+    "arxiv": "2406.05946",
+    "status": "OK",
+    "abstract_chars": 1446
+  },
+  {
+    "id": "2403.06634",
+    "venue": "ICML 2024",
+    "award": "Best Paper",
+    "field": "ML/Security",
+    "title": "Stealing Part of a Production Language Model",
+    "status": "OK",
+    "abstract_chars": 850
+  }
+]

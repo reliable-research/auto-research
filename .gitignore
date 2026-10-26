@@ -218,3 +218,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated runtime and research artifacts
+.ara/
+/docker-project/
+/runs/
+*.sqlite
+*.sqlite-*
+*.db
+*.pdf
+*.zip
+*.skill
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.bak*
+*.pre_canonical_backup

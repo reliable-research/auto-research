@@ -1,0 +1,32 @@
+<div style="position: relative; width: 100%; height: 300px;">
+  <canvas id="stageChart" role="img" aria-label="Line chart showing the share of LLM-related IdeaSeed proposals in each research-spiral stage from 2022 to 2025. S4 intervention/design stays dominant at 62-88 percent throughout. S1 measurement/benchmark rises steadily from 6 percent in 2022 to 21 percent in 2025. S2 mechanism and S6 governance stay in single digits throughout.">Stage share by year: S4 intervention 87.5/64.8/61.1/62.9%, S1 measurement 6.2/14.8/20.8/21.0%, S2 mechanism 3.1/11.0/7.8/6.2%, S6 governance 3.1/6.6/3.5/5.1%</canvas>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text-secondary);">
+  <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #e34948;"></span>S4 干预/设计 (dominant)</span>
+  <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #2a78d6;"></span>S1 测量/基准 (rising)</span>
+  <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #1baf7a;"></span>S2 机制/解释</span>
+  <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; border-radius: 2px; background: #4a3aa7;"></span>S6 治理/审计</span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+new Chart(document.getElementById('stageChart'), {
+  type: 'line',
+  data: {
+    labels: ['2022','2023','2024','2025'],
+    datasets: [
+      { label: 'S4 干预/设计', data: [87.5,64.8,61.1,62.9], borderColor: '#e34948', backgroundColor: '#e34948', borderWidth: 2, pointRadius: 4, tension: 0.25 },
+      { label: 'S1 测量/基准', data: [6.2,14.8,20.8,21.0], borderColor: '#2a78d6', backgroundColor: '#2a78d6', borderWidth: 2, pointRadius: 4, tension: 0.25, borderDash: [6,3] },
+      { label: 'S2 机制/解释', data: [3.1,11.0,7.8,6.2], borderColor: '#1baf7a', backgroundColor: '#1baf7a', borderWidth: 2, pointRadius: 4, tension: 0.25, borderDash: [2,2] },
+      { label: 'S6 治理/审计', data: [3.1,6.6,3.5,5.1], borderColor: '#4a3aa7', backgroundColor: '#4a3aa7', borderWidth: 2, pointRadius: 4, tension: 0.25, borderDash: [1,3] }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 100, ticks: { callback: v => v + '%', color: '#898781' }, grid: { color: '#e1e0d9' } },
+      x: { ticks: { color: '#898781' }, grid: { display: false } }
+    }
+  }
+});
+</script>

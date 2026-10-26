@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pengsida Paper Writer"
+  short_description: "Research process + academic paper writing and section-level refinement"
+  default_prompt: "Use $pengsida-paper-writer to develop my research idea, plan experiments, and improve my paper's structure, flow, and section writing quality."

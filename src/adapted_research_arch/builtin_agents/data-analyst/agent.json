@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arch.analysis.data-analyst",
+  "version": "0.1.0",
+  "name": "Data Analyst",
+  "description": "Profiles data, tests hypotheses, and compares measured results.",
+  "maturity": "stable",
+  "capabilities": ["data.inspect", "analysis.test_hypothesis", "analysis.compare_results"],
+  "inputs": ["research.objective.v1", "research.hypothesis_set.v1", "experiment.result_set.v1"],
+  "outputs": ["data.profile.v1", "experiment.result_set.v1", "claim.candidate_set.v1"],
+  "adapter": {"type": "command", "command": ["python3", "{runtime_stub}"]},
+  "risk": "R3",
+  "permissions": {
+    "filesystem": {"read": ["project:workspace"], "write": ["attempt:artifacts", "attempt:workspace"]},
+    "network": {"mode": "disabled", "hosts": []},
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": ["schema.valid", "numeric.provenance", "claim.evidence_complete"],
+  "budgets": {"maxWallSeconds": 300, "maxToolCalls": 10, "maxSources": 0, "maxCostUsd": 0},
+  "routing": {"allowImplicit": true}
+}

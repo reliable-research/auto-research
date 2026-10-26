@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arch.publication.evidence-writer",
+  "version": "0.1.0",
+  "name": "Evidence Writer",
+  "description": "Writes reports exclusively from promoted claims with reverse provenance links.",
+  "maturity": "stable",
+  "capabilities": ["publication.write_from_claims"],
+  "inputs": ["claim.promoted_set.v1"],
+  "outputs": ["publication.report.v1"],
+  "adapter": {"type": "command", "command": ["python3", "{runtime_stub}"]},
+  "risk": "R1",
+  "permissions": {
+    "filesystem": {"read": [], "write": ["attempt:artifacts"]},
+    "network": {"mode": "disabled", "hosts": []},
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": ["schema.valid", "publication.reverse_links"],
+  "budgets": {"maxWallSeconds": 120, "maxToolCalls": 5, "maxSources": 100, "maxCostUsd": 0},
+  "routing": {"allowImplicit": true}
+}

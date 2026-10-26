@@ -1,0 +1,39 @@
+# Lightweight digest (backfill): TRIM: Hybrid Inference via Targeted Stepwise Routing in Multi-Step Reasoning Tasks
+
+> **BACKFILL NOTICE.** This is not a full paper-digest N0-N12 extraction. It is a
+> lightweight digest built from this topic's own digest.md N3 grounded-corpus
+> record plus the underlying topics/corpus/ideas.jsonl proposal text (motivation +
+> method, read from the paper's own OpenReview submission), created during the
+> Phase A reference-cache upgrade because this paper is already cited as related
+> work in digest.md/paper.md but had no standalone cache record. No local PDF
+> is cached for this OpenReview id (see verified.id_resolves in
+> reference_candidates.jsonl); the OpenReview forum id is real and resolvable
+> externally.
+
+- **Title**: TRIM: Hybrid Inference via Targeted Stepwise Routing in Multi-Step Reasoning Tasks
+- **OpenReview id**: MoKrugWUfC
+- **URL**: https://openreview.net/forum?id=MoKrugWUfC
+
+## Motivation (from the paper's own OpenReview submission text)
+
+Multi-step reasoning tasks expose a limitation that query-level routing does not address well. Methods such as RouteLLM @ong2024routellm and AutoMix @aggarwal2023automix decide which model should answer a prompt as a whole, implicitly assuming that the value of stronger computation is roughly uniform over the entire generation. In mathematical reasoning, this assumption is often false: a trajectory may contain only a few critical steps where an incorrect decision causes all subsequent steps to drift, while the remaining steps are routine continuations. As a result, query-level routing either under-intervenes by leaving an entire hard trace to a weak model, or over-intervenes by assigning the full response to a strong model when only a small subset of steps truly require it.
+
+Prior work makes this gap technically actionable. Process-supervision results from Let’s Verify Step by Step @lightman2023verify show that intermediate reasoning steps can be scored for correctness, and Math-Shepherd @wang2023mathshepherd further shows that such stepwise scores and simple aggregates can estimate trajectory validity. At the same time, the adaptive inference perspective in @snell2024testtimecompute argues that test-time compute should be allocated where it has the highest marginal utility, while the forking-point analysis in @bigelow2025forkingpaths suggests that local generation decisions can strongly alter downstream outcomes. These observations create a concrete opportunity: instead of routing per prompt, we can route per reasoning step, using step-level correctness signals to identify where expensive regeneration is likely to prevent cascading failure.
+
+Existing step-level compute-allocation approaches still leave an important methodological gap. Reward-Guided Speculative Decoding @liao2025rewardguidedsd uses reward signals to accept or regenerate intermediate generations, but its thresholding strategy is fundamentally local and aimed primarily at decoding efficiency rather than explicit budgeted accuracy. For routing under constrained strong-model token budgets, local decisions are insufficient because PRM scores are noisy and the value of intervention depends on trajectory state, remaining budget, and future opportunities. The core problem, therefore, is to design a routing policy that uses noisy step-level correctness estimates to decide when regeneration by a strong model will produce the largest long-horizon accuracy gain per unit cost.
+
+## Method (from the paper's own OpenReview submission text)
+
+We propose TRIM, a targeted stepwise routing framework for multi-step reasoning. A weak model generates the solution one step at a time, and after each proposed step a router decides whether to accept that step or regenerate it with a stronger model. By moving routing from the query level to the step level, the method aligns expensive computation with the specific points where errors are most likely to cause cascading failure, directly addressing the inefficiency exposed by @ong2024routellm and @aggarwal2023automix.
+
+1. **Stepwise Hybrid Generation**: TRIM decomposes reasoning into explicit steps and lets the weak model draft each next step before any escalation decision is made. This component is needed to expose localized decision points that query-level routers cannot access, enabling intervention only where stronger computation is necessary. It extends the cost-aware routing perspective of @ong2024routellm and the sequential-control view of @aggarwal2023automix by making the decision unit an individual reasoning step rather than an entire prompt.
+
+2. **PRM-Based Risk Estimation**: After each weak-model step, TRIM evaluates the partial trace with a process reward model and uses both the current step score and aggregated trajectory statistics as risk signals. This is needed because routing requires a step-local estimate of whether the trajectory is still on track, and process supervision provides a principled proxy for that latent correctness state. This component draws directly on the step-level verification capabilities of @lightman2023verify and the aggregation ideas from @wang2023mathshepherd.
+
+3. **Budget-Aware Threshold Routing**: As a simple instantiation, TRIM uses a threshold policy that regenerates the current step when its PRM score falls below a budget-dependent threshold. This component provides a strong low-complexity baseline and demonstrates that even myopic step-level control can outperform query-level routing when failures are localized. It generalizes the reward-guided accept/regenerate mechanism of @liao2025rewardguidedsd from decoding efficiency to explicit cost–accuracy routing.
+
+4. **Sequential Policy Learning for Long-Horizon Trade-offs**: To move beyond myopic decisions, TRIM trains router policies on stepwise correctness scores, token costs, and trajectory summaries using an RL objective that trades terminal correctness against strong-model decode-token cost. This is needed because the value of regenerating a step depends on both future error propagation and remaining budget, not just the current score. The design inherits the sequential decision framing of @aggarwal2023automix while using the richer process-based signals motivated by @lightman2023verify, @wang2023mathshepherd, and the adaptive compute perspective of @snell2024testtimecompute.
+
+5. **POMDP Routing Under Noisy Verification**: TRIM further models PRM outputs as noisy observations of a latent trajectory-correctness state and solves a compact POMDP to compute routing policies for different cost trade-off parameters. This component is needed because step-level correctness estimates are imperfect, and explicit belief-state reasoning is more robust than deterministic thresholding when observations are miscalibrated. It extends the POMDP philosophy of @aggarwal2023automix to stepwise reasoning and is motivated by the observation from @bigelow2025forkingpaths that a small number of uncertain branching points can dominate final outcomes.
+
+These components form a coherent system: stepwise generation exposes localized intervention opportunities, PRM-derived signals estimate their risk, and budget-aware policies decide whether the expected downstream benefit of correction justifies the strong-model token cost. Together, they implement adaptive test-time compute at the granularity most relevant for multi-step reasoning accuracy.

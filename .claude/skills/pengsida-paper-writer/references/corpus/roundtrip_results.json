@@ -1,0 +1,282 @@
+[
+  {
+    "id": "6Mxhg9PtDE",
+    "content_recall": 0.65,
+    "node_coverage": 0.875,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "empirical",
+    "overall": 0.508,
+    "recon_len": 223
+  },
+  {
+    "id": "2304.15004",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "empirical",
+    "overall": 0.625,
+    "recon_len": 314
+  },
+  {
+    "id": "2401.06416",
+    "content_recall": 0.975,
+    "node_coverage": 1.0,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "empirical",
+    "overall": 0.658,
+    "recon_len": 247
+  },
+  {
+    "id": "2305.08846",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "empirical",
+    "overall": 0.667,
+    "recon_len": 160
+  },
+  {
+    "id": "2305.16264",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "empirical",
+    "overall": 0.667,
+    "recon_len": 218
+  },
+  {
+    "id": "2310.16834",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "theoretical",
+    "overall": 0.667,
+    "recon_len": 262
+  },
+  {
+    "id": "2403.06634",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "empirical",
+    "overall": 0.667,
+    "recon_len": 243
+  },
+  {
+    "id": "2404.16019",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 0.0,
+    "type_got": "system",
+    "type_ref": "dataset",
+    "overall": 0.667,
+    "recon_len": 225
+  },
+  {
+    "id": "2210.14707",
+    "content_recall": 0.675,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "theoretical",
+    "type_ref": "theoretical",
+    "overall": 0.85,
+    "recon_len": 149
+  },
+  {
+    "id": "2406.04327",
+    "content_recall": 0.575,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "empirical",
+    "type_ref": "empirical",
+    "overall": 0.858,
+    "recon_len": 231
+  },
+  {
+    "id": "2205.11487",
+    "content_recall": 0.925,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.933,
+    "recon_len": 224
+  },
+  {
+    "id": "2311.16493",
+    "content_recall": 0.8,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.933,
+    "recon_len": 207
+  },
+  {
+    "id": "2310.06114",
+    "content_recall": 0.975,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.95,
+    "recon_len": 249
+  },
+  {
+    "id": "2302.05543",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.958,
+    "recon_len": 205
+  },
+  {
+    "id": "2310.02557",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "empirical",
+    "type_ref": "empirical",
+    "overall": 0.958,
+    "recon_len": 334
+  },
+  {
+    "id": "2402.15391",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.958,
+    "recon_len": 236
+  },
+  {
+    "id": "2404.02905",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.958,
+    "recon_len": 265
+  },
+  {
+    "id": "2404.17546",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.958,
+    "recon_len": 294
+  },
+  {
+    "id": "2406.02507",
+    "content_recall": 1.0,
+    "node_coverage": 0.875,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 0.958,
+    "recon_len": 206
+  },
+  {
+    "id": "2206.00364",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 308
+  },
+  {
+    "id": "2211.11559",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 212
+  },
+  {
+    "id": "2212.10156",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 202
+  },
+  {
+    "id": "2304.02643",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "dataset",
+    "type_ref": "dataset",
+    "overall": 1.0,
+    "recon_len": 223
+  },
+  {
+    "id": "2305.18290",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 267
+  },
+  {
+    "id": "2306.05422",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 270
+  },
+  {
+    "id": "2308.04079",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 393
+  },
+  {
+    "id": "2309.07906",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 328
+  },
+  {
+    "id": "2403.03206",
+    "content_recall": 1.0,
+    "node_coverage": 1.0,
+    "type_ok": 1.0,
+    "type_got": "system",
+    "type_ref": "system",
+    "overall": 1.0,
+    "recon_len": 390
+  }
+]

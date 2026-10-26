@@ -1,0 +1,152 @@
+{
+  "ai": {
+    "content_recall": 0.9491071428571428,
+    "node_coverage": 0.9508928571428571,
+    "type_ok": 0.7142857142857143,
+    "overall": 0.8713571428571428
+  },
+  "se": {
+    "content_recall": 0.9596153846153845,
+    "node_coverage": 0.9711538461538461,
+    "type_ok": 0.46153846153846156,
+    "overall": 0.7974615384615386
+  },
+  "combined": {
+    "content_recall": 0.9524390243902439,
+    "node_coverage": 0.9573170731707317,
+    "type_ok": 0.6341463414634146,
+    "overall": 0.8479268292682927
+  },
+  "se_rows": [
+    {
+      "id": "2402.14366",
+      "content_recall": 0.85,
+      "node_coverage": 0.875,
+      "type_ok": 0.0,
+      "type_got": "system",
+      "type_ref": "empirical",
+      "overall": 0.575,
+      "recon_len": 195
+    },
+    {
+      "id": "2401.06619",
+      "content_recall": 0.75,
+      "node_coverage": 1.0,
+      "type_ok": 0.0,
+      "type_got": "empirical",
+      "type_ref": "system",
+      "overall": 0.583,
+      "recon_len": 313
+    },
+    {
+      "id": "2306.03091",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 0.0,
+      "type_got": "benchmark",
+      "type_ref": "empirical",
+      "overall": 0.667,
+      "recon_len": 203
+    },
+    {
+      "id": "2306.03438",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 0.0,
+      "type_got": "dataset",
+      "type_ref": "empirical",
+      "overall": 0.667,
+      "recon_len": 251
+    },
+    {
+      "id": "2312.06056",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 0.0,
+      "type_got": "benchmark",
+      "type_ref": "system",
+      "overall": 0.667,
+      "recon_len": 213
+    },
+    {
+      "id": "2312.10793",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 0.0,
+      "type_got": "system",
+      "type_ref": "dataset",
+      "overall": 0.667,
+      "recon_len": 160
+    },
+    {
+      "id": "2402.07542",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 0.0,
+      "type_got": "system",
+      "type_ref": "empirical",
+      "overall": 0.667,
+      "recon_len": 152
+    },
+    {
+      "id": "2209.02752",
+      "content_recall": 0.875,
+      "node_coverage": 1.0,
+      "type_ok": 1.0,
+      "type_got": "system",
+      "type_ref": "system",
+      "overall": 0.958,
+      "recon_len": 283
+    },
+    {
+      "id": "2305.06161",
+      "content_recall": 1.0,
+      "node_coverage": 0.875,
+      "type_ok": 1.0,
+      "type_got": "system",
+      "type_ref": "system",
+      "overall": 0.958,
+      "recon_len": 337
+    },
+    {
+      "id": "2308.07124",
+      "content_recall": 1.0,
+      "node_coverage": 0.875,
+      "type_ok": 1.0,
+      "type_got": "benchmark",
+      "type_ref": "dataset",
+      "overall": 0.958,
+      "recon_len": 171
+    },
+    {
+      "id": "2310.06770",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 1.0,
+      "type_got": "benchmark",
+      "type_ref": "benchmark",
+      "overall": 1.0,
+      "recon_len": 262
+    },
+    {
+      "id": "2401.14196",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 1.0,
+      "type_got": "system",
+      "type_ref": "system",
+      "overall": 1.0,
+      "recon_len": 162
+    },
+    {
+      "id": "2505.18216",
+      "content_recall": 1.0,
+      "node_coverage": 1.0,
+      "type_ok": 1.0,
+      "type_got": "system",
+      "type_ref": "system",
+      "overall": 1.0,
+      "recon_len": 165
+    }
+  ]
+}

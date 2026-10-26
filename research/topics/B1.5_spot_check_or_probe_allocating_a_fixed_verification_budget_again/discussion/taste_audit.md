@@ -1,0 +1,45 @@
+# Research Taste Audit — B1.5
+
+> Skill: `research-taste-auditor` (Chen, Zhao & Cohan, arXiv:2607.01233). Run once, on the core idea (Motivation + Method) confirmed at Stage 2 / Stage 5 of the discussion-loop run, **before** final paper assembly — per the skill's own guidance ("cheaper to catch before drafting than after").
+
+## 1. Extracted idea
+
+**Motivation** (Stage 2, confirmed): "Automated verifiers that gate agent code before it is merged, rewarded, or deployed operate under a fixed, small budget of verification calls; how that budget is *composed* across qualitatively different check flavors — not just its raw size — may be the dominant lever once exhaustive checking is off the table, and no existing work has directly compared these flavors under matched-budget adversarial pressure. Existing quantitative treatments model the scarce verification resource as a single, homogeneous channel — an LM-monitor suspicion score plus an audit threshold — so they can quantify how audit-budget *size* trades off against safety, but structurally cannot ask whether *how the budget is composed* changes the answer. A one-time comparison also isn't enough: a deployed verifier is reused across many episodes, and a patient attacker who observes enough outcomes can infer which calls are predictable and redistribute shortcuts accordingly."
+
+**Method** (Stage 5, summary-level): "We meter three structurally distinct check flavors — uniform random spot-check, targeted invariance probe, hidden combinatorial test — identically and score them against implanted-shortcut episodes with machine-checkable ground truth; sweep allocation across the flavor simplex to trace a miss-rate-vs-budget frontier; test blind-vs-allocation-aware attackers to see whether mixed/randomized allocations retain more detection power than pure policies or a reproduced single-channel auditing baseline; and ablate targeting structure against a novelty-matched control to isolate what is actually doing the work."
+
+## 2. Taxonomy labels
+
+**Opportunity Pattern:** primary **Evidence Gap** (secondary: **Failure/Risk Gap**)
+- rationale: the motivation's load-bearing claim is "no existing work has directly compared these flavors under matched-budget adversarial pressure" and "[prior models] structurally cannot ask whether how the budget is composed... changes the answer" — a diagnosability/measurement absence (no way to compare check-flavor composition), not a "two literatures never connected" framing. The secondary Failure/Risk Gap reading is licensed by the motivation's exploitability clause ("a pass-rate-optimizing agent can concentrate shortcuts precisely where the budget does not reach") — the worry that a naively-composed budget is actively exploitable, not that two fields need linking.
+- Explicitly **not** Bridge Opportunity, and this was a real, evidence-grounded risk rather than a hypothetical one: digest N7's contribution CO1, as originally worded, literally said the idea was "bridging single-channel AI-control models and multi-channel classical inspection games." `paper.md`'s own Step 3 self-audit independently caught this exact risk before this audit ever ran, flagged it as a rejected framing, and rewrote CO1 as "a formalization in which each check flavor's detection profile is a computable object, making budget composition a measurable defender variable" — isolating composition as the experimental variable rather than describing the work as connecting two literatures. The confirmed Stage 2 motivation used in this audit inherits the corrected framing, not the original bridge-worded one.
+
+**Method Paradigm:** primary **Empirical Mapping** (secondary: **Formal Derivation**)
+- rationale: "we meter... score... sweep... test... ablate" is characterization/measurement instrumentation — building a frontier and comparing policies on it — not "integrate/unify" two existing methods. The secondary Formal Derivation reading comes from the flavor-portfolio action-space formalization itself (representing budget composition as a point on a simplex with a common cost meter) being a conceptual/decision-rule contribution, not just a measurement pipeline — the same dual reading `paper.md` Step 2 assigns itself ("primary: empirical... secondary: conceptual framework").
+
+## 3. Diagnostics
+
+- `surface_stitching` = **1** — not "A+B" gluing with nothing added: the core measurement device (the cost-commensurable multi-flavor meter, the simplex sweep, and the novelty-ablation control) is purpose-built for this comparison and does not exist in any of the cited prior works. The score is 1, not 0, because the harness deliberately *reuses* two components wholesale from prior work rather than inventing them from scratch — the implanted-backdoor construction methodology from Control Tax and the attack-scaffold elicitation approach from AI Control — so a real (if partial) combination is present; the honest read is "some combination, but a real new mechanism links the parts," which is the rubric's definition of a 1, not a 0.
+- `bottleneck_specificity` = **3** — the target is exact and nameable at every step: *which* three flavors, *which* cost meter (one execution + one comparison), *which* simplex sweep resolution, *which* specific ablation isolates structure from novelty. Matches the strongest tested models in the source paper's calibration (2.3-2.6) and the human baseline (2.56); arguably above both given how concretely each mechanism is pinned down.
+- `boilerplate` = **1** — mostly load-bearing; the one generic-sounding clause is "Automated verifiers that gate agent code... operate under a fixed, small budget of verification calls" — true and necessary scene-setting, but it's the kind of sentence that could open several different budgeted-oversight papers, so it isn't fully load-bearing on its own (it earns its place only once the very next clause pivots to the composition-specific gap).
+
+## 4. Dominant verb(s)
+
+Method sentence's main verbs: **meter, score, sweep, test, ablate**. `ablate` and `isolate` (used in the key-insight language: "isolate whether any targeted-flavor advantage comes from structure or merely from novelty") are explicitly in the human-heavy archetype family (`archetype-verbs.md` lists *isolate, disentangle, localize, swap out, strip out, ablate, invert, recast, expose* as the same cluster as *replace* and *decouple*). `meter`, `score`, `sweep`, and `test` are neutral, task-specific verbs, not connecting verbs. No instance of *integrate/unify/merge/adapt/combine/leverage* appears in a claim position anywhere in the extracted idea — the one place a bridge-flavored verb ("bridging") appeared was in the *original*, uncorrected wording of CO1 in the digest, which the confirmed Stage 2/5 outputs do not carry forward.
+Archetype family: **human-heavy / neutral**.
+
+## 5. Verdict
+
+| # | Condition | Fired? |
+|---|---|---|
+| 1 | Opportunity = Bridge Opportunity AND Method = Synthesis/Unification | **No** |
+| 2 | surface_stitching ≥ 2, OR boilerplate ≥ 2, OR bottleneck_specificity ≤ 1 | **No** (1 / 1 / 3) |
+| 3 | Dominant verb from the LLM-heavy archetype list | **No** (ablate/isolate/meter/score/sweep/test) |
+
+**Verdict: 🟢 Reads as human-shaped.** No condition fires — a clean pass on all three independent checks, not merely an absence of the single worst flag.
+
+## 6. Interpretation (why this matters here, honestly)
+
+This is a genuinely useful confirmation rather than a rubber stamp, and it is worth being precise about what exactly it confirms. The seed material (`digest.md` N7's CO1 wording, before `paper.md` existed) *did* originally carry a real Bridge-Opportunity-flavored phrase ("bridging single-channel AI-control models and multi-channel classical inspection games") — this was not a strawman risk invented for this audit. `paper.md`'s own Step 3 self-audit caught and corrected exactly that phrase before this audit began, which is why the *confirmed* Stage 2/5 outputs used here score clean. This audit is independent verification, using a different, externally-sourced taxonomy (not the same prompt logic that wrote `paper.md`), that the corrected framing actually holds up rather than merely asserting it does — and it agrees with `paper.md`'s own self-correction.
+
+The practical implication for the broader topic set: this specific pass (🟢, no manufactured flag) should not be read as "the correction was unnecessary" — the opposite is true. The original digest-level wording of CO1 would very likely have tripped condition 1 outright had it survived unedited into a paper draft. The lesson this topic reinforces is that the auditor's value is highest exactly at the boundary between a paper's own internal contribution statement (which can drift toward bridge language even when the underlying mechanism is specific) and its motivation/method prose (which, here, was already disciplined by the time it reached this audit). Running this check *after* Stage 2/5 confirm but *before* the paper draft is committed is what let a real, pre-existing bridge-flavored phrase get caught upstream rather than being independently rediscovered post-hoc.

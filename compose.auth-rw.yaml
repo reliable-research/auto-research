@@ -1,0 +1,16 @@
+# Opt-in override for commands that must update Codex or Claude state.
+services:
+  ara:
+    volumes:
+      - type: bind
+        source: "${HOME}/.codex"
+        target: /home/ara/.codex
+        read_only: false
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${HOME}/.claude"
+        target: /home/ara/.claude
+        read_only: false
+        bind:
+          create_host_path: false

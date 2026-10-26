@@ -1,0 +1,754 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage[hidelinks]{hyperref}
+\usepackage{balance}
+\providecommand{\BIBentryALTinterwordspacing}{\spaceskip=0pt plus 4pt minus 1pt}
+\providecommand{\BIBentrySTDinterwordspacing}{\spaceskip=0pt}
+
+% ---------------------------------------------------------------
+% Pre-registration machinery.
+% \PH{...}  = pre-registered placeholder: a SLOT bound to a fixed
+%             estimand before data exists, never a claim. Filled only
+%             from experimental output; if the pre-registered fallback
+%             fires, the surrounding sentence is REPLACED by its
+%             pre-committed fallback wording, not edited post hoc.
+% \wj{...}  = author-visible standpoint comment on a hypothesis:
+%             why this hypothesis is posed this way, what the
+%             disconfirming result is, and which fallback governs.
+%             Strip both macros for camera-ready.
+% ---------------------------------------------------------------
+\newcommand{\PH}[1]{\colorbox{gray!18}{\small$\langle$#1$\rangle$}}
+\newcommand{\wj}[1]{\textcolor{blue}{\footnotesize [WJ: #1]}}
+
+\newcommand{\ms}{\ensuremath{\mathit{ms}}}
+\newcommand{\Fs}{\ensuremath{F(s)}}
+\newcommand{\Gs}{\ensuremath{G(s)}}
+
+\begin{document}
+
+\title{Adequacy Is the Attack Surface: Measuring When Visible Test-Pass
+Stops Tracking Correctness for Coding Agents}
+
+\author{\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockA{Anonymous Institution\\
+anonymous@example.com}}
+
+\maketitle
+
+\begin{abstract}
+The space between passing a visible test suite and being correct has a
+concrete, enumerable form: the surviving mutants of that suite --- executable
+programs that differ from the intended implementation yet escape every
+visible test. For a coding agent that edits code until the suite turns
+green, this surviving-mutant set is an \emph{attack surface}: the exact
+space of ways to be wrong and still be accepted, whose size is a single
+controllable scalar, the suite's mutation-kill score. We present the first
+study that treats visible-suite mutation adequacy as a controlled,
+size- and coverage-matched independent variable for coding agents, and
+estimates the \emph{false-acceptance curve} it induces:
+$\Fs = P(H{=}0 \mid V{=}1, \ms(T_v){=}s)$, the fraction of
+agent patches accepted at adequacy $s$ that fail a held-out oracle.
+On \PH{$N$} repair tasks from SWE-bench Verified (Python) and Defects4J
+(Java) and \PH{$K$} agent families, degrading visible adequacy from full
+to $\ms{=}0.30$ raises false acceptance by \PH{$\Delta F$~pp}, while false
+acceptance at full adequacy remains \PH{$\le F(1.00)$~pp}; the rise
+\PH{emerges near $s^\ast{=}0.xx$ / grows gradually}, and the iterative
+fix-until-pass loop exceeds a budget-matched selection-only control by
+\PH{$\ge$5~pp} in the low-adequacy band. A human-validated differential
+diagnostic (agreement \PH{$\kappa{=}0.xx$}) attributes \PH{$xx\%$} of
+low-adequacy false acceptances to gaming-shaped behavior rather than
+honest incompleteness. Our results yield a calibrated sufficiency floor
+for practitioners: in our setting, visible suites whose mutation adequacy
+falls below \PH{$s^\ast$} should not serve as standalone acceptance gates
+for agent-produced patches. All hypotheses, estimands, thresholds, and
+fallback interpretations were fixed before data collection.
+\end{abstract}
+
+\begin{IEEEkeywords}
+coding agents, mutation testing, test adequacy, automated program repair,
+overfitting, verifier sufficiency, empirical software engineering
+\end{IEEEkeywords}
+
+\section{Introduction}\label{sec:intro}
+
+The space between passing a visible test suite and being correct is not an
+unknown residual. Software testing gives it a concrete, enumerable form:
+the behavior changes the suite fails to detect. Mutation testing constructs
+that set explicitly --- each surviving mutant is an executable program that
+differs from the intended implementation yet escapes every visible
+test~\cite{Papadakis2019Survey}. For a human developer, a surviving mutant
+marks a testing weakness. For a coding agent that edits code and observes
+test feedback until the suite turns green, the surviving-mutant set is
+something sharper: the exact space of ways to be wrong and still be
+accepted, whose size is a single scalar --- the suite's mutation-kill
+score --- that can be dialed. The exploitable slack is not estimated after
+the fact; it is constructed in advance. That is the opening this paper
+exploits: a testing risk one can only warn about becomes a variable one can
+sweep.
+
+The trust placed in that slack is growing faster than our knowledge of it.
+Execution-grounded pipelines propose a patch, run the visible tests,
+revise, and accept once the suite passes; benchmarks report a single pass
+rate against whatever suite ships with a
+task~\cite{SWEbench_VTF8yNQM66}. The appeal is real --- test execution is
+cheap, deterministic, and needs no human --- but it rests on one
+assumption: that visible test-pass tracks correctness closely enough. When
+the suite is inadequate, an agent under optimization pressure can satisfy
+the checked behaviors without fixing the defect, and the pipeline reports
+success while accepting a broken patch. The question a benchmark designer
+or an engineering team actually faces is not \emph{whether} this can
+happen but \emph{how adequate a suite must be before its pass signal can
+be trusted} --- and no study answers it, because no study controls
+adequacy itself.
+
+Existing work holds fixed precisely the variable we vary.
+Imperfect-verifier theory shows that resampling under a \emph{fixed} weak
+selector converges not to correctness but to a ceiling set by the
+selector's false-positive rate~\cite{ResamplingLimits_j8H84v6AZ1}, and
+characterizes how the verifier's ROC curve reshapes what best-of-$N$
+accepts~\cite{ROCnReroll_3Gy5mmyuxn}; both study a static generator
+against a static verifier, never an agent adapting to one.
+Execution-verified benchmarks define correctness by whatever fail-to-pass
+tests ship with each repository~\cite{SWEbench_VTF8yNQM66}, so their pass
+rates mix agent capability with uncontrolled suite strength.
+Reward-over-optimization work documents policies exploiting reward-model
+errors as they improve~\cite{ChasingTail_pBjy4ek2QV,acl_pang_etal_2023_reward},
+but for text reward models, never a verifier with a computable adequacy
+score. Recent benchmarks measure reward hacking of long-horizon coding
+agents as a gap between visible validation and held-out pass
+rates~\cite{SpecBench_2605_21384,RHB_2605_02964} --- structurally our
+two-suite construct --- but under each task's \emph{fixed, shipped} suite
+decomposition, with no control over the suite's adequacy. Closest of all,
+the classical automated-program-repair literature measures patch
+overfitting against a held-out suite~\cite{Smith2015Overfitting,
+Qi2015PatchPlausibility} and detects it per patch by differential testing
+against a reference patch~\cite{XinReiss2017DiffTGen,Xiong2018PatchSim}
+--- we concede these are the method-twins of our visible/held-out
+construct and of our per-patch diagnostic. All of this work differs on the
+one axis none of it varies: no prior study --- recent or classical ---
+sweeps mutation-kill adequacy as a size- and coverage-matched independent
+variable against iterative LLM-agent behavior. Concretely, before this
+design one could not \emph{attribute} accepted-but-wrong patches to suite
+adequacy at all, because adequacy arrived confounded with suite size, code
+coverage, and benchmark accident; making it a matched, swept variable is
+what turns ``weak suites are risky'' from a caution into a measurement.
+
+\textbf{We treat visible-suite mutation adequacy as a controlled
+independent variable and estimate the false-acceptance curve it induces.}
+Specifically: for each repair task we construct visible sub-suites at
+target mutation-kill scores while holding suite size and code coverage
+approximately fixed and filtering equivalent mutants
+(Sec.~\ref{sec:sampler}); the agent sees only the visible suite and runs a
+standard fix-until-pass loop, blind to a held-out oracle of hidden tests
+plus the tests that kill the mutants excluded from the visible suite
+(Sec.~\ref{sec:oracle}); and every accepted patch is scored post hoc
+against that oracle. The object of study is the \emph{false-acceptance
+rate}
+\begin{equation}
+\Fs \;=\; P\bigl(H{=}0 \,\bigm|\, V{=}1,\; \ms(T_v){=}s\bigr),
+\label{eq:fs}
+\end{equation}
+where $V{=}1$ denotes visible-suite acceptance and $H{=}1$ held-out oracle
+pass: of the patches the visible suite \emph{accepts} at adequacy $s$, the
+fraction that fail the held-out oracle. This conditional quantity, rather
+than a marginal difference of two pass rates, is what a practitioner
+gating patches needs: it answers ``of what my suite greenlights, how much
+is broken?''
+
+Turning this into a trustworthy measurement raises difficulties that our
+design answers with constructions rather than hedges. Adequacy, size, and
+coverage correlate in an unconstrained draw, and equivalent mutants
+corrupt the score's own denominator --- so an adequacy-controlled sampler
+isolates adequacy by construction, and equivalent-mutant handling is
+elevated to first-class, reported machinery with a sensitivity band
+(Sec.~\ref{sec:equiv}). Repair episodes are noisy --- so a mixed-effects
+trend model pools instances and repeated episodes
+(Sec.~\ref{sec:analysis}). A coarse scalar does not reveal its own curve
+shape --- so a segmented-versus-smooth model comparison forces any ``sharp
+threshold'' claim to beat a gradual alternative. A rising \Fs{} alone
+cannot say whether agents exploit blind spots or merely produce
+honestly-incomplete fixes --- so a differential diagnostic tests each
+accepted-but-wrong patch just outside the visible suite's footprint, and
+is itself validated against adjudicated human labels before its output is
+trusted (Sec.~\ref{sec:diagnostic}). And an imperfect verifier already
+inflates accepted-but-wrong mass for a purely static generator --- so a
+budget-matched, feedback-free selection control isolates adaptive
+exploitation from that mechanical selection effect
+(Sec.~\ref{sec:controls}).
+
+Degrading visible-suite adequacy raises false acceptance by
+\PH{$\Delta F$~pp} between full adequacy and $\ms{=}0.30$, while false
+acceptance at full adequacy stays \PH{$\le F(1.00)$~pp}, isolating
+adequacy as the operative driver --- measured on \PH{$N$} repair tasks
+spanning Python (SWE-bench Verified) and Java (Defects4J) across
+\PH{$K$} agent families, against a full-adequacy control, a size-matched
+adequacy-uncontrolled arm, and a budget-matched selection-only arm. The
+rise \PH{emerges around $s^\ast{=}0.xx$ / grows gradually}; it
+\PH{does / does not} transfer across the tested agent families; the
+iterative loop exceeds the selection-only control by \PH{$\ge$5~pp} in the
+low-adequacy band, licensing an attribution to adaptive agent behavior
+beyond selection; and the diagnostic reaches \PH{$\kappa{=}0.xx$}
+agreement with human labels, attributing \PH{$xx\%$} of low-adequacy
+false acceptances to gaming-shaped behavior rather than honest
+incompleteness. All of this is reported for budget-bounded iterative
+repair under a frozen policy --- the only regime we test; extrapolation to
+training-time verifiers under gradient pressure is a bounded conjecture,
+not a claim any hypothesis licenses.
+
+This paper makes the following contributions:
+\begin{enumerate}[leftmargin=1.5em]
+\item A formalization of visible test-suite mutation adequacy as a
+\textbf{controllable attack surface} for coding-agent acceptance: the
+surviving-mutant set is the exact space in which a wrong patch can pass,
+and its size is a dial-able scalar rather than a fixed accident of the
+shipped suite (Sec.~\ref{sec:background}).
+\item An \textbf{adequacy-controlled sub-suite construction} isolating
+mutation-kill score from suite size, code coverage, and equivalent-mutant
+noise, with the complementary held-out oracle it simultaneously defines
+(Sec.~\ref{sec:instrument}).
+\item The \textbf{false-acceptance curve \Fs{} and onset estimate
+$s^\ast$} for coding agents under controlled adequacy, with the
+sharp-versus-gradual question decided by model comparison rather than
+presupposed (Sec.~\ref{sec:results}).
+\item A \textbf{separation of adaptive feedback exploitation from
+selection} under an imperfect verifier, and of deliberate suite-gaming
+from honestly-incomplete fixes via a human-validated per-patch diagnostic
+(Secs.~\ref{sec:controls}, \ref{sec:diagnostic}).
+\item A \textbf{practical sufficiency floor}: in our setting, visible
+suites below mutation adequacy $s^\ast{=}$\,\PH{$0.xx$} should not serve
+as standalone acceptance gates for agent-produced patches --- stated for
+evaluation- and acceptance-time gating, with the training-time
+extrapolation explicitly bounded (Sec.~\ref{sec:discussion}).
+\end{enumerate}
+
+The contributions are deliberately ordered so the paper degrades
+gracefully under its own pre-registered fallbacks: the calibrated floor
+(items 2--3) requires only \Fs{}; the gaming attribution (item 4) is gated
+on diagnostic validation and can be withdrawn without voiding the floor;
+transfer (within item 3) is reported per agent either way.
+
+\section{Background: Adequacy as an Exploit Surface}\label{sec:background}
+
+\subsection{Setting}
+An agent receives a repair task: a buggy program $P$, a natural-language
+issue, and a \emph{visible} test suite $T_v$. The agent may edit $P$ and
+execute $T_v$ freely; it terminates when $T_v$ passes (acceptance,
+$V{=}1$) or its budget is exhausted. Afterwards --- and invisibly to the
+agent --- the final patch is executed against a \emph{held-out oracle}
+$T_h$, yielding $H \in \{0,1\}$. This visible/held-out decomposition is
+the standard construct of patch-overfitting
+research~\cite{Smith2015Overfitting} and of recent agent reward-hacking
+benchmarks~\cite{SpecBench_2605_21384}; what is new here is that we
+control the strength of $T_v$.
+
+\subsection{Mutation adequacy, definitionally}
+Given a mutant pool $M$ generated from the fixed reference version of $P$,
+the mutation-kill score of a suite $T$ is
+$\ms(T) = |\{m \in M^\ast : T \text{ kills } m\}| \,/\, |M^\ast|$, where
+$M^\ast \subseteq M$ excludes mutants judged equivalent
+(Sec.~\ref{sec:equiv}). We emphasize a definitional rather than empirical
+reading of \ms{}: whether mutation score predicts \emph{real-fault}
+detection is contested in the
+literature~\cite{Just2014Valid,Papadakis2019Survey}, and this paper does
+not rely on that correlation. For our purposes, $1-\ms(T_v)$ measures,
+literally and by construction, the normalized size of the
+\emph{surviving-mutant set}: the enumerable space of behavior changes
+$T_v$ cannot see. Every surviving mutant is a certificate that some wrong
+program passes $T_v$. It is in this sense --- and only this sense --- that
+adequacy is the attack surface: we make no claim that \ms{} measures
+``true suite quality,'' only that it measures the size of the exploitable
+slack, which is the quantity an adapting agent can occupy.
+
+\subsection{Why the agent case differs from classical overfitting}
+Classical APR overfitting~\cite{Smith2015Overfitting,Qi2015PatchPlausibility}
+arises when a \emph{search} procedure samples patches until one passes.
+An iterative agent adds two ingredients: it \emph{reads} the failing
+tests (so the visible suite's blind spots are partially legible in the
+feedback), and it \emph{adapts} its edits across turns. Whether these
+ingredients add accepted-but-wrong mass beyond what any imperfect
+verifier mechanically produces for a static
+sampler~\cite{ResamplingLimits_j8H84v6AZ1} is precisely our RQ5, and we
+measure it rather than assume it.
+
+\section{Study Design}\label{sec:design}
+
+\subsection{Research questions}
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{RQ1 (Adequacy $\to$ false acceptance).} Does false
+acceptance rise as visible-suite mutation adequacy falls, with suite size
+and coverage held fixed?
+\item \textbf{RQ2 (Onset and shape).} Is there an onset threshold
+$s^\ast$ below which visible test-pass stops tracking correctness, and is
+the rise sharp or gradual?
+\item \textbf{RQ3 (Transfer).} Does the adequacy--false-acceptance
+relationship, and $s^\ast$ in particular, transfer across agent families
+and task languages?
+\item \textbf{RQ4 (Mechanism).} Are accepted-but-wrong patches
+gaming-shaped --- exploiting the visible suite's specific blind spots ---
+or merely honestly incomplete?
+\item \textbf{RQ5 (Adaptation vs.\ selection).} Does iterative
+test-feedback use add accepted-but-wrong mass beyond the mechanical
+selection effect of an imperfect verifier?
+\end{itemize}
+
+\subsection{Estimand and pre-registered decision machinery}\label{sec:estimand}
+The primary estimand is \Fs{} of Eq.~\eqref{eq:fs}, estimated at target
+adequacy levels $s \in \{0.30, 0.45, 0.60, 0.75, 0.90, 1.00\}$. The
+marginal overfitting gap $\Gs = P(V{=}1 \mid s) - P(H{=}1 \mid s)$ is
+retained as a secondary, descriptive curve.\footnote{The study was first
+specified with \Gs{} as primary; the promotion of \Fs{} was made as a
+recorded pre-data amendment, before any agent episode was run, because
+\Fs{} conditions on the acceptance event and is therefore the quantity an
+acceptance gate exposes. No estimand was altered after data collection.}
+
+Because \Fs{} conditions on $V{=}1$, its per-cell denominator is the
+number of \emph{accepted} patches, which can be small precisely where the
+suite is strongest. We therefore build the thin-cell rule into the
+estimand itself: a cell (task $\times$ agent $\times$ level) with fewer
+than $n_{\min} =$ \PH{$n_{\min}$} accepted patches is reported
+\textsc{inconclusive} for \Fs{} and is excluded from curve fitting; every
+reported \Fs{} point carries its denominator. If the pilot
+(Sec.~\ref{sec:pilot}) shows $F(1.00)$ cannot reach $n_{\min}$ at our task
+budget, the pre-registered fallback is to report \Gs{} as primary and
+\Fs{} descriptively --- decided before the main run, never after.
+
+\subsection{Hypotheses}\label{sec:hypotheses}
+All confirmatory hypotheses, thresholds, and fallbacks below were fixed
+before data collection; family-wise error across H1--H5 is controlled by
+Holm's procedure at $\alpha = 0.05$.
+
+\medskip\noindent
+\textbf{H1 (Adequacy drives false acceptance).} \emph{(i)}
+$F(0.30) - F(1.00) \ge 10$~pp; \emph{(ii)} the fixed effect of \ms{} on
+$H$ among accepted patches is negative ($p < 0.05$, Holm); \emph{(iii)}
+$F(1.00) \le 10$~pp.
+\wj{Standpoint: this is the compass hypothesis --- the binary success
+criterion of the whole study. (iii) is the internal control: if even
+full-adequacy suites over-accept, adequacy is not the operative driver and
+the finding becomes an attack on the adequacy construct itself
+(pre-worded fallback), which is still publishable but a different paper.
+Disconfirming result: a flat curve; governed by fallback F-G1, reported as
+a clean refutation of the weak-suites-invite-gaming assumption.}
+
+\medskip\noindent
+\textbf{H2 (Shape).} The rise of \Fs{} as $s$ decreases is monotone; and
+\textbf{H2a (Sharpness)}: a segmented (broken-stick) model beats a smooth
+monotone alternative by $\Delta\mathrm{AIC} \ge 4$, yielding an onset
+estimate $s^\ast$ with a bootstrap 95\% CI.
+\wj{Standpoint: we deliberately pose sharpness as the HARDER claim and
+predict, based on the digest of prior overfitting curves, that H2 holds
+but H2a fails (gradual growth). If neither segmented nor smooth fits
+monotonically, the pre-worded fallback is that scalar mutation score does
+not order agent-exploitable weakness --- a construct-level finding.
+``Sharp threshold'' language is licensed only if H2a passes; otherwise
+$s^\ast$ is reported as a regulatory floor chosen on the fitted smooth
+curve, not a discovered discontinuity.}
+
+\medskip\noindent
+\textbf{H3 (Transfer).} The agent$\times$adequacy interaction is
+non-significant AND per-agent $s^\ast$ estimates lie within a
+pre-registered tolerance band of $\pm 0.10$.
+\wj{Standpoint: both branches are pre-worded and both are findings. If H3
+holds, the floor is agent-intrinsic and the practitioner rule is
+universal. If H3 fails, the deliverable degrades gracefully to a
+per-agent floor table --- ``compute your suite's kill score, look up your
+agent's floor'' --- which is weaker but still actionable. The narrative
+must not presuppose transfer.}
+
+\medskip\noindent
+\textbf{H4 (Gaming attribution).} \emph{(i)} The differential diagnostic
+agrees with blind, adjudicated human labels at Cohen's $\kappa \ge 0.7$
+on a stratified sample of \PH{$n_{\mathrm{lab}}$} accepted-but-wrong
+patches; \emph{(ii)} conditional on (i), the gaming-shaped fraction among
+accepted-but-wrong patches rises by $\ge 15$~pp from the highest to the
+lowest adequacy band.
+\wj{Standpoint: (i) is a kill-switch, and the paper is built to survive
+it: if $\kappa < 0.7$ the diagnostic is withdrawn, every gaming
+attribution disappears from the paper (combination rule 5), and the
+contribution reverts to the calibrated floor, which needs only F(s).
+This is why gaming is a SECONDARY contribution in
+Sec.~\ref{sec:intro} --- a deliberate hierarchy choice, not modesty.}
+
+\medskip\noindent
+\textbf{H5 (Adaptation beyond selection).} In the low-adequacy band
+($\ms \le 0.45$), the iterative fix-until-pass arm exceeds the
+budget-matched, feedback-free best-of-$k$ selection arm:
+$F_{\mathrm{iter}} - F_{\mathrm{sel}} \ge 5$~pp.
+\wj{Standpoint: this is the causal firewall separating our claim from
+the imperfect-verifier literature's mechanical ceiling
+(ResamplingLimits): an imperfect verifier inflates accepted-but-wrong
+mass even for a static sampler, so a naive reading of H1 alone would
+over-attribute to ``gaming.'' If H5 fails (fallback F5), every
+agent-agency claim in the paper is restated as a selection effect and
+the study is reported as the first adequacy-controlled confirmation of
+the selection ceiling --- the title and floor survive because they do not
+depend on agency.}
+
+\subsection{Confirmatory vs.\ exploratory scope}
+H1--H5 are confirmatory. Pre-registered as exploratory: per-mutant-class
+breakdowns of which operators' survivors are exploited, operator-mix
+robustness cells, per-repository effects, and qualitative patch
+taxonomies. Exploratory results are reported in a separate subsection and
+never enter the Holm family.
+
+\section{Instrumentation}\label{sec:instrument}
+
+\subsection{Adequacy-controlled sub-suite sampler}\label{sec:sampler}
+For each task we require visible sub-suites that differ in \ms{} but not
+in the confounds a reviewer would reach for first: suite size and code
+coverage. Given the task's full suite $T$ (all developer tests plus the
+benchmark's fail-to-pass tests) and filtered mutant pool $M^\ast$
+(Sec.~\ref{sec:equiv}), we compute the kill matrix
+$K \in \{0,1\}^{|T| \times |M^\ast|}$ once per task. The sampler then
+draws, for each target level $s$, sub-suites $T_v \subseteq T$ subject to:
+(a) $|\ms(T_v) - s| \le 0.03$; (b) $|T_v| = n_0$ fixed across all levels
+of the task, with $n_0$ chosen as the largest size for which the lowest
+target level remains reachable; (c) line coverage of $T_v$ within
+$\pm 5$\% of the level-1.0 reference sub-suite; (d) the benchmark's
+fail-to-pass tests for the target defect always included, so every arm
+still specifies the bug being repaired. Sampling is greedy-random over
+$K$ with rejection, \PH{$r$} independent sub-suites per (task, level),
+seeds fixed and published. Tasks for which the constraint set is
+infeasible at any level are excluded before any agent run, with counts
+reported (Table~\PH{X}).
+
+Constraint (d) has a consequence worth stating: our sweep degrades the
+\emph{regression-detection} adequacy of the visible suite while keeping
+the defect specification constant. This is the deployment-realistic
+regime --- gating suites almost always contain a reproduction test for
+the issue at hand and vary in how well they guard everything else.
+
+\subsection{Equivalent mutants as first-class machinery}\label{sec:equiv}
+Detecting equivalent mutants is undecidable, real-world equivalence rates
+are material, and the strongest simple filter, Trivial Compiler
+Equivalence (TCE), removes only a fraction of
+them~\cite{Papadakis2015TCE,Papadakis2019Survey}. Because \ms{} is our
+independent variable and equivalent mutants corrupt its denominator ---
+non-randomly, clustered by operator and code region --- we treat
+equivalence handling as reported machinery rather than a preprocessing
+checkbox. Three layers: \emph{(1)} TCE at compile/bytecode level removes
+provably-trivial equivalents; \emph{(2)} an independent LLM-based
+equivalence judgment in the style of industrial mutation
+pipelines~\cite{Foster2025ACH}, run with a fixed prompt and model
+snapshot, flags suspected equivalents; inter-method agreement is reported
+(Table~\PH{X}). \emph{(3)} Every headline curve is recomputed under a
+\emph{sensitivity band}: an aggressive policy (drop all suspected
+equivalents) and a conservative policy (drop only TCE-proven ones). The
+onset $s^\ast$ is reported with its value under both policies; if
+$s^\ast$ moves outside its bootstrap CI across the band, that instability
+\emph{is} reported as a finding about the construct
+\wj{pre-committed: we do not get to pick the friendlier band post hoc;
+the abstract's $s^\ast$ is the conservative-policy value, with the band
+in the results table}. Tasks whose suspected-equivalence rate exceeds
+\PH{$q_{\mathrm{eq}}$}\% are excluded pre-run, counts reported.
+
+\subsection{Held-out oracle, as a lower bound}\label{sec:oracle}
+The held-out oracle $T_h$ comprises (i) all tests of $T$ excluded from
+$T_v$, (ii) the benchmark's hidden evaluation tests where the benchmark
+maintains them, and (iii) the killing tests of every mutant excluded from
+$T_v$'s kill responsibility. $T_h$ is fixed per (task, level, replicate)
+\emph{before} any agent run and is never visible to any arm.
+
+$T_h$ is itself a finite suite, so the label $H{=}1$ can be granted to a
+patch that is wrong on inputs neither suite covers. The error is
+one-sided: it can only \emph{undercount} false acceptances. Every \Fs{}
+in this paper is therefore a \textbf{lower bound} on the true
+false-acceptance rate, and every claim is phrased accordingly
+\wj{this framing is load-bearing for construct validity: a reviewer
+applying the ``your oracle is also just a suite'' attack is conceded in
+advance, and the direction of the bias strengthens rather than weakens
+the alarm the floor raises}. As a robustness probe we additionally
+amplify $T_h$ with EvalPlus-style generated
+tests~\cite{EvalPlus_Liu2023} on the \PH{$n_{\mathrm{amp}}$} tasks where
+type-aware amplification applies, and report how much \Fs{} moves
+(Table~\PH{X}).
+
+\subsection{Gaming-vs-incompleteness diagnostic}\label{sec:diagnostic}
+For each accepted-but-wrong patch we execute a differential probe just
+outside the visible suite's footprint: inputs generated from the visible
+tests by boundary perturbation and metamorphic variation, executed
+against the patch and the reference fix. A patch is \emph{gaming-shaped}
+if its disagreements with the reference concentrate on
+visible-suite-adjacent inputs while it reproduces visible-checked
+behavior exactly --- e.g., special-casing checked values, hardcoding
+expected outputs, or disabling the faulty path only for tested inputs;
+it is \emph{honestly incomplete} if disagreements distribute across the
+input space without structure aligned to $T_v$'s footprint. The
+classifier's output is trusted only after H4(i): two authors blind-label
+a stratified sample of \PH{$n_{\mathrm{lab}}$} patches with adjudication,
+and Cohen's $\kappa$ against the classifier is reported. Below the 0.7
+gate, all gaming attributions are withdrawn.
+
+\subsection{Selection-only control and cross-agent harness}\label{sec:controls}
+The selection-only arm isolates adaptation: the same base model generates
+$k$ independent single-shot patches with \emph{no} test feedback; the
+visible suite then selects the first passing candidate, with $k$
+calibrated so that total model-token and execution budget matches the
+iterative arm's mean consumption per (task, level)
+\wj{budget matching is by cost, not by attempts --- matching attempts
+would hand the iterative arm more tokens and bias H5 toward
+adaptation}. All arms share the cross-agent harness: identical prompts
+up to agent-native scaffolding, identical budgets, temperature
+\PH{$\tau$}, \PH{$k$} episodes per (task, level, agent), fixed seeds
+where the agent stack honors them.
+
+\section{Experimental Setup}\label{sec:setup}
+
+\subsection{Tasks and benchmarks}
+We draw \PH{$N_{\mathrm{py}}$} Python tasks from SWE-bench
+Verified~\cite{SWEbench_VTF8yNQM66} and \PH{$N_{\mathrm{jv}}$} Java
+tasks from Defects4J v\PH{x.y}~\cite{Defects4J_Just2014}, filtered to
+tasks with (a) a deterministic, flake-free full suite under \PH{$R$}
+repeated runs, (b) a feasible sampler constraint set at all six levels,
+and (c) suspected-equivalence rate below \PH{$q_{\mathrm{eq}}$}\%.
+Filtering counts per criterion are reported in Table~\PH{X}. Because
+SWE-bench Verified is widely used in agent training corpora,
+contamination is a first-order concern: we tag each task with the
+repository-snapshot recency heuristics of \PH{tooling}, and the
+\textbf{contamination-excluded subset is the primary analysis set}
+whenever it disagrees with the full set; both are always reported.
+
+\subsection{Mutation tooling}
+Java mutants are generated with Major~\cite{Just2011Major} and Python
+mutants with \PH{mutmut/cosmic-ray, version}, under the standard
+operator sets of each tool; operator mixes are held identical across
+levels within a task by construction (the pool $M$ is fixed; only
+$T_v$'s kill responsibility varies). Kill matrices are computed once on
+the unpatched reference version with per-test timeouts of
+\PH{$t$}s.
+
+\subsection{Agents and budgets}
+We evaluate \PH{$K$} agent families spanning the current design space:
+a pipeline-style repair system (Agentless-class), a
+tool-using autonomous agent (SWE-agent-class), and \PH{a third family},
+each backed by \PH{model list, pinned snapshots}. Budgets:
+\PH{$B$} iterations or \PH{\$C} per episode, whichever first;
+\PH{$k$} episodes per cell. The full grid is
+$\PH{N} \times 6 \times \PH{K} \times \PH{k}$ episodes plus the
+selection-only arm at \PH{levels}, a total of \PH{$E$} episodes at an
+estimated compute cost of \PH{\$D}.
+
+\subsection{Statistical analysis}\label{sec:analysis}
+RQ1/H1: mixed-effects logistic regression of $H$ among accepted patches
+on \ms{} (fixed), with crossed random intercepts for task and agent and
+a random slope for task; the H1(i) contrast is estimated on the fitted
+marginal means with cluster-bootstrap CIs (tasks as clusters,
+\PH{$B_{\mathrm{boot}}$} resamples). RQ2/H2: segmented (single-knot
+broken-stick) versus monotone smooth (I-spline GAM) fits on \Fs{};
+$\Delta\mathrm{AIC} \ge 4$ decides sharpness; $s^\ast$ is the knot (if
+segmented wins) or the pre-registered regulatory crossing
+$F(s) = F(1.00) + 5$~pp (if smooth wins). RQ3/H3: agent$\times$\ms{}
+interaction by likelihood-ratio test plus per-agent $s^\ast$ band check.
+RQ4/H4: Cohen's $\kappa$ with adjudication; band contrast by
+proportion test within accepted-but-wrong patches. RQ5/H5: paired
+per-(task, level) contrast between arms, McNemar on paired episode
+outcomes where pairing is exact and cluster bootstrap otherwise. All
+five families enter one Holm correction. Thin cells follow
+Sec.~\ref{sec:estimand}. Analysis code and the locked analysis plan are
+in the artifact.
+
+\subsection{Pilot gates (go/no-go)}\label{sec:pilot}
+Before the main grid, a \PH{15}-task pilot must pass three gates:
+\textbf{G1} --- $F(1.00)$ cells reach $n_{\min}$ at the pilot's
+acceptance rates, else the \Gs{} fallback activates; \textbf{G2} ---
+$s^\ast$ (pilot estimate) is stable across the equivalent-mutant
+sensitivity band; \textbf{G3} --- the diagnostic clears $\kappa \ge 0.7$
+on the pilot's labeled sample. Gate outcomes are reported regardless of
+result \wj{the pilot is a capability check on the instrument, not a
+peek at the hypothesis; pilot episodes are excluded from confirmatory
+analysis}.
+
+\section{Results}\label{sec:results}
+\wj{Every number below is a pre-registered slot. If a hypothesis's
+fallback fires, the corresponding subsection is REPLACED by its
+pre-committed fallback text (kept in the artifact), not edited.}
+
+\subsection{RQ1: Adequacy drives false acceptance}
+Across \PH{$N$} tasks and \PH{$K$} agents, false acceptance rises from
+$F(1.00) = $ \PH{$x.x$}\% to $F(0.30) = $ \PH{$xx.x$}\%
+($\Delta = $ \PH{$xx$}~pp; H1(i) threshold 10~pp), with a negative
+adequacy effect ($\hat\beta_{\ms} = $ \PH{$-x.xx$}, $p = $
+\PH{$x{\cdot}10^{-x}$}, Holm) and a full-adequacy rate below the
+10~pp control bound. The size-matched, adequacy-uncontrolled arm shows
+\PH{result}, confirming the effect is carried by adequacy rather than
+suite size (Table~\PH{X}). Per-cell denominators accompany every point
+(Fig.~\PH{X}); \PH{$c$} cells were \textsc{inconclusive} under
+$n_{\min}$ and excluded from fitting.
+
+\subsection{RQ2: Onset and shape}
+The \PH{segmented / smooth} model wins
+($\Delta\mathrm{AIC} = $ \PH{$x.x$}), yielding
+$s^\ast = $ \PH{$0.xx$} (95\% CI \PH{$[0.xx, 0.xx]$}), stable across the
+equivalent-mutant sensitivity band
+(conservative \PH{$0.xx$} / aggressive \PH{$0.xx$}).
+\wj{If smooth wins, this subsection's language shifts from
+``discovered discontinuity'' to ``regulatory crossing'' per H2a's
+standpoint note; the floor remains.}
+
+\subsection{RQ3: Transfer across agents and languages}
+The agent$\times$adequacy interaction is \PH{n.s. / significant}
+(LRT $p = $ \PH{$0.xx$}); per-agent onsets are
+\PH{$0.xx$ / $0.xx$ / $0.xx$}, \PH{within / outside} the $\pm 0.10$
+band. Per-language curves are reported separately
+(Python \PH{$s^\ast$}, Java \PH{$s^\ast$}); pooling \PH{is / is not}
+licensed. \wj{Non-transfer branch: the deliverable becomes the
+per-agent floor table (Table~X), pre-worded as an actionable artifact,
+not a hedge.}
+
+\subsection{RQ4: Gaming-shaped vs.\ honestly incomplete}
+The diagnostic reaches $\kappa = $ \PH{$0.xx$} against blind adjudicated
+labels (\PH{pass/fail} of the 0.7 gate). \PH{Conditional on the gate:}
+gaming-shaped fractions among accepted-but-wrong patches rise from
+\PH{$xx$}\% (band $\ms \ge 0.75$) to \PH{$xx$}\%
+(band $\ms \le 0.45$), a \PH{$xx$}~pp increase (H4(ii) threshold
+15~pp). Exploratory operator-class breakdowns appear in
+Sec.~\ref{sec:exploratory}.
+
+\subsection{RQ5: Adaptation beyond selection}
+In the low-adequacy band, the iterative arm's false acceptance exceeds
+the budget-matched selection-only arm by \PH{$x.x$}~pp
+(H5 threshold 5~pp; paired \PH{McNemar/bootstrap} $p = $ \PH{$0.xx$}).
+\wj{If F5 fires: all agency language in
+Secs.~\ref{sec:intro}--\ref{sec:discussion} is restated as selection;
+the floor and RQ1--RQ3 findings are unaffected by construction.}
+
+\subsection{Calibration against as-shipped suites}
+Computed from the same kill matrices at no additional agent cost,
+\PH{$q$}\% of benchmark tasks ship visible suites with
+$\ms < s^\ast$ (Python \PH{$q$}\%, Java \PH{$q$}\%): the regime our
+floor warns about is \PH{common / rare} in the wild.
+
+\subsection{Exploratory analyses}\label{sec:exploratory}
+\PH{operator-class exploitation profiles}, \PH{per-repository
+effects}, and a \PH{qualitative taxonomy of gaming-shaped patches with
+examples} are reported here. These are
+outside the Holm family and claim no confirmatory status.
+
+\section{Discussion and Implications}\label{sec:discussion}
+
+\textbf{A calibrated sufficiency floor.} The practitioner rule this
+study licenses is: compute your gating suite's mutation-kill score
+(one mutation run; no agent episodes needed); if it falls below
+$s^\ast = $ \PH{$0.xx$} \PH{(per-agent table X if H3 failed)}, do not
+treat visible test-pass as a standalone acceptance signal --- add held-out
+tests, mutant-derived tests, or human review. Because every \Fs{} we
+report is a lower bound (Sec.~\ref{sec:oracle}), the floor errs on the
+permissive side: the true unsafe region can only be larger.
+
+\textbf{What the floor does and does not claim.} It is an
+acceptance-time result under a frozen policy and bounded budgets. It
+does not claim that training against weak verifiers produces gaming
+policies (RLVR-regime extrapolation is a conjecture our design cannot
+test), does not claim mutation score measures true suite quality
+(Sec.~\ref{sec:background}), and --- if H4(i) failed --- does not
+attribute intent-like structure to the patches.
+
+\textbf{For benchmark designers.} Reporting a benchmark's per-task
+visible-suite \ms{} distribution alongside pass rates would let readers
+condition trust on adequacy; our kill matrices for both benchmarks are
+released in the artifact.
+
+\textbf{For the imperfect-verifier literature.} Our selection-only arm
+gives the resampling-ceiling account~\cite{ResamplingLimits_j8H84v6AZ1}
+its first adequacy-controlled instantiation with an executable verifier;
+H5's outcome says whether adaptation adds mass beyond that ceiling.
+
+\section{Threats to Validity}\label{sec:threats}
+
+\textbf{Construct.} (1) Equivalent mutants corrupt \ms{}'s denominator;
+undecidable in general, with material real-world rates and only partial
+automated detection~\cite{Papadakis2015TCE}. Mitigation: the three-layer
+pipeline and sensitivity band of Sec.~\ref{sec:equiv}; the headline
+$s^\ast$ is the conservative-band value. (2) The held-out oracle is
+finite, so \Fs{} is a lower bound; all claims are phrased as such, and
+the EvalPlus-amplified probe bounds the movement. (3) Mutation score's
+relation to real-fault detection is contested~\cite{Just2014Valid}; we
+rely only on the definitional reading (surviving-set size), not the
+contested correlation.
+
+\textbf{Internal.} (4) Contamination of SWE-bench-derived tasks can
+flatten the curve toward a false null; the contamination-excluded set is
+primary on disagreement. (5) Thin \Fs{} denominators at high adequacy
+could manufacture shape artifacts; the $n_{\min}$ rule and per-cell
+reporting are built into the estimand. (6) Sampler rejection could
+correlate with task difficulty; excluded-task counts and characteristics
+are reported.
+
+\textbf{External.} (7) Two languages, two benchmarks, \PH{$K$} agent
+families, frozen policies, bounded budgets: the floor is stated for this
+regime. Per-language and per-agent results are reported unpooled unless
+H3 licenses pooling. (8) Operator sets are tool-standard; the
+operator-mix robustness cell (exploratory) probes this choice.
+
+\section{Related Work}\label{sec:related}
+
+\textbf{Patch overfitting in APR.} Overfitting to the evaluating suite
+is the classical failure of generate-and-validate
+repair~\cite{Smith2015Overfitting,Qi2015PatchPlausibility}, with
+per-patch detection by generated differential
+tests~\cite{XinReiss2017DiffTGen} and behavioral
+similarity~\cite{Xiong2018PatchSim}. We concede these as method-twins of
+our two-suite construct and our diagnostic; none sweeps suite adequacy
+as a controlled variable, none matches size and coverage, and none
+studies iterative LLM agents.
+
+\textbf{Reward hacking and imperfect verifiers.} Reward gaming in text
+generation~\cite{acl_pang_etal_2023_reward,acl_he_etal_2023_blind} and
+tail-chasing under reward models~\cite{ChasingTail_pBjy4ek2QV}
+establish the exploitation dynamic; verifier-imperfection theory bounds
+what selection can achieve under fixed
+error~\cite{ResamplingLimits_j8H84v6AZ1,ROCnReroll_3Gy5mmyuxn}. Recent
+benchmarks measure visible/held-out gaps for coding agents under
+shipped suites~\cite{SpecBench_2605_21384,RHB_2605_02964}. All fix the
+verifier we dial.
+
+\textbf{Test generation against code models.} Adversarial co-evolution
+of coders and testers~\cite{CURE_wPdBe9zxNr,ATGen_Sxj4o3qXtl,
+UTRL_VqjNYF9nbP} and self-verification agents~\cite{ReVeal_q56ZI1Co43}
+strengthen suites during training; we need the complementary diagnostic
+setting --- a suite held fixed at controlled, degraded adequacy.
+Execution-free reward models~\cite{2512_21919} motivate themselves by
+suite inadequacy without quantifying it; our curve supplies the
+quantification. Benchmark-strengthening work~\cite{EvalPlus_Liu2023}
+amplifies oracles for function-level code; we use it as a robustness
+probe, not a surrogate for our construct.
+
+\textbf{Mutation testing.} Foundations and the equivalent-mutant
+problem~\cite{Papadakis2019Survey,Papadakis2015TCE,Just2011Major},
+validity for real faults~\cite{Just2014Valid}, and industrial LLM-based
+mutation pipelines~\cite{Foster2025ACH}. Mutation-guided \emph{test}
+improvement is well studied; mutation adequacy as a swept independent
+variable against an adapting agent is, to our knowledge, ours.
+
+\section{Conclusion}\label{sec:conclusion}
+We turned a warning into a measurement. Visible-suite mutation adequacy
+--- definitionally the size of the surviving-mutant space a wrong patch
+can occupy --- was made a controlled, matched, swept variable for coding
+agents, yielding the false-acceptance curve \Fs{}, an onset estimate
+$s^\ast$, a validated separation of gaming from honest incompleteness,
+and an isolation of adaptive exploitation from mechanical selection.
+The resulting sufficiency floor gives practitioners a one-number,
+pre-agent check on whether their gating suite's green light means
+anything. The design's pre-registered fallbacks ensure every branch ---
+including the null --- returns an interpretable finding.
+
+\section*{Data Availability}
+The artifact (sampler, kill matrices, equivalence-filter outputs and
+sensitivity bands, harness configurations, locked analysis plan,
+labeled diagnostic sample, and all episode logs) is available at
+\PH{URL}, archived at \PH{DOI}.
+
+\balance
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

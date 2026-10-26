@@ -1,0 +1,769 @@
+# Recommending Ghosts: Install-Time Provenance Gating of Squatted Skill Recommendations in Live Agent Trajectories
+
+> Assembled from the six confirmed stage outputs in `discussion_trace.md`, post-audit
+> (`taste_audit.md`: 🟢) and post stage-review (`stage_review.md`: three REVISE findings
+> applied). Status: **specification / paper draft — no experiments have been run.** All
+> numbers below are pre-registered design targets with stated rationale, not results.
+
+## Abstract
+
+Autonomous LLM agents increasingly recommend and auto-install skills and tools from open
+registries, and a just-published large-scale study shows they hallucinate skill names that do
+not exist at rates of 36–43% across every tested configuration — a confirmed supply-chain
+attack precondition, because an adversary who observes which fake names agents reliably
+produce can pre-register a malicious skill under one of them and wait for a victim's agent to
+recommend and install it. Every mitigation in that study acts at the recommendation step, by
+constraining what the model is allowed to say, and every one buys a lower hallucination rate
+only by destroying usefulness (best case: a real-skill recall of roughly 16%). We observe that
+all of these defenses share one structural property — they intervene on the recommendation
+distribution — and that a defense placed one step later, at install time, need not touch that
+distribution at all: it need only ask whether the specific skill about to be installed comes
+from a trusted publisher. Crucially, a bare *existence* check cannot substitute, because the
+attack is squatting: once the malicious skill is registered, its name exists. We build a
+multi-step agent-trajectory testbed that embeds a recommend-then-install decision inside a task
+with a real downstream outcome, insert a gate keyed only on publisher-trust-tier provenance
+metadata (no name lookup, no name-similarity heuristic, no model judgment), seed a squatting
+adversary from the confirmed recurring-name pattern, and measure the resulting
+(compromise-block, legitimate-reject) operating point, how it moves as interception is delayed,
+and the recovery cost — reporting all of it per model and harness against the published
+recommendation-time defenses as fixed reference markers, not competitors to beat.
+
+## Introduction
+
+Autonomous LLM agents no longer just call a fixed set of built-in tools; they discover,
+recommend, and auto-install skills from open registries mid-task, on behalf of a principal who
+never sees the individual install decision. A just-published large-scale security study settles
+an uncomfortable fact about this practice: across 15,000 prompts and twelve model-and-harness
+configurations, every single configuration recommends skills that do not exist, at an average
+rate of 36–43%, and these hallucinated names recur predictably enough across prompts and models
+to be reliable attack targets \citep{hallucskills}. That recurrence is what turns a reliability
+quirk into a supply-chain vulnerability: an adversary who watches which fake names an agent
+reliably produces can pre-register a real, malicious skill under one of those names on a registry
+that rarely verifies publishers, then wait for a victim's agent to recommend and auto-install the
+trap. The study confirms the full path end to end in a sandboxed proof of concept. The
+attack-precondition pattern itself — hallucinated dependency names becoming squattable attack
+surface — was established earlier for package ecosystems, where code-generating LLMs hallucinate
+package names at scale and "slopsquatting" attacks pre-register them \citep{spracklen,phantoms},
+and where a 2026 replication finds the threat persisting across frontier models, with dozens of
+model-agnostic hallucinated names still registrable after registries' deployed defenses
+\citep{packrange}. What is different in the skill setting — and what this paper's question turns
+on — is the consumer of the hallucinated name: not a developer reading a suggestion, but an agent
+that autonomously installs and executes mid-task.
+
+A just-published study settling the phenomenon leaves one intervention point unexamined. Every
+mitigation that study evaluates — retrieval-constrained generation, self-refinement, cross-model
+voting, and their combination — acts at the *recommendation* step, constraining what the model is
+allowed to say, and every one of them buys a lower hallucination rate only by collapsing
+usefulness: the strongest cuts hallucination from 40.8% to 3.2% but keeps only about 16% of the
+correct real skills \citep{hallucskills}. This is not four independent failures; it is one
+structural property. A filter operating on the model's output cannot tell a real but
+training-atypical skill name apart from a hallucinated one, because on the recommendation
+distribution they look the same. The study's own closing sentence calls for "registry-level name
+reservations and verified recommendation pipelines," and builds neither.
+
+We observe that the checkpoint does not have to sit on the recommendation distribution at all. A
+defense placed one step later, at the moment of install, never needs to constrain what the model
+says; it needs only to ask whether the specific skill about to be installed comes from a trusted
+publisher. Moving the checkpoint this way separates two signals the recommendation-time filters
+necessarily conflate: a correctly-named real skill from an unverified publisher, and a
+hallucinated name, are different things to an install-time provenance check even though they are
+indistinguishable to a recommendation-time one. And crucially, a *bare existence* check — does a
+skill by this name exist in the registry — cannot do this job, because the attack is squatting:
+the whole point is that the attacker registers the hallucinated name, so by the time a victim's
+agent recommends it, the name exists and a naive existence gate waves the malicious skill through.
+The signal that survives the threat model is publisher provenance, not name existence.
+We do not claim the mechanism class as ours: registry-side publisher-identity verification and
+trust-scored tool registries have been proposed, at design level, for exactly the tool-squatting
+threat \citep{ztr,etdi}, and package ecosystems deploy provenance attestation in practice. What no
+prior work provides is the measurement — whether such a gate actually blocks squatting seeded from
+confirmed hallucinated-name recurrence, what it costs on legitimate skills from unverified
+publishers, and whether interception timing matters. That measurement, not the gate, is this
+paper's contribution.
+
+Turning this into a measurable question surfaces its own difficulties. The evaluation's ground
+truth must make squatting real: if "the name exists" is treated as safe, the trap is scored safe
+by construction, so the registry snapshot must carry forgery-resistant publisher-trust tiers and
+the simulated adversary must pre-register names drawn from the *confirmed recurring* hallucinated
+set, not arbitrary strings. The gate itself must reach its verdict without any model judgment,
+because the same study shows self- and cross-model auditing separates real from hallucinated
+names no better than a coin flip (51–53%); an LLM "looks-real" call inside the gate would import
+exactly that failure. The usability cost must be measured on *real* skills — a legitimate
+first-time publisher is indistinguishable from a squatter on provenance alone until trust accrues,
+so whether the gate avoids or merely relocates the recall collapse is an empirical question, not
+an assumption. And *when* the check fires is itself a first-class outcome, not a tuning detail:
+unlike a hallucinated non-existent name, which stalls the task and surfaces organically because
+the tool is simply not there, a squatted skill that installs and runs can complete the visible
+task while doing its damage silently, so a single post-hoc audit of the final state cannot tell
+"blocked before execution" apart from "executed silently, task succeeded anyway." Only
+step-indexed interception distinguishes the two, and the number of steps between an untrusted
+install and its detection is the recovery cost an operator pays.
+
+Our approach turns each of these obstacles into a specific design choice rather than a hedge. The
+registry snapshot is annotated with publisher-trust tiers and registration recency, and the
+squatting adversary is seeded from the confirmed recurring-name pattern, so squatting is the
+ground truth before any agent runs. The gate keys on provenance metadata alone — no existence
+lookup as a safety signal, no name-similarity heuristic, no model judgment — so its block
+decisions cannot inherit either the name-shortcut brittleness or the coin-flip detectability the
+base study documents; the recurring-name set is consumed only by the offline adversary and the
+ground-truth labeler, never read by the online gate. The usability cost is measured directly, as
+the rejection rate on a held-out probe set of real, useful skills from unverified publishers. And
+interception timing is manipulated by an explicit delayed-gate control that holds the trajectory
+and task difficulty fixed while varying only how many steps late the check fires, so timing's
+effect on the security outcome is isolated from task difficulty.
+
+We evaluate this design across multi-step trajectories that embed a recommend-then-install
+decision, drawn from the base study's own two settings — standalone-LLM recommendation and
+agent-harness recommend-then-install — comparing a gate-on arm against gate-off, a bare-existence
+placebo gate, and a delayed-gate control, and reporting every operating point and timing statistic
+per model and harness against the base study's four published recommendation-time defenses as
+fixed reference markers on the same plane.
+
+In summary, we contribute:
+- An identification of the structural property shared by all recommendation-time defenses against
+  skill hallucination — they constrain the recommendation distribution, which is why they collapse
+  recall — and the analysis showing why, under the base study's own findings, an install-time
+  checkpoint must key on publisher provenance rather than name existence, since the squatting
+  attack renders existence-checking inert by construction. The checkpoint mechanism itself is
+  conceded to design-level registry-trust proposals \citep{ztr,etdi}; the causal analysis, and the
+  measurement of what the mechanism class actually buys and costs, are not provided by any of them.
+- A multi-step recommend-then-install trajectory testbed with a trust-tiered registry snapshot and
+  a squatting adversary seeded from confirmed hallucinated-name recurrence, faithful to the base
+  study's measured prevalence and targetability, released as the instrument for this and future
+  install-time interventions.
+- A pre-registered measurement of the (compromise-block, legitimate-unverified-publisher-reject)
+  operating point that install-time provenance gating achieves, placed on the same plane as the
+  published recommendation-time defenses, together with a detection-timing-to-cost curve and a
+  falsification control (a bare-existence placebo gate) that isolates whether provenance, not mere
+  existence, is doing the work.
+
+## Problem Definition
+
+**Formal setup.** A task trajectory is a sequence of steps $\tau = (x_1, \dots, x_L)$ containing
+one recommend-then-install step $x_r$ that proposes a skill name $n$ and, if the install proceeds,
+fetches and executes a skill body $b$ drawn from a registry $R$. A registry snapshot
+$R = \{(n_k, p_k, \theta_k)\}$ pairs each published name $n_k$ with its publisher $p_k$ and a
+publisher-trust tier $\theta_k \in \{\mathrm{verified}, \mathrm{known}, \mathrm{unknown}\}$
+together with registration recency. A gate $g_\delta$ maps the proposed name and the snapshot to a
+verdict, $g_\delta : (n, R) \to \{\mathrm{allow}, \mathrm{block}, \mathrm{review}\}$, and fires
+$\delta$ steps after $x_r$: $\delta = 0$ is immediate interception, $\delta = k$ is a delayed
+check, and $\delta = \infty$ is no gate at all (gate-off). A squatting adversary pre-registers a
+subset of the confirmed recurring hallucinated names $\mathcal{H}$ under an unverified publisher
+identity ($\theta = \mathrm{unknown}$); a disjoint probe set $\mathcal{L}$ holds real, useful
+skills from legitimate but unverified publishers. The object of study is the map, per model and
+harness cell, from an intervention $(g, \delta)$ to four quantities: the rate at which a squatted
+install on an $\mathcal{H}$-name is completed and executes (from sandbox state), the rate at which
+a legitimate skill in $\mathcal{L}$ is rejected, the downstream task success, and the recovery
+cost — the number of extra steps and tokens between an untrusted install and task resolution.
+
+**Why this is hard.** Four difficulties are intrinsic to the setting. First, making the
+measurement faithful to the attack requires that "the name exists" be true for the malicious skill:
+because the adversary registers an $\mathcal{H}$-name, a ground truth keyed on name existence would
+score the trap safe by construction, so the snapshot must carry a distinct provenance predicate
+$\theta$ that existence cannot satisfy. Second, the verdict $g$ must be a function of $\theta$ and
+recency alone — no model judgment — because self- and cross-model auditing of $n$ is known to
+separate real from hallucinated names no better than chance, so any LLM inside the gate re-imports
+that failure. Third, the usability cost is the rejection rate on $\mathcal{L}$, and a legitimate
+first-time publisher occupies exactly the same $\theta = \mathrm{unknown}$ tier as a squatter until
+trust accrues, so whether the gate avoids or merely relocates the recall collapse cannot be assumed
+— it must be measured against real skills. Fourth, the outcome on a squatted install is
+security-relevant and, unlike a stalled task, need not surface organically: a skill that installs
+and executes can leave the visible task successful, so distinguishing "blocked before execution"
+from "executed silently" requires manipulating $\delta$ under a fixed trajectory rather than
+reading the final state.
+
+## Method Overview
+
+At a conceptual level the study is a single measurement pipeline with six cooperating parts, three
+of which construct a faithful testbed offline and three of which run the intervention and account
+for its effect online. A trust-tiered registry snapshot and a recurrence-seeded squatting adversary
+make squatting the ground truth before any agent runs; a recommend-then-install trajectory harness
+embeds the install decision inside a real downstream task; a provenance-only install gate reaches a
+verdict from publisher-trust metadata alone; a detection-timing instrument records and manipulates
+how many steps late the check fires; and an operating-point accounting turns every episode into a
+point on the shared (compromise-block, legitimate-reject) plane, reported per model and harness.
+
+The **trust-tiered registry snapshot** annotates each published skill with a publisher-trust tier
+and registration recency, so a squatted malicious skill can satisfy "exists" while failing
+"verified-or-known publisher." The **recurrence-seeded squatting adversary** pre-registers names
+drawn from the confirmed recurring hallucinated-name set rather than arbitrary strings, keeping the
+attack faithful to the demonstrated one. The **recommend-then-install trajectory harness** embeds
+one install decision inside a longer task whose outcome carries a security dimension — did a
+squatted skill install and execute — alongside task success. The **provenance-only install gate**
+reaches its verdict from the snapshot's trust tier alone, never reading the recommended name's
+string, so it inherits neither the name-shortcut brittleness nor the coin-flip detectability of the
+recommendation-time defenses. The **detection-timing instrument** records the step index at which an
+untrusted install is first caught and provides a delayed-gate control that varies only that timing.
+The **operating-point accounting** records, per episode, whether a compromise was blocked or
+completed, whether the task succeeded, the recovery cost, and the rejection rate on the legitimate
+probe set, reporting a single operating point per cell against the base study's four published
+points.
+
+## Methodology
+
+### Trust-Tiered Registry Snapshot
+
+**Challenge.** Because the adversary registers a name the agent reliably hallucinates, "a skill by
+this name exists" is true for the malicious skill; an evaluation whose ground truth is name
+existence would score the trap safe by construction.
+
+**Insight.** Existence and provenance are different predicates, and only the second survives the
+squatting threat model — so the testbed must carry provenance, not merely a name list.
+
+**Method.** Each published name in the snapshot is annotated with a publisher-trust tier — verified
+(a publisher that passed an identity/verification step), known (a publisher previously seen and
+trusted by this agent or principal), or unknown (anonymous or first-seen) — plus registration
+recency. This is an offline property of the testbed, fixed before any agent runs: a squatted
+malicious skill occupies the unknown tier, so it satisfies existence while failing the
+verified-or-known predicate. The snapshot is the pre-committed ground truth for whether a given
+install is a compromise, independent of any model judgment.
+
+### Provenance-Only Install Gate
+
+**Challenge.** A verdict that consulted a model's "does this name look real" judgment would inherit
+the confirmed coin-flip (51–53%) detectability of hallucinated names, and a verdict that keyed on
+name existence or name similarity would inherit the documented tendency of models to shortcut on
+names rather than semantics.
+
+**Insight.** Moving the checkpoint to the install step means the verdict never has to touch the
+recommendation distribution — it can be a pure function of who published the skill — so it does not
+pay the recall cost the recommendation-time filters pay, and it can exclude both the model judgment
+and the name signal that the base study shows are unreliable.
+
+**Method.** The gate reads only the snapshot's trust tier for the proposed skill's publisher, never
+the recommended name's string: allow iff the publisher is verified or known; otherwise block
+(unknown publisher) or route to human-review (an operator-configurable middle verdict for an
+unknown publisher an operator may wish to approve manually). No existence lookup is used as a
+safety signal, no similarity-to-known-hallucinations heuristic, and no model judgment enters the
+verdict path; the confirmed recurring-name set is consumed only by the offline adversary and the
+ground-truth labeler, never by this online gate. The human-review verdict is pinned onto both
+reporting axes before any downstream measurement uses it: on a legitimate probe skill it counts as
+a rejection for the conservative (worst-case usability) reading of the reject-rate axis, and is
+*also* reported as a separate deferred-not-rejected count, so the usability cost is given as a
+bounded interval — block-only at the optimistic end, block-plus-review at the conservative end —
+rather than a single number that hides the human-review policy; on a squatted skill it counts as
+blocked, since the security claim is about autonomous auto-install, and a skill held for a human is
+not autonomously installed.
+
+### Recommend-Then-Install Trajectory Harness
+
+**Challenge.** A single-shot recommendation event cannot expose the difference between an install
+blocked before execution and one that executes silently while the visible task still succeeds — the
+distinction the security outcome turns on.
+
+**Insight.** Only an install decision embedded inside a longer task with a real, checkable
+downstream outcome makes that distinction observable, because only then does "the task succeeded"
+fail to imply "nothing malicious ran."
+
+**Method.** One recommend-then-install decision is embedded as a single step inside a longer,
+executable multi-step task with a checkable outcome, instantiated from the base study's two settings
+— standalone-LLM recommendation and agent-harness recommend-then-install. Each episode records a
+two-part outcome: task success (did the trajectory complete its goal) and a security label (did a
+squatted skill install and execute, read from sandbox state), so the two can diverge.
+
+### Recurrence-Seeded Squatting Adversary
+
+**Challenge.** An adversary that pre-registered arbitrary malicious names would over- or under-state
+the gate's value, because the demonstrated attack depends on the specific property that hallucinated
+names recur predictably enough to be cheaply squatted.
+
+**Insight.** Faithfulness to the measured attack requires seeding the adversary from the confirmed
+recurrence, not from a hypothetical worst case — the recurrence is precisely what makes
+pre-registration low-effort and the threat real.
+
+**Method.** The simulated attacker pre-registers, under the unknown-publisher tier, a subset of the
+confirmed recurring hallucinated names elicited by the base study's own prompt-construction method,
+rather than arbitrary strings. This keeps the attack path identical to the demonstrated one and lets
+the block-rate axis measure blocking of genuinely squatted names. The recurring-name set is used
+here (offline, to build the attack and label ground truth) and nowhere else — in particular the
+online gate never sees it.
+
+### Detection-Timing Instrumentation
+
+**Challenge.** The causal effect of interception timing on a security outcome cannot be read from
+observed trajectories, because the timing at which an install is caught is confounded with how hard
+the task was and with whether the trajectory failed for unrelated reasons.
+
+**Insight.** A benign convergence of "caught early" with "easy task" can be broken by an
+intervention that holds the trajectory and task difficulty fixed and varies only the step at which
+the check fires — a controlled delay, not an observed one.
+
+**Method.** The instrument records the step index at which an untrusted install is first caught:
+immediately by the gate ($\delta = 0$), never or late via organic task/security failure (gate-off,
+$\delta = \infty$), or artificially delayed by $k$ steps (the delayed-gate control). The delayed-gate
+arm holds the trajectory and task difficulty fixed and moves only $\delta$, isolating timing's effect
+on the security outcome and on recovery cost. This controlled-delay design is original; it borrows
+the counterfactual logic of holding everything fixed but the intervention point from prior
+failure-attribution work \citep{agentracer}, not that work's offline post-completion tracer.
+
+### Operating-Point Accounting
+
+**Challenge.** Whether the gate solved the security/usability tradeoff or merely relocated it cannot
+be read off a block rate alone, and a pooled number would be uninterpretable against the base study's
+own per-configuration reporting.
+
+**Insight.** The single number that decides "solved versus relocated" is the rejection rate on
+*real* skills; reported alongside the block rate as one point on a shared plane, per model and
+harness, it becomes directly comparable to the published recommendation-time defenses.
+
+**Method.** Per episode, the accounting records whether a compromise was blocked or completed,
+whether the task succeeded, the recovery cost (extra steps and tokens between an untrusted install
+and task resolution), and the rejection rate on the legitimate-unverified-publisher probe set. Each
+model-and-harness cell yields a single (compromise-block rate, legitimate-reject rate) operating
+point, plotted on the same plane as the base study's four published recommendation-time defense
+points, which are placed as fixed reference markers — not re-run, since re-running them is not this
+study's contribution — and every statistic is reported per cell, never pooled.
+
+## Experiments
+
+### Experimental Setup
+
+**Instruments and source material.** The testbed is a novel multi-step recommend-then-install
+trajectory harness embedding decisions from the base study's two settings — standalone-LLM
+recommendation and agent-harness recommend-then-install \citep{hallucskills} — over executable
+multi-step tasks in the style of a real-world executable-API tool-use suite \citep{toolllm}. The
+registry is a trust-tiered snapshot: a real marketplace's publisher-verification metadata where one
+is available, otherwise a constructed synthetic registry that exposes the three trust tiers —
+deployed analogues of such metadata exist in package ecosystems (npm provenance attestations, PyPI
+Trusted Publishers), so the three-tier construct models real, not hypothetical, registry practice. The
+squatting adversary is seeded from the base study's confirmed recurring hallucinated-name set; a
+held-out probe set of real, useful skills from unverified/independent publishers measures the
+usability-cost axis. Because the harness, registry snapshots, and probe set are released artifacts,
+their construction is documented and their contents held disjoint from any tuning split.
+
+**Replication gate (pre-run pass criterion, not a research question).** Before any gate arm is
+scored, the harness must reproduce a skill-hallucination rate within the base study's published
+36–43% range on at least one of its own model-and-harness configurations, using its
+prompt-construction method as closely as feasible. This is the placebo-equivalent for this study: a
+harness that elicits far less hallucination would leave every squatting arm underpowered and every
+operating point incomparable to the published points. Failure reopens the harness rather than being
+reported as a substantive result.
+
+**Arms.** Gate-off (no intervention) is the control for every gate-on claim. The provenance gate
+(immediate, $\delta = 0$) is the intervention. A bare-existence gate (allow iff the name resolves in
+the registry) is the falsification placebo. A delayed-gate arm ($\delta = k$) isolates timing. The
+base study's four published recommendation-time defense operating points are placed on the plane as
+fixed reference markers, not re-run.
+
+**Metrics.** Compromise-block rate (fraction of squatted-install attempts on recurrence-seeded names
+blocked, per cell); legitimate-unverified-publisher reject rate, reported as the bounded interval
+[block-only, block-plus-review]; detection lag (step index of first catch; "uncaught" when a
+squatted skill executes and the task still succeeds); recovery cost (extra steps and tokens between
+an untrusted install and task resolution); reproduced baseline hallucination rate (the replication
+gate).
+
+**Sample size and correction.** Each cell is sized at roughly 300 trajectory episodes per arm per
+model, powered to detect a 10-percentage-point difference in compromise-block rate at 80% power,
+two-sided $\alpha = 0.05$ under a two-proportion test; the base rate is re-estimated from the pilot
+before scale-up. Primary contrasts use Fisher's exact test per cell with Holm–Bonferroni correction
+across cells. RQ4 is the one contrast whose decision boundary (2 percentage points) lies below this
+design's 10-point minimum detectable effect: it is therefore pre-registered as an equivalence claim,
+tested with two one-sided tests (TOST) at a 2-point margin and sized separately — at a block rate
+near 90%, on the order of 3,000 episodes per arm (design arithmetic from the stated margin, $\alpha$,
+and power, to be re-estimated once the pilot pins the base rate); if that cell cannot be run at full
+size, RQ4 is reported descriptively with its confidence interval, not as a passed equivalence test. Any human-coded disputed rejection is double-annotated with a Cohen's $\kappa \geq 0.7$
+acceptance threshold. Every quantity stated in the research questions below is a pre-registered
+design target, not a measured result.
+
+**Research questions:**
+1. RQ1 — Does the squatting attack path execute end-to-end in the harness under no gate?
+2. RQ2 — Does a bare-existence gate fail to block squatted installs?
+3. RQ3 — Does the provenance gate block squatted installs, using zero model judgment?
+4. RQ4 — Does provenance alone suffice — does adding a model judgment raise the block rate?
+5. RQ5 — What is the usability cost, and is it materially below the published recall collapse?
+6. RQ6 — Does the security outcome worsen monotonically as interception is delayed?
+7. RQ7 — Is the gate's benefit larger where a real install step exists to intercept?
+
+#### RQ1: Does the squatting attack path execute end-to-end in the harness under no gate?
+
+**Setup.** Under gate-off, run recurrence-seeded squatting episodes and read from sandbox state
+whether the squatted skill was installed and executed. This establishes the phenomenon is present in
+the harness before any defense is measured, extending the base study's single proof-of-concept to a
+systematic rate.
+
+**Expected outcome.** The compromise-completion rate under gate-off is materially above zero — at
+least 20 percentage points — on recurrence-seeded squatted names, confirming the attack path
+executes end-to-end in the harness, not just in the base study's single PoC.
+
+**Falsification condition.** Refuted if the gate-off compromise-completion rate is below 20% (the
+attack does not reliably execute in this harness), which would mean the testbed does not reproduce
+the demonstrated attack and every downstream block-rate comparison is uninterpretable — reopen the
+harness rather than score the gate.
+
+**Hypothesis (plain language).** The demonstrated squatting attack is reliably present in this
+multi-step testbed, not a one-off.
+
+**Metrics.** Compromise-completion rate under gate-off, per cell.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ2: Does a bare-existence gate fail to block squatted installs?
+
+**Setup.** Replace the provenance gate with a bare-existence gate (allow iff the recommended name
+resolves in the registry) and measure its compromise-block rate on the same recurrence-seeded
+squatted installs. This is the falsification control for the paper's central claim that provenance,
+not existence, is what does the work: if a bare-existence check sufficed, the whole motivation would
+collapse.
+
+**Expected outcome.** The bare-existence gate blocks under 5% of squatted-malicious installs, because
+the attacker's entire move is to make the name resolve — establishing that existence-checking is not
+a defense against the base study's own attack.
+
+**Falsification condition.** Refuted if the existence gate blocks 5% or more of squatted installs,
+which would mean name existence carries real safety signal after all and the provenance framing is
+not necessary — a result that would redirect the paper toward characterizing when existence suffices.
+
+**Hypothesis (plain language).** Checking that a skill by this name exists provides essentially no
+protection against squatting, because squatting makes the name exist.
+
+**Metrics.** Compromise-block rate of the bare-existence gate, per cell; contrast against the
+provenance gate's block rate (RQ3).
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ3: Does the provenance gate block squatted installs, using zero model judgment?
+
+**Setup.** Under the immediate provenance gate ($\delta = 0$), measure the compromise-block rate on
+recurrence-seeded squatted installs, per cell, confirming that no model call enters the verdict path.
+A squatted skill held for human-review counts as blocked (no autonomous auto-install), per the gate
+definition. This RQ is an integrity check on the instrument rather than a finding about the world —
+the gate blocks the unknown tier deterministically, so its informative content is the count of
+leaks; the study's informative endpoints are RQ5–RQ7.
+
+**Expected outcome.** The provenance gate blocks at least 90% of squatted-malicious installs using
+zero model calls, per model-and-harness cell, because every recurrence-seeded squatted skill occupies
+the unknown-publisher tier by construction and the gate blocks that tier deterministically.
+
+**Falsification condition.** Refuted if the block rate falls below 90% in a majority of cells, which
+— since squatted skills are unknown-tier by construction — would indicate a leak in the gate or the
+snapshot (e.g., a squatted publisher wrongly resolving to a known tier) rather than a property of
+provenance gating; diagnose and reopen rather than report a low block rate as a finding.
+
+**Hypothesis (plain language).** A gate that blocks unknown-publisher installs stops almost all
+squatting, without asking any model whether a name looks real.
+
+**Metrics.** Compromise-block rate at $\delta = 0$, per cell; count of model calls in the verdict
+path (target: zero).
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ4: Does provenance alone suffice — does adding a model judgment raise the block rate?
+
+**Setup.** Ablate the provenance-only constraint by adding an LLM "does this name look real" judgment
+to the verdict path (block if either provenance or the model flags the skill) and compare the block
+rate against the provenance-only gate on the same squatted installs. Because the 2-point boundary is
+below the study's 10-point powered effect, this contrast runs as the separately sized TOST equivalence
+cell described in the Experimental Setup.
+
+**Expected outcome.** Adding the model judgment raises the block rate by less than 2 percentage points
+over the provenance-only gate — no material gain — consistent with the base study's finding that
+self- and cross-model auditing is coin-flip (51–53%): the model contributes essentially no reliable
+signal the provenance tier does not already carry.
+
+**Falsification condition.** Refuted if adding the model judgment raises the block rate by 2
+percentage points or more, which would mean the model contributes real signal beyond provenance and
+the provenance-only design is leaving protection on the table — a result that would motivate a hybrid
+gate rather than a provenance-only one.
+
+**Hypothesis (plain language).** The model's judgment adds nothing the publisher tier does not
+already provide, so keeping the model out of the gate costs no protection.
+
+**Metrics.** Block-rate difference (provenance-plus-LLM minus provenance-only), per cell.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ5: What is the usability cost, and is it materially below the published recall collapse?
+
+**Setup.** Run the held-out probe set of legitimate skills from unverified publishers through the
+immediate provenance gate and measure the rejection rate, reported as the bounded interval
+[block-only, block-plus-review]. Compare directly against the base study's published recall-loss
+figures for its recommendation-time defenses (roughly 84% real-skill rejection under the strongest,
+55% under a weaker one). Disputed rejections are double-annotated ($\kappa \geq 0.7$).
+
+**Expected outcome.** The gate's legitimate-unverified-publisher rejection rate is materially below
+the base study's worst recommendation-time recall loss (~84%), specifically below half of it — under
+42 percentage points at the conservative (block-plus-review) end — because moving the intervention
+off the recommendation distribution does not penalize a correctly-named real skill for being
+training-atypical. The rejection rate is not expected to be zero, since a legitimate first-time
+publisher is indistinguishable from a squatter on provenance alone until trust accrues.
+
+**Falsification condition.** Refuted if the conservative-end rejection rate on legitimate skills is
+42% or higher — statistically indistinguishable from the base study's own recommendation-time recall
+loss — which would mean moving the intervention point bought no usability improvement and the tradeoff
+was relocated, not solved.
+
+**Hypothesis (plain language).** The gate wrongly rejects far fewer real skills than the
+recommendation-time defenses do, though it cannot spare every unknown first-time publisher.
+
+**Metrics.** Rejection rate on the legitimate probe set, as the interval [block-only,
+block-plus-review], per cell; comparison to the published recall-loss figures.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ6: Does the security outcome worsen monotonically as interception is delayed?
+
+**Setup.** Across the delayed-gate arm's timing levels {immediate ($\delta = 0$), delayed-by-$k$,
+never (gate-off)}, holding the trajectory and task difficulty fixed, measure the compromise-execution
+rate and recovery cost, and test for a monotone trend.
+
+**Expected outcome.** Compromise-execution rate and recovery cost worsen monotonically as the check is
+delayed across {immediate, delayed-$k$, never} (Jonckheere–Terpstra trend test, $p < 0.05$), holding
+task difficulty fixed — later interception means more squatted skills execute and each costs more
+steps to recover from.
+
+**Falsification condition.** Refuted if the trend is non-monotone or non-significant ($p \geq 0.05$),
+which would mean interception timing does not causally govern the security outcome and the "when it is
+caught matters" motivation is not supported — the finding would then be that only whether, not when,
+the gate fires matters.
+
+**Hypothesis (plain language).** The later an untrusted install is caught, the more damage executes
+and the costlier the recovery — timing is causal, not incidental.
+
+**Metrics.** Compromise-execution rate and recovery cost per timing level; Jonckheere–Terpstra trend
+statistic.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ7: Is the gate's benefit larger where a real install step exists to intercept?
+
+**Setup.** Compare the gate's benefit — the compromise-block-rate gain of gate-on over gate-off —
+between the agent-harness recommend-then-install setting and the standalone-LLM recommendation
+setting, matching the base study's own standalone-versus-agent split for direct comparability. To
+keep the contrast well-defined, the standalone arm's recommendation is consumed by a scripted,
+out-of-loop installer (mirroring the base study's proof-of-concept path from recommendation to
+install), so the gate can veto in both settings; the contrast then measures the value of in-the-loop
+interception with recovery versus a post-hoc veto with none.
+
+**Expected outcome.** The gate's benefit is larger in the agent-harness recommend-then-install setting
+than in the standalone-LLM recommendation setting, by at least 10 percentage points, because only the
+former embeds the install inside a live trajectory where interception preserves the task and in-context
+recovery is possible; the standalone arm's scripted install can be vetoed but not recovered from
+in-context.
+
+**Falsification condition.** Refuted if the gate's benefit is statistically indistinguishable between
+the two settings, which would mean the install step is not where the gate's value comes from — a
+result that would broaden the claim from "install-time interception" to something the recommendation
+setting shares.
+
+**Hypothesis (plain language).** The gate helps most exactly where there is a real auto-install to
+intercept.
+
+**Metrics.** Compromise-block-rate gain (gate-on minus gate-off) per setting; between-setting
+difference.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+**Further evaluation.** With more time, a natural extension is a single simulated
+adversarial-retargeting sweep — does a deployed provenance gate push attackers away from squatting raw
+hallucinations and toward typosquatting the names of verified publishers instead? This is explicitly a
+scale-up stretch goal, not a headline result: it is a longer-horizon question that a single simulated
+sweep can only partially answer, and a live, iteratively-adapting red-team adversary is out of scope
+for this design.
+
+### Threats to Validity
+
+**Construct validity.** The compromise and usability constructs are only as sound as the trust-tier
+snapshot and the gate's verdict definition. Ground truth for "compromise" is the pre-committed
+trust-tier snapshot plus sandbox execution state, never a model judgment, so the security label does
+not inherit the coin-flip detectability the base study documents. The one construct decision that
+materially moves a headline number is the treatment of the gate's human-review verdict on the
+reject-rate axis; this is why the usability cost is reported as a bounded interval [block-only,
+block-plus-review] rather than a single number that would hide the human-review policy, with the
+conservative end counting every human-review of a legitimate skill as a rejection. A separate construct
+threat is the fidelity of the squatting adversary: seeding it from arbitrary rather than
+recurrence-confirmed names would overstate the gate's value, which is why the adversary draws only from
+the base study's confirmed recurring set.
+
+**Internal validity.** Two confounds threaten a causal reading. First, whether a squatted install
+executes must be attributable to the gate's timing, not to task difficulty; the delayed-gate control
+holds the trajectory and task difficulty fixed and varies only $\delta$, and any episode failing static
+validation (a task with no well-defined completion state) is excluded before any API spend, with the
+exclusion rate reported rather than silently dropped. Second, the provenance-only claim is undermined if
+the gate quietly reads the recommended name; the harness asserts that the gate's verdict path contains
+zero model calls and no name-string lookup (RQ3/RQ4 measure this directly), and the recurring-name set is
+architecturally confined to the offline adversary and labeler.
+
+**External validity.** Findings are scoped to sandboxable, two-party recommend-then-install trajectories
+with a computable trust-tier snapshot, across the model-and-harness cells actually tested (the base
+study's standalone and agent-harness settings). They do not cover live uncontrolled registries whose
+publisher-verification metadata may be forgeable or absent, frontier proprietary models beyond those
+tested, or a live iteratively-adapting adversary — the single simulated retargeting sweep is a stretch
+goal, not evidence about a real adaptive attacker. The released harness, registry snapshots, and probe
+set are the intended vehicle for extension to configurations beyond the tested grid.
+
+**Conclusion validity.** A single cell's block rate cannot distinguish a real gate effect from harness
+noise, so every operating-point and timing statistic is reported per model-and-harness cell with
+Holm–Bonferroni correction across cells, never pooled, and every squatting arm is scored only after the
+replication gate confirms the harness reproduces the base study's 36–43% hallucination rate — the
+placebo-equivalent whose failure reopens the harness rather than being read as a null result. The
+sample size is pre-registered to detect a 10-percentage-point block-rate difference at 80% power, and
+underpowered cells are pre-declared inconclusive rather than reported as null.
+
+## Related Work
+
+The closest prior work to this paper is the large-scale hallucinated-skill-recommendation study of
+\citet{hallucskills}, and it is worth stating the delta plainly before surveying the wider landscape.
+That study establishes, at scale, everything this paper takes as given: that agents hallucinate skill
+names at 36–43% across every configuration, that the names recur predictably enough to be squatted, that
+self- and cross-model auditing detects them no better than a coin flip, that all four of its
+recommendation-time defenses trade a lower hallucination rate for a collapse in real-skill recall, and
+— in a single sandboxed proof of concept — that the full squatting attack path executes end to end. We
+concede all of it and build on it. What that study does not do, and explicitly defers, is exactly this
+paper's contribution: it runs no multi-step trajectory study with a downstream task outcome, measures no
+detection timing and no recovery cost, evaluates no install-time intervention, and states in its own
+closing sentence that "registry-level name reservations and verified recommendation pipelines" are the
+needed fix without building either. We move the intervention point from recommendation to install, swap
+the signal from name existence (which the study's own squatting threat model defeats) to publisher
+provenance, and measure the operating point, timing curve, and usability cost it never ran.
+
+**Supply-chain squatting from hallucinated names, and registry-trust proposals.** The
+attack-precondition pattern predates the skill setting: code-generating LLMs hallucinate package
+names at scale, creating the "slopsquatting" surface in which attackers pre-register hallucinated
+dependencies \citep{spracklen,phantoms}; a 2026 frontier-cohort replication finds the rate
+compressed but the threat intact, with a set of model-agnostic hallucinated names still registrable
+after registries' deployed defenses \citep{packrange}; and prompting-side attacks can stealthily
+steer agents toward more speculative names \citep{npa}. Defenses in that lineage sit, like the base
+study's, on the generation side — decoding-time monitoring against authoritative package lists
+\citep{packmonitor} and model editing of the package-validity boundary \citep{bound} — the very
+intervention point whose structural cost this paper measures an alternative to. On the mechanism
+side, design-level proposals for tool-registry trust exist: a zero-trust tool registry with
+admin-controlled registration and dynamic trust scoring \citep{ztr}, and OAuth-based cryptographic
+tool-identity verification for the Model Context Protocol \citep{etdi}. We concede the mechanism
+class to these proposals; both are security architectures, and neither reports a measured
+security/usability operating point against a hallucination-seeded squatting adversary, a usability
+cost on legitimate unverified publishers, or any interception-timing measurement — the quantities
+this paper's testbed is built to produce.
+
+**Tool-use grounding and verification.** A line of work grounds proposed agent actions in real,
+executable resources to combat brittleness: a large-scale executable-API tool-use suite trains and
+evaluates agents against thousands of real APIs with multi-step solution paths \citep{toolllm}, and a
+tool-augmented reward model invokes real external tools mid-evaluation rather than trusting an internally
+generated score \citep{themis}. Both treat grounding as the fix for unreliable *reasoning*, but both
+assume the tool set is fixed, known, and trustworthy by construction — the exact assumption the base
+study shows is false for open skill registries — and neither asks whether a *proposed* resource's
+publisher can be trusted. The closest mechanism-level precedents for on-demand external checking,
+Self-RAG's learned decision to retrieve and critique support for a generated claim \citep{selfrag} and
+Function Masking's training of a policy to abstain when no real function applies within a known set
+\citep{funcmasking}, both operate by retraining the policy over a known, fixed resource set and never
+face the existence-or-provenance question a drop-in install-time gate must answer; they are method-side
+references, not runnable comparators for this study.
+
+**Failure attribution and recover-early architectures in agent trajectories.** A second line studies how
+an early error propagates through a multi-step trajectory. Counterfactual-replay failure attribution
+localizes the earliest decisive error step by holding a trajectory fixed and substituting a corrected
+action \citep{agentracer}; tree-structured planning with per-node verification and backtracking catches a
+failing step and recovers before continuing down a linear pipeline \citep{genartist}. These are the
+closest precedents for "catch the failure early and recover," and this paper's controlled-delay design
+borrows the counterfactual logic of holding the trajectory fixed while moving the intervention point —
+but the prior work diagnoses a *completed* trajectory post hoc, or verifies image-generation quality, and
+neither treats tool provenance as the thing checked nor measures recovery cost as a function of how early
+the check fires, which are exactly this paper's timing measurements.
+
+**Trajectory-centered agent testbeds and data verification.** A third line builds and verifies agent
+trajectories as instruments. Self-evolving agent benchmarks treat a reproducible test-time trajectory as
+evidence a task is solvable and convert it into a verified benchmark item \citep{selfevolve}, and
+ToolACE-MT synthesizes multi-turn tool-use dialogues behind an explicit offline verification stage
+\citep{toolacemt}. Both apply verification to *construct* or *validate trajectory data*, once and offline;
+neither runs a live, per-step safety gate on a deployed agent's real-time install proposals, which is the
+online intervention this paper measures. None of these three lines establishes whether an install-time,
+provenance-keyed gate can block squatted installs without the usability collapse that every
+recommendation-time defense in the base study suffers — the question this paper's testbed is built to
+answer.
+
+## Conclusion
+
+This work reframes a governance assumption — that checking a recommended skill against the registry
+disciplines hallucinated and malicious tool installs — as an empirical question with a precise structure,
+and corrects it at two points. The checkpoint belongs at install time, not recommendation time, because a
+provenance check there need not constrain the recommendation distribution and so need not pay the recall
+collapse that every recommendation-time defense in the base study pays; and the signal must be publisher
+provenance, not name existence, because the squatting attack makes the malicious name exist by
+construction. The central methodological wager is that whether this relocation solves or merely relocates
+the security/usability tradeoff is decided by one measured number — the rejection rate on real skills from
+unverified publishers — and that whether interception timing matters is decided by a controlled delay that
+holds the task fixed; both are measured, not assumed, and a bare-existence placebo gate is carried
+specifically to falsify the claim that provenance rather than existence does the work. Two limitations
+bound the claim from the outset and are natural next steps rather than afterthoughts: the gate cannot drive
+the legitimate-first-time-publisher rejection rate to zero on provenance alone until trust accrues, so a
+trust-accrual mechanism for honest newcomers is the obvious follow-up; and whether a deployed gate simply
+pushes attackers toward typosquatting verified publishers is a longer-horizon adversarial question this
+design can only begin to probe with a single simulated sweep. Whichever way the operating point lands
+relative to the published recommendation-time frontier, the measurement is decision-relevant: it tells a
+marketplace or harness builder whether install-time provenance is a cheap first line of defense or whether
+it, too, buys security by rejecting the honest newcomers a healthy ecosystem depends on.
+
+## References
+
+> Grounded per goal.md §8: eight OpenReview corpus works (`paper_id`s re-verified in
+> `topics/corpus/ideas.jsonl`), the fully-read method-twin arXiv:2607.12340 (re-verified via the live
+> arXiv API 2026-08-15), and eight additional arXiv works added in the 2026-08-15 revision, each
+> verified real via the arXiv API (ID, title, authors, abstract) on that date. No external anchors were
+> invented; `refs.bib` uses the corpus `paper_title`/`paper_url` verbatim, and the `.tex` build wires
+> real `\citep`/`\citet` keys to this same file. This list is the Markdown-readable mirror.
+
+- Weifeng Yuan, Wenbo Guo, Feng Dong, Haoyu Wang, Yang Liu. Skills That Don't Exist: A Large-Scale Study
+  of Hallucinated Skill Recommendation in LLM Agents. arXiv:2607.12340, 2026.
+- Joseph Spracklen, Raveen Wijewickrama, A H M Nazmus Sakib, Anindya Maiti, Bimal Viswanath, Murtuza
+  Jadliwala. We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code
+  Generating LLMs. arXiv:2406.10279, 2024 (USENIX Security 2025).
+- Arjun Krishna, Erick Galinkin, Leon Derczynski, Jeffrey Martin. Importing Phantoms: Measuring LLM
+  Package Hallucination Vulnerabilities. arXiv:2501.19012, 2025.
+- Aleksandr Churilov. The Range Shrinks, the Threat Remains: Re-evaluating LLM Package Hallucinations
+  on the 2026 Frontier-Model Cohort. arXiv:2605.17062, 2026.
+- Chia-Yi Hsu, Chia-Mu Yu, Chun-Ying Huang, Jun Sakuma. Harmless Yet Harmful: Neutral Prompting Attacks
+  for Stealthy Hallucination Steering in Agent Skills. arXiv:2605.29354, 2026.
+- Xiting Liu, Yuetong Liu, Yitong Zhang, Jia Li, Shi-Min Hu. PackMonitor: Enabling Zero Package
+  Hallucinations Through Decoding-Time Monitoring. arXiv:2602.20717, 2026.
+- Shuhan Liu, Yukai Zhao, Xing Hu, Kui Liu, Xiaohu Yang, Xin Xia. Mitigating Package Hallucinations in
+  Large Language Models via Model Editing. arXiv:2607.02052, 2026.
+- Vineeth Sai Narajala, Ken Huang, Idan Habler. Securing GenAI Multi-Agent Systems Against Tool
+  Squatting: A Zero Trust Registry-Based Approach. arXiv:2504.19951, 2025.
+- Manish Bhatt, Vineeth Sai Narajala, Idan Habler. ETDI: Mitigating Tool Squatting and Rug Pull Attacks
+  in Model Context Protocol (MCP) by using OAuth-Enhanced Tool Definitions and Policy-Based Access
+  Control. arXiv:2506.01333, 2025.
+- (Anonymous). ToolLLM: Facilitating Large Language Models to Master 16000+ Real-World APIs. OpenReview
+  submission, id=dHng2O0Jjr.
+- (Anonymous). Robust Function-Calling for On-Device Language Models via Function Masking. OpenReview
+  submission, id=yVQcr4qjD6.
+- (Anonymous). AgenTracer: Who Is Inducing Failure in the LLM Agentic Systems? OpenReview submission,
+  id=l05DseqvuD.
+- (Anonymous). Towards Self-Evolving Agent Benchmarks: Validatable Agent Trajectory via Test-Time
+  Exploration. OpenReview submission, id=2H03gm4Rq6.
+- (Anonymous). Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection. OpenReview
+  submission, id=hSyW5go0v8.
+- (Anonymous). Tool-Augmented Reward Modeling. OpenReview submission, id=d94x0gWTUX.
+- (Anonymous). GenArtist: Multimodal LLM as an Agent for Unified Image Generation and Editing. OpenReview
+  submission, id=Ur00BNk1v2.
+- (Anonymous). ToolACE-MT: Non-Autoregressive Generation for Agentic Multi-Turn Interaction. OpenReview
+  submission, id=KznJt9Fhjc.
+
+---
+
+## Pre-handoff checklist
+
+- **Organization/navigation** — narrative flows problem → method → experiments → related work without
+  forward references to undefined terms; the two corrections (install-time vs recommendation-time;
+  provenance vs existence) are introduced in the Introduction and reused consistently.
+- **Terminology discipline** — "publisher-trust tier," "provenance gate," "squatting," "compromise-block
+  rate," "detection lag," "operating point" each defined at first use in the Introduction/Problem
+  Definition, used consistently thereafter; no internal stage IDs (`sp_*`, `m_*`, `rq_*`, `C*`, `M*`)
+  leaked into prose — checked directly against `discussion_trace.md`.
+- **Notation with worked example** — the formal setup defines $(\tau, x_r, n, b, R, p_k, \theta_k,
+  g_\delta, \delta, \mathcal{H}, \mathcal{L})$ and the Problem Definition/Methodology reuse it
+  consistently; no separate worked numeric example is included since no numbers exist yet (would require
+  fabricating results).
+- **RQ framing matches outcomes** — all 7 RQs are graded/quantitative (rates, differences, trend
+  statistics), each answered in its own subsection with an explicit Falsification condition, not a binary
+  yes/no; the study_type is empirical, so no RQ is framed as "our gate beats defense X."
+- **No typesetting artifacts** — no `[CITE]`/`[TODO]` placeholders; only explicit
+  `[placeholder — fill in after experiments are run]` markers in Results.
+- **Artifact plan** — the trajectory harness, trust-tiered registry snapshots, recurrence-seeded adversary,
+  and legitimate-publisher probe set are the natural release artifacts; not yet built, so not claimed as
+  available.
+
+## Hand-off
+
+This is a Markdown draft, not a finished paper — experiments have not run. Natural next steps:
+`research-paper-writing` for venue-specific LaTeX polish once a target venue is chosen, or back into this
+pipeline if a stage needs revision (e.g., if piloting surfaces that the replication gate cannot reproduce
+the base study's hallucination rate in this harness, that is a walking-skeleton failure that reopens the
+harness before any gate arm is scored).

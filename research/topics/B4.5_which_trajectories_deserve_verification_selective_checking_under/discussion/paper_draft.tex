@@ -1,0 +1,256 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{natbib}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{Uniform Price, Non-Uniform Value:\\ Selective Verification of Sampled Trajectories under a Fixed Call Budget}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic B4.5), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}). Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets, not results.}
+\end{quote}
+
+\begin{abstract}
+Test-time-scaling pipelines that sample many candidate reasoning trajectories per query increasingly pair the sampler with a verifier --- a costlier check such as sandboxed test execution, a process-reward-model score, or a stronger judge. A call to that verifier has uniform price, but its marginal information over a pool of already-sampled trajectories is far from uniform, and the only free estimates of that information --- signals computable before any verifier call --- are themselves produced by the same model whose failures they must detect, so the highest-value verification targets can be exactly the ones a cheap signal ranks as least worth checking. We formalize verification under a metered call budget: given $N$ candidate trajectories per instance and a global budget $B$ of calls to a trusted verifier, which trajectories should be checked, and how should verified and unverified evidence be combined into a final answer? We measure three verifier-free signals as budget-aiming devices, isolating the allocation question from verifier quality with an oracle verifier before moving to realistic execution- and process-reward-model-based verifiers; we combine verified and unverified evidence with an aggregator that exploits, rather than discards, the information a verified-incorrect outcome buys; and we test whether allocation gains survive a shift in verifier class and in task domain. We report which allocation policies actually beat blind spending, and by how much, as falsifiable pre-registered predictions rather than findings.
+\end{abstract}
+
+\section{Introduction}
+
+Test-time compute scaling has made sampling many candidate solutions to the same problem routine: self-consistency draws several chains of thought and votes, best-of-N samples many completions and keeps one, and agentic pipelines run several rollouts of the same task. Increasingly, these pipelines pair the sampler with a verifier --- a sandboxed test suite, a process-reward model, or a stronger judge --- that checks a candidate before it is trusted. This checking step is often the more expensive half of the pipeline, and treating it as free is not a simplification a real deployment can afford.
+
+Yet the accounting that has emerged for this setting is lopsided. Work on allocating test-time compute already treats \emph{generation} as a metered, budgeted resource --- deciding how many samples to draw, or how much search to spend, per query, by estimated difficulty. No comparable accounting yet answers the allocation question for the \emph{verifier}: concurrent 2026 work has begun to meter verification --- gating whether a single instance's answer is actively verified at all, or choosing how fine-grained a verification signal a compute budget should buy --- but not which of many already-sampled trajectories, competing across instances for the same metered calls, deserve them. In deployed pipelines, verification is either exhaustive --- every candidate is checked, at whatever cost that entails --- or effectively absent, in which case a wrong answer that every sampled trajectory happens to agree on passes through unchallenged. Between these two extremes sits an unasked question: given a fixed number of calls to a verifier that is accurate whenever it is consulted, which of the many already-sampled candidates should actually receive one?
+
+The nearest existing work approaches this gap from adjacent but distinct angles. Compute-Optimal-TTS \citep{ComputeOptTTS2607} and CaTS \citep{CaTS2607} already treat inference-time compute as an explicitly allocable resource, learning difficulty-conditioned policies over search hyperparameters or sample counts --- but in both, verifier or reward-model scoring is bundled into the chosen strategy rather than metered as its own resource, so neither answers which of $N$ already-drawn trajectories deserves one of $B$ verifier calls. A parallel line of theory, exemplified by ROC-n-reroll \citep{ROCnReroll2607} and OT-Verify \citep{OTVerify2607}, gives an exact account of how verifier \emph{imperfection} --- a noisy ROC curve, not a hard call limit --- shapes test-time scaling under Best-of-N and rejection sampling; both assume every candidate is scored, making verifier-call scarcity the one variable their analysis does not admit. Closer in spirit is TRIM \citep{TRIM2607}, which already budgets a costly intervention --- regenerating a reasoning step with a strong model --- under an explicit token budget, guided by a noisy per-step risk signal; TRIM's own motivation argues that local, per-step threshold decisions are insufficient because the value of intervening depends on context the threshold alone cannot see. That is exactly this paper's argument, one level up: the unit here is a whole trajectory competing with every other trajectory in a cross-instance pool for a shared budget, not a step competing only with the rest of its own trajectory for a local one. Closest of all in vocabulary --- though not in estimand --- are SEVRA \citep{SEVRA2026}, a serving-layer gate that decides per instance whether to keep a frozen solver's answer or invoke active verification, and GRACE \citep{GRACE2026}, which derives the compute-optimal \emph{granularity} of verification (outcome- versus process-level scoring) under a budget; both meter verification as a selectively-spent resource, and neither poses the question studied here --- which of $N$ already-sampled trajectories, competing across a batch for $B$ shared calls to a trusted verifier, should receive one.
+
+Turning this gap into a measurable question surfaces its own difficulties. Any signal cheap enough to compute before a verifier call is, by construction, a proxy for the very quantity the verifier would reveal --- and that proxy's errors are not benign: the trajectories whose verification would change an answer the most are consensus pools where every sampled trajectory agrees on a wrong answer, which is exactly the case an agreement-based signal ranks as safest to skip. Even a signal that is informative on average may not stay informative when the task domain shifts from bounded-answer-space math to open-ended code. Spending a shared budget across many instances and trajectories is not a per-item threshold problem either --- it is a combinatorial allocation problem that a single static ranking pass only approximates. And once some calls are spent, combining what they revealed with what was never checked is its own design decision: a verified-incorrect outcome does not name the right answer, but discarding it anyway wastes exactly the information the budget bought.
+
+Our approach turns each of these obstacles into a measured quantity rather than an assumption. Proxy validity is measured directly, not assumed: three verifier-free signals are scored against verifier-determined correctness on an audited sample, with a targeted count of how often the highest-value, confident-but-wrong cases are the ones every signal ranks last. A budget-constrained ranking policy spends the calls on the most uncertain trajectories, compared at both trajectory- and instance-level granularity, with a sequential variant that reallocates calls once an instance is already resolved, measured against what a hindsight-optimal allocation would have done. An elimination-aware aggregator folds verified-incorrect outcomes into the final vote by removing the answers they rule out, rather than falling back to an uncorrected count. And before either verifier realism or domain transfer is assumed, each is audited: a realistic verifier is checked against gold labels before it is trusted operationally, and a policy tuned on one domain is frozen and tested, unmodified, on the other.
+
+We evaluate this design on math (GSM8K, MATH-500) and code (HumanEval+, MBPP+) benchmarks, first isolating the allocation question with an oracle verifier, then moving to realistic execution- and process-reward-model-based verifiers, against uniform-random allocation, full verification, unverified majority voting, and two adapted controls that isolate difficulty-based and per-item-threshold explanations of any observed gain.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item A formalization of verifier-call allocation as budget-constrained trajectory selection with a \emph{trusted} verifier --- the complementary corner to existing accounts of verifier \emph{imperfection} and to generation-side compute-allocation theory, neither of which meters calls to a trusted verifier as an explicit scarce resource over a trajectory pool --- and distinct from concurrent selective-verification work that gates verification per instance (SEVRA) or optimizes its granularity under a compute budget (GRACE) without allocating calls over a trajectory pool.
+\item A direct measurement of proxy validity: which verifier-free signals actually predict verifier-determined correctness, and how systematically the highest-value, confident-but-wrong targets are ranked last by every one of them.
+\item An elimination-aware aggregation rule that exploits verified-incorrect outcomes rather than discarding them, together with a direct test of whether this aggregation step adds accuracy beyond selection alone.
+\item An audited account of whether allocation gains survive the move from an oracle verifier to realistic verifiers and from one task domain to another, rather than assuming either transfer holds.
+\end{itemize}
+
+\section{Problem Definition}
+
+\noindent\textbf{Formal setup.} Consider task instances $x_1, \dots, x_m$. Each instance has a pool $T_i = \{\tau_{i1}, \dots, \tau_{iN}\}$ of $N$ candidate trajectories, sampled independently from a model, each with a final answer $a(\tau)$. A verifier $V: \tau \mapsto \{0, 1\}$ returns a correct/incorrect label for any trajectory it is given, and is trusted in one of two senses: an \textbf{oracle} tier, in which $V$ is exact by construction (a ground-truth lookup), used to isolate the allocation question from verifier quality; and a \textbf{realistic} tier, in which $V$ (test execution, a process-reward-model score) is an empirically audited precondition --- its false-positive and false-negative rates against held-out gold labels must fall below a pre-stated tolerance before it is used operationally, rather than assumed. A global budget $B < mN$ bounds the total number of verifier calls across the entire batch. An allocation policy $\pi$ selects a subset $S \subseteq \bigcup_i T_i$ with $|S| \le B$ to submit for verification; an aggregator $g$ maps each instance's trajectory pool, the verifier outcomes for $S \cap T_i$, and verifier-free signals over $T_i$ to a final answer $\hat a_i$. The object of study is $\text{Acc}(\pi, B) = \frac{1}{m}\sum_i \mathbb{1}[\hat a_i \text{ correct}]$, evaluated relative to uniform-random $S$ and to full verification ($S = \bigcup_i T_i$), as a function of $B$. Writing the budget as a fraction $b = B / (mN)$ of all trajectories in the batch, two derived quantities recur throughout: \textbf{accuracy-per-verifier-call} $\text{APC}(B) = (\text{Acc}(\pi, B) - \text{Acc}(\pi, 0)) / B$, and the \textbf{budget-recovery fraction} $R(b) = (\text{Acc}(\pi, bmN) - \text{Acc}(\pi, 0)) / (\text{Acc}(\pi, mN) - \text{Acc}(\pi, 0))$ --- the share of the full-verification accuracy gain that a policy $\pi$ recovers at budget fraction $b$.
+
+\noindent\textbf{Why this is hard.} Any signal used to choose $S$ before $V$ is consulted is necessarily computed without access to what $V$ would say, so it is a proxy for exactly the quantity it is trying to predict --- and its errors are not random with respect to value: an instance where every trajectory in $T_i$ agrees on the same wrong answer is precisely the case where an agreement-based signal reports maximal confidence, which is precisely the case where verification would change the most. This proxy relationship need not be stable, either: a signal informative on one task domain may carry no transferable information to another, and this cannot be checked from within-domain evidence alone --- only by freezing a policy and testing it, unmodified, elsewhere. Because $B$ is shared across every instance and every trajectory in the batch, choosing $S$ is not a per-item threshold decision but a combinatorial allocation problem --- spending a second call on an already-uncertain instance competes directly with spending the first call on a different one --- and a single static ranking pass over all of $\bigcup_i T_i$ is only an approximation to the sequential decision process an adaptive policy could instead follow. Finally, the outcomes in $S$ must be combined with the unverified signal over the rest of $T_i$ into $\hat a_i$ without silently discarding information: a verified-incorrect trajectory eliminates its answer from contention without ever revealing $\hat a_i$ directly, and an aggregator that does not exploit that elimination wastes part of what $B$ already purchased.
+
+\section{Method Overview}
+
+At a conceptual level, this is a single measurement pipeline with four cooperating parts, developed in two stages --- an oracle-verifier stage that isolates the allocation question, and a realistic-verifier stage that tests whether the isolated result survives contact with verifier imperfection and task-domain shift. Trajectory pools and a verifier-free scoring pass enter the pipeline first; a budget-constrained ranking policy turns the resulting scores into a verified subset; an aggregator turns verified and unverified evidence into one final answer per instance; and a pair of audits checks, rather than assumes, that the whole pipeline's premises survive a shift in verifier class or task domain.
+
+The \textbf{verifier-free uncertainty scorer} computes three signals per trajectory --- mode share, normalized sequence log-likelihood, and a one-shot verbalized confidence rating --- before any verifier call, and measures each one's discrimination against verifier-determined correctness on an audited held-out sample, including a direct count of how often the highest-value, confident-but-wrong cases are ranked last. The \textbf{budget-constrained allocation policy} takes these scores and a global budget and submits the most-uncertain trajectories for verification, comparing a static ranking against a sequential variant that reallocates calls once an instance is already resolved. The \textbf{elimination-aware aggregator} takes the resulting verifier outcomes together with the unverified signal and produces a final answer per instance, removing verified-incorrect answers from contention rather than falling back to an uncorrected vote. The \textbf{verifier-realism and domain-transfer audits} take the same pipeline and re-run it under two shifts it was not built for --- a realistic, non-oracle verifier, and a task domain the policy was never tuned on --- to check rather than assume that the pipeline's conclusions survive both.
+
+\section{Methodology}
+
+\subsection{Verifier-Free Uncertainty Scorer}
+\textbf{Challenge.} Any signal cheap enough to compute before a verifier call is inherently a proxy for the correctness label that call would reveal, and its errors are not incidental: the highest-value verification targets --- instances where every sampled trajectory agrees on the same wrong answer --- are exactly the cases an agreement-based signal scores as safest to skip.
+
+\textbf{Insight.} Proxy validity cannot be assumed away, but it can be converted into a first-class measured quantity rather than a hidden premise, and the same computed rank data that yields an aggregate discrimination score also yields a direct count of the specific failure mode the design has to worry about most.
+
+\textbf{Method.} Three signals are computed per trajectory before any verifier call: mode share (the fraction of an instance's sampled final answers agreeing with this trajectory's answer), normalized sequence log-likelihood under the sampling model, and a one-shot verbalized confidence rating. Each signal's discrimination against verifier-determined correctness is measured on a held-out audited sample. Separately, instances whose plurality answer has high mode share and is nonetheless incorrect are counted, and the rate at which every signal-ranked policy fails to select them for verification is reported directly, rather than left implicit in an aggregate accuracy number.
+
+\subsection{Budget-Constrained Allocation Policy}
+\textbf{Challenge.} A shared budget spent across many instances and many trajectories per instance is not a sequence of independent per-item decisions --- verifying a second trajectory of an already-uncertain instance competes directly with verifying the first trajectory of a different one --- and this competition can, in principle, unfold sequentially as outcomes arrive rather than being fixed in advance.
+
+\textbf{Insight.} A single static ranking pass over the whole batch is only an approximation to the true sequential allocation problem; comparing it against a policy that can reallocate calls once some outcomes are known, benchmarked against what a hindsight-optimal allocation would have done, measures exactly how much of that approximation gap is recoverable.
+
+\textbf{Method.} Trajectories (or, in a second granularity, instances) are ranked most-uncertain-first by the scorer above, and the top-$B$ are submitted for verification. A sequential variant spends the budget one call at a time, halting further probes of any instance that already has a verified-correct trajectory and redirecting the freed calls to the next most uncertain unresolved instance; its accuracy gap to a hindsight-optimal allocation --- computable after the fact, since fully verified pools reveal every label --- measures how much value the sequential, adaptive character of the policy adds over the static ranking.
+
+\subsection{Elimination-Aware Aggregator}
+\textbf{Challenge.} A verified-incorrect trajectory rules out its answer without ever revealing the correct one, so combining verified and unverified evidence into a final answer is a genuine design decision, not a formality that reduces to ``use the verified answer if one exists, otherwise vote.''
+
+\textbf{Insight.} Discarding a verified-incorrect outcome once it has ruled out an answer wastes information the budget already paid for; exploiting the elimination directly, rather than falling back to an uncorrected vote, should recover some of that value.
+
+\textbf{Method.} If an instance has a verified-correct trajectory, its answer is returned directly. Otherwise, every answer with a verified-incorrect trajectory is removed from the candidate set, and a confidence-weighted vote is taken over what remains. If verification has eliminated every observed candidate answer, the highest-confidence unverified answer is returned and the instance is flagged. This rule is compared against a naive rule --- use the verified answer if one exists, otherwise take the raw, uncorrected majority vote --- at matched budget, to measure the elimination step's own contribution separately from the allocation policy's.
+
+\subsection{Verifier-Realism and Domain-Transfer Audits}
+\textbf{Challenge.} Neither ``the verifier is trusted'' nor ``the policy generalizes'' can be assumed once the oracle verifier is replaced by a realistic one, or once the task domain shifts from math to code --- both are premises the pipeline depends on, and both can silently fail.
+
+\textbf{Insight.} The only way to check whether either premise survives a shift it was not built for is to freeze the thing being tested exactly as it stood and re-evaluate it under that shift, without retuning anything in response. One audit-then-freeze-then-retest principle, applied along two independent shift axes --- verifier class and task domain --- not two unrelated procedures bundled together.
+
+\textbf{Method.} Before a realistic verifier (sandboxed test execution, a process-reward-model score) is used operationally, its false-positive and false-negative rates are measured against held-out gold labels and must fall below a pre-stated tolerance. Separately, a policy --- signal choice and ranking granularity, frozen exactly as selected on one task domain --- is evaluated unmodified on the other domain, with no retuning permitted, to test whether the earlier stages' conclusions transfer or were specific to the domain they were measured on.
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Datasets.} GSM8K (test split; a fixed 500-instance subsample for the pilot) --- grade-school math with short, exactly-matchable answers, the cheapest domain in which to compute an oracle verifier label, anchoring the pilot stage. MATH-500 (500 competition-math problems, difficulty levels 1--5) --- harder math with a graded difficulty knob, used both to keep model--dataset pairs in a non-degenerate accuracy band and as a second math-domain point for the domain-transfer test. HumanEval+ (164 tasks, EvalPlus-extended test suites) --- enables an execution-based realistic verifier with near-ground-truth reliability, stress-testing whether gains survive contact with a genuinely non-oracle verifier. MBPP+ (378 tasks, EvalPlus variant) --- a second, structurally different code benchmark (basic programming tasks rather than HumanEval+'s interview-style problems), included specifically so the code-side cells of the domain-transfer and verifier-realism research questions are not certified from one code dataset's idiosyncrasies alone.
+
+\textbf{Design constants (pre-registered).} Pilot: two open-weight models (Qwen2.5-7B-Instruct, Llama-3.1-8B-Instruct) $\times$ two math datasets (the GSM8K 500-instance fixed subsample, MATH-500), pool size $N = 16$, budget grid $b \in \{0.05, 0.10, 0.25, 0.50\}$, five seeds on the primary configuration, oracle verifier; the scale-up stage adds HumanEval+ and MBPP+, $N = 64$, and the execution- and process-reward-model verifiers. Statistics: per-budget paired McNemar tests plus 10{,}000-resample paired bootstrap confidence intervals on identical pools, Holm--Bonferroni correction within each declared test family, AUROC via DeLong. Power discipline: McNemar power at each RQ's pre-registered effect floor is computed per configuration before any test, from that configuration's own $n$ (500 instances, except HumanEval+'s full 164); any RQ$\times$configuration cell whose floor is unattainable at power $\geq 0.80$ is pre-declared INCONCLUSIVE --- not scored, not counted in any ``$k$ of $n$ configurations'' vote, and never silently dropped.
+
+\textbf{Baselines} (sanity-check comparators and strongest-alternative-explanation controls, not outcome-tier competitors --- this is a measurement study, and no research question here is framed as ``our procedure beats baseline X''). Uniform-random verifier-call allocation at matched budget is the necessary control for every allocation claim. Full verification is the upper anchor, and the gap between full verification and no verification (self-consistency majority voting \citep{WangSelfConsistency2023}) defines a verification-headroom gate: configurations where that gap is below a pre-registered tolerance are reported as out of scope for the allocation question, rather than silently included. Difficulty-conditioned instance-level allocation, adapted from Compute-Optimal-TTS's \citep{ComputeOptTTS2607} estimated-difficulty framing, is the strongest-alternative-explanation control for ``the gains are just difficulty triage, not trajectory-level uncertainty.'' Confidence-threshold escalation, adapted from Trust-or-Escalate's \citep{TrustOrEscalate2607} per-item calibrated mechanism but stripped of its human-agreement guarantees, isolates the value of globally budget-coupled ranking over per-item, budget-blind thresholding.
+
+\textbf{Metrics.} Signal AUROC against verifier-determined correctness; the confident-but-wrong under-selection rate; accuracy-per-verifier-call and the budget-recovery fraction (the share of the full-verification accuracy gain recovered at a given budget); the elimination-aware aggregator's accuracy delta over the naive rule at matched budget; the sequential policy's gap-closure toward hindsight-optimal allocation; and accuracy retention and transfer success under realistic verifiers and cross-domain policy freezing.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.6em]
+\item RQ1 --- Do any of the verifier-free signals actually discriminate correct from incorrect trajectories?
+\item RQ2 --- Are the highest-value, confident-but-wrong trajectories the ones every signal ranks as least worth verifying?
+\item RQ3 --- Does uncertainty-guided allocation beat uniform-random allocation at matched budget, and does it recover the majority of the full-verification gain at a small fraction of calls?
+\item RQ4 --- Does sequential reallocation close a meaningful share of the static policy's gap to hindsight-optimal allocation?
+\item RQ5 --- Does the elimination-aware aggregator add accuracy beyond the naive combination rule?
+\item RQ6 --- Do allocation gains survive the move from an oracle verifier to realistic verifiers?
+\item RQ7 --- Does a policy frozen on one task domain transfer to another?
+\end{enumerate}
+
+\subsubsection{RQ1: Do any of the verifier-free signals actually discriminate correct from incorrect trajectories?}
+\textbf{Setup.} On a held-out audited sample per pilot model$\times$dataset configuration, compute AUROC (with DeLong confidence intervals) for each of the three signals against verifier-determined correctness.
+
+\textbf{Expected outcome.} At least one signal attains AUROC $\geq 0.65$, with a 95\% DeLong confidence-interval lower bound above $0.55$, on at least 3 of 4 pilot configurations.
+
+\textbf{Falsification condition.} Refuted if every signal's AUROC confidence-interval lower bound falls at or below $0.55$ (indistinguishable from chance) on a majority of configurations --- that outcome would mean the proxy gap described in the Problem Definition is effectively total, and no signal-based allocation policy can be expected to beat blind spending.
+
+\textbf{Hypothesis (plain language).} At least one cheap, verifier-free signal carries real, non-chance information about whether a trajectory is correct.
+
+\textbf{Metrics.} Per-signal AUROC and DeLong confidence interval, per configuration.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ2: Are the highest-value, confident-but-wrong trajectories the ones every signal ranks as least worth verifying?}
+\textbf{Setup.} Among instances whose plurality answer has mode share at or above a pre-registered high-confidence threshold and is nonetheless incorrect, measure the rate at which each signal's ranking places them outside the top-$B$ selected for verification, and compare that rate against the chance rate $B / (mN)$ --- the selection rate a uniform-random size-$B$ sample would be expected to produce for any subgroup, confident-but-wrong or otherwise.
+
+\textbf{Expected outcome.} Confident-but-wrong instances are selected for verification at a rate below what chance-level selection would produce, for every one of the three signals.
+
+\textbf{Falsification condition.} Refuted if confident-but-wrong instances are selected for verification at or above the chance rate under any signal --- that would mean the structural blind spot described in the Problem Definition does not actually manifest for that signal, and its ranking is not adversarially misaligned with verification value in the way the framing predicts.
+
+\textbf{Hypothesis (plain language).} The proxy signals are not merely imperfect at random --- they are systematically worst exactly where verification would matter most.
+
+\textbf{Metrics.} Confident-but-wrong under-selection rate versus chance rate, per signal and configuration.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ3: Does uncertainty-guided allocation beat uniform-random allocation at matched budget, and does it recover the majority of the full-verification gain at a small fraction of calls?}
+\textbf{Setup.} At a small budget fraction ($b = 0.10$), compare the best single-signal, most-uncertain-first allocation policy against uniform-random allocation on identical frozen trajectory pools, using a paired significance test with a multiple-comparison correction across configurations. Separately, at $b = 0.25$, compute the budget-recovery fraction $R(0.25)$ for the same policy with a bootstrap confidence interval, to test the headline claim that selective allocation recovers most of the full-verification gain at a small fraction of the calls (Claim 1). Third, at $b \in \{0.10, 0.25\}$, compare the instance-level uncertainty-guided policy against each of the two strongest-alternative-explanation control arms --- difficulty-conditioned instance-level allocation and per-item confidence-threshold escalation --- call-budget-matched and aggregator-matched, on the same frozen pools with the same test families and corrections as (i).
+
+\textbf{Expected outcome.} (i) The best single-signal policy beats uniform-random allocation by at least 2.0 accuracy points, with a corrected $p < 0.05$, on at least 3 of 4 pilot configurations. (ii) $R(0.25) \geq 0.50$, with a 95\% bootstrap confidence-interval lower bound above $0.25$, on at least 3 of 4 pilot configurations. (iii) The instance-level uncertainty-guided policy beats difficulty-triage at $b \in \{0.10, 0.25\}$ under the same corrected criterion, and likewise beats per-item confidence-threshold escalation at matched budget --- establishing that the gain is attributable to per-trajectory uncertainty under global budget coupling, not to instance-difficulty triage or per-item thresholding alone.
+
+\textbf{Falsification condition.} (i) is refuted if the accuracy difference between the best signal-ranked policy and uniform-random allocation is not significantly positive at the pre-registered threshold on a majority of configurations --- that would mean the signal, even if informative in isolation (RQ1), cannot be converted into an allocation advantage at the budget levels tested. (ii) is refuted if $R(0.25)$'s confidence-interval lower bound falls at or below $0.25$ on a majority of configurations --- that would mean selective allocation's recovery is only proportional to spend (the budget--accuracy curve is statistically indistinguishable from the diagonal), so Claim 1's "recovers the majority of the gain" wording does not hold even where (i) does. (iii) is an attribution test rather than a refutation of the allocation gain itself: if the uncertainty-guided policy does not beat difficulty-triage, the claim demotes --- per the pre-registered wording --- from ``trajectory-uncertainty-guided'' to ``difficulty-guided'' allocation; if it does not beat confidence-threshold escalation, the value of globally budget-coupled ranking over per-item, budget-blind thresholding is not demonstrated and the framing scopes down to per-item selection.
+
+\textbf{Hypothesis (plain language).} Spending the budget on the trajectories a cheap signal flags as most uncertain beats spending it blindly --- and beats spending it by instance difficulty or per-item thresholds --- and by $b = 0.25$ it has recovered most of what full verification would have bought.
+
+\textbf{Metrics.} Matched-budget accuracy difference and its confidence interval, per configuration; $R(0.25)$ and its bootstrap confidence interval, per configuration; matched-budget accuracy difference against each control arm at $b \in \{0.10, 0.25\}$, per configuration.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ4: Does sequential reallocation close a meaningful share of the static policy's gap to hindsight-optimal allocation?}
+\textbf{Setup.} At a small budget fraction, compute the accuracy gap between the static ranking policy and a hindsight-optimal allocation (computable once all pools are fully labeled), and measure what share of that gap the sequential reallocation policy closes.
+
+\textbf{Expected outcome.} Sequential reallocation closes at least 20\% of the static policy's gap to hindsight-optimal allocation, with a bootstrap confidence interval excluding zero, on at least 2 of 4 configurations.
+
+\textbf{Falsification condition.} Refuted if the sequential policy's gap-closure is statistically indistinguishable from zero on a majority of configurations --- that would mean the online, adaptive character of the allocation problem is not worth the added complexity at the budget levels tested, and a static ranking is sufficient.
+
+\textbf{Hypothesis (plain language).} Being able to redirect calls once some outcomes are known meaningfully beats committing to a fixed ranking in advance.
+
+\textbf{Metrics.} Gap-closure fraction and its bootstrap confidence interval, per configuration.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ5: Does the elimination-aware aggregator add accuracy beyond the naive combination rule?}
+\textbf{Setup.} At a moderate budget fraction, compare the elimination-aware aggregator against the naive rule (use the verified answer if one exists, otherwise raw majority vote) on identical verified pools, isolating the aggregation step from the allocation policy. Because the two rules differ only on instances where an elimination actually changes the vote, the discordant fraction per configuration is expected to be small, and a 1.0-point paired difference sits near the resolution limit of a single 500-instance cell (a discordant fraction of 8\% puts the paired standard error near 1.3 points); the pooled paired comparison across all pilot configurations is therefore pre-registered as RQ5's primary test, with per-configuration results reported descriptively under the power-and-INCONCLUSIVE rule above.
+
+\textbf{Expected outcome.} The elimination-aware aggregator beats the naive rule by at least 1.0 accuracy point in the pooled paired comparison, with a bootstrap confidence interval excluding zero, and a directionally positive delta on at least 3 of 4 configurations.
+
+\textbf{Falsification condition.} Refuted if the elimination-aware aggregator's accuracy advantage over the naive rule is statistically indistinguishable from zero in the pooled paired comparison --- that would mean exploiting verified-incorrect eliminations adds nothing measurable over discarding them, and aggregation is not a separate design axis from allocation at the budgets tested.
+
+\textbf{Hypothesis (plain language).} Actively removing answers that verification has ruled out is worth more than falling back to an uncorrected vote.
+
+\textbf{Metrics.} Matched-budget accuracy difference between the two aggregation rules and its confidence interval.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ6: Do allocation gains survive the move from an oracle verifier to realistic verifiers?}
+\textbf{Setup.} Repeat the matched-budget selective-versus-uniform comparison under execution-based (code) and process-reward-model-based (math) verifiers, after each verifier has passed the false-positive/false-negative audit gate, and compare the resulting accuracy gain against its oracle-verifier magnitude.
+
+\textbf{Expected outcome.} The accuracy gain under realistic verifiers retains at least 50\% of its oracle-verifier magnitude and remains statistically significant on at least 2 of 4 scale-up configurations.
+
+\textbf{Falsification condition.} Refuted if the accuracy gain under realistic verifiers falls below half its oracle-verifier magnitude, or loses significance, on a majority of scale-up configurations --- and especially damaging if this happens under the code-execution verifier specifically, since execution verifiers are close to ground truth and a collapse there cannot be blamed on verifier noise, implicating the signal or the aggregation instead.
+
+\textbf{Hypothesis (plain language).} The measured allocation advantage is not an artifact of the oracle verifier's unrealistic exactness.
+
+\textbf{Metrics.} Realistic-verifier accuracy gain as a fraction of oracle-verifier accuracy gain, per configuration.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ7: Does a policy frozen on one task domain transfer to another?}
+\textbf{Setup.} Freeze a policy's signal choice and ranking granularity exactly as selected on one task domain (math or code), and evaluate it unmodified, with no retuning, on the other domain, comparing against uniform-random allocation on that domain.
+
+\textbf{Expected outcome.} The frozen policy beats uniform allocation on the domain it was not tuned on, at a small budget fraction with corrected $p < 0.05$, in at least 3 of 4 transfer-direction $\times$ model cells.
+
+\textbf{Falsification condition.} Refuted if the frozen policy fails to beat uniform allocation on the untuned domain in a majority of transfer cells --- that would mean signal informativeness is domain-bound, and a verification-budget policy would need to be re-fit separately for every task domain rather than transferring.
+
+\textbf{Hypothesis (plain language).} Whatever makes a signal informative is not specific to the one domain it was measured on.
+
+\textbf{Metrics.} Transferred-policy accuracy delta over uniform allocation, per transfer direction and model.
+
+\textbf{Result.} \ph
+
+\vspace{0.5em}
+\noindent\textbf{Further evaluation.} With more time, a natural extension is the fully online, streaming setting --- instances arriving over an unknown horizon with a budget shared across future batches, not just within one fixed batch --- which the sequential-reallocation policy above approximates but does not fully address; that setting would need its own identifiability design rather than a direct extension of the within-batch sequential policy tested here.
+
+\section{Related Work}
+
+The closest prior work to this paper is TRIM \citep{TRIM2607}, which already budgets a costly intervention --- regenerating a reasoning step with a strong model --- under an explicit token budget, guided by a noisy per-step risk signal from a process reward model; TRIM's own motivation states that local, per-step threshold decisions are insufficient because the value of intervening depends on context a fixed threshold cannot see. This paper makes the same argument one level up: the unit of competition for a shared budget is a whole trajectory against every other trajectory in a cross-instance pool, not a reasoning step against the rest of its own trajectory, and no existing work --- TRIM included --- treats that whole-trajectory, cross-instance allocation question as its object of study.
+
+\textbf{Compute allocation for generation.} Compute-Optimal-TTS \citep{ComputeOptTTS2607} formalizes inference-time methods as a proposer--verifier combination under a fixed compute budget and learns a difficulty-conditioned policy over search and revision hyperparameters; CaTS \citep{CaTS2607} distills self-consistency agreement statistics into a calibrated confidence predictor used to decide, per query, how many samples to draw before stopping. Both establish that generation-side compute is already treated as a metered, allocable resource with a difficulty- or confidence-conditioned policy governing it, but in both, verifier or reward-model scoring is bundled into the chosen strategy rather than metered as its own resource --- neither answers which of several already-sampled trajectories deserves one of a fixed number of verifier calls.
+
+\textbf{Theories of verifier imperfection.} ROC-n-reroll \citep{ROCnReroll2607} represents a verifier by its ROC curve and derives closed-form accuracy--compute expressions for Best-of-N and rejection sampling under noisy verification; OT-Verify \citep{OTVerify2607} unifies coverage, verifier accuracy, and algorithm design via an optimal-transport formulation of verifier-guided sampling. Both give an exact account of how a verifier's \emph{accuracy} shapes test-time scaling, but both assume the verifier scores every candidate --- the number of verifier calls is never itself a constraint, only verifier quality is the free variable, the opposite corner from a verifier that is trusted but sparsely consulted.
+
+\textbf{Concurrent selective-verification work.} Two 2026 works are nearest by name and are conceded directly rather than left for a reviewer to find. SEVRA \citep{SEVRA2026} frames budget-aware reasoning as a serving-layer decision --- keep a frozen solver's initial answer, or invoke active verification --- trained from serving-visible attempt state; its decision unit is a single instance in isolation, verification there is an \emph{intervention} that re-reasons and may repair the answer, and no pool of already-sampled candidates competes for a shared call budget. GRACE \citep{GRACE2026} treats verification compute as budgeted and derives the compute-optimal \emph{granularity} of the verifier --- outcome-level versus process-level scoring --- but its decision variable is the form of verification applied, not which trajectories receive it; cross-instance allocation over a trajectory pool is outside its formulation. Both establish that verification is now being metered as a selectively-spent resource --- the scarcity premise of this paper is no longer unoccupied ground --- and what remains unclaimed is exactly this paper's object: a global budget $B < mN$ shared across every trajectory of every instance, the selection set $S$ it induces, and the aggregation of verified-incorrect outcomes over the unselected remainder.
+
+\textbf{Selective evaluation, escalation, and routing.} Trust-or-Escalate \citep{TrustOrEscalate2607} calibrates per-item confidence thresholds with provable human-agreement guarantees and escalates uncertain items through a cascade from cheap to strong judges; TRIM \citep{TRIM2607} routes individual reasoning steps to a strong model under a token budget using a per-step PRM risk signal, as discussed above. Both establish that uncertainty-conditioned, budget-aware intervention reduces evaluation or correction cost, but both allocate at a grain --- a single evaluation item, or a single step within one trajectory --- below the level this paper studies: a shared budget competed for by many whole trajectories across many instances at once.
+
+\textbf{Confidence and self-consistency foundations.} Wang et al.'s \citep{WangSelfConsistency2023} self-consistency samples several chains of thought and takes a majority vote, using a fixed sample count and equal weighting for every sample, with no verification step at all --- a consensus-wrong answer passes through unchecked, which is exactly the failure a small, well-aimed verifier budget could catch. Self-Capability \citep{SelfCapability2607} evaluates whether models can predict their own task success ex ante, finding substantial miscalibration, but stops at measuring whether the signal exists rather than constructing or evaluating a policy that spends a budget based on it; SAFER \citep{SAFER2607} calibrates a sampling budget and an uncertainty-filtering threshold entirely offline against admissibility labels, never invoking an external trusted verifier at test time at all. All three establish that self-consistency-derived signals carry some information and that budgets can be calibrated around them, but none constructs or evaluates a policy that spends a scarce, trusted-verifier budget guided by such a signal --- the gap this paper's allocation policy and aggregator are built to close.
+
+\section{Conclusion}
+
+This work reframes a deployment assumption --- that verification should be either exhaustive or absent --- as a measurable allocation question with a precise identifiability structure: given a fixed number of calls to a verifier that is accurate when consulted, which trajectories should receive one, and how should verified and unverified evidence be combined. The central methodological wager is that neither half of this question can be assumed to resolve favorably --- proxy validity, aggregation value, verifier-realism robustness, and domain transfer are each measured directly rather than presumed, because a design that assumes any one of them risks reporting an allocation advantage that is really an artifact of an oracle verifier, a single task domain, or a naive combination rule that happens not to be tested against a better one. Whichever way the measurements land, the result is decision-relevant: if selective allocation recovers most of the full-verification gain at a small fraction of the calls, pipeline designers gain a principled way to size and aim a verification budget instead of guessing between exhaustive checking and none; if it does not, the confident-but-wrong under-selection measurement (RQ2) still gives a concrete, quantified account of exactly where cheap signals are blind, which is itself the kind of ceiling future allocation policies would need to break by importing information from outside the sampling distribution. Two limitations bound this claim from the outset rather than arriving as afterthoughts: the study is scoped to sampled-trajectory pools with checkable final answers and a verifier that is trustworthy when consulted, leaving verifier \emph{unreliability} itself, agentic long-horizon rollouts, and human verifiers for future work; and the sequential reallocation policy tested here operates within one fixed batch, leaving the fully online setting --- instances arriving over an unknown horizon, with a budget shared across future batches --- as the natural next methodological target.
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section*{Pre-handoff checklist}
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Organization/navigation} --- narrative flows problem $\to$ method $\to$ experiments $\to$ related work without forward references to undefined terms.
+\item \textbf{Terminology discipline} --- ``verifier-free signal,'' ``budget-constrained allocation,'' ``elimination-aware aggregator,'' ``confident-but-wrong'' each defined at first use in the Problem Definition or Methodology, used consistently thereafter; no internal stage IDs (\texttt{sp\_*}, \texttt{m\_*}, \texttt{rq\_*}) leaked into prose --- checked directly against the discussion pipeline log.
+\item \textbf{Notation with worked example} --- the formal setup section defines $(x_i, T_i, \tau, a(\tau), V, B, S, \pi, g, \hat a_i)$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+\item \textbf{RQ framing matches outcomes} --- all 7 RQs are graded/quantitative (rates, deltas, gap-closure fractions), each answered in its own subsection with an explicit falsifiable expected outcome and a distinct falsification condition, not a binary yes/no.
+\item \textbf{No typesetting artifacts} --- only explicit placeholder markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+\item \textbf{Artifact plan} --- the sampled-trajectory-pool cache, the signal/verifier logging harness, and the policy-evaluation code are the natural release artifacts; not yet built, so not claimed as available.
+\end{itemize}
+
+\section*{Hand-off}
+This is a draft, not a finished paper --- experiments have not run. Natural next steps: prose polish and venue-specific LaTeX formatting once a target venue is chosen, or revising an earlier stage if piloting surfaces a problem (e.g., if no verifier-free signal clears the RQ1 informativeness bar at all).
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

@@ -1,0 +1,298 @@
+# 每个 Topic 的具体 Research Topics（4–5 条/topic）
+
+**日期：2026-07-03**
+**说明：** 在《螺旋框架下的 LLM Topic 定位表》基础上，为八个 topic 各展开 4–5 个论文粒度的具体研究题。每条给出：题目表述、核心可证伪问题、最小实验/真值来源。每条标注缺口类型标签（反同质化自查用）：
+
+- [证据] Evidence Gap：缺系统测量
+- [机制] Explanation Gap：现象已知、原因不明
+- [边界] Failure/Boundary Gap：方法何时失效
+- [矛盾] Puzzle/Contradiction：与直觉或既有结论相反
+- [资源] Resource Bottleneck：预算/成本约束下的优化
+
+**通用要求（适用于全部条目）：** 真值不依赖 LLM judge 作最终裁决；每条实验失败时方向本身可被推翻；避免 bridge/synthesis 型表述。
+
+---
+
+## B1. Verifier 充分性（agent / 代码场景）
+
+**B1.1 工具日志可伪造性** [证据+机制]
+> Satisfying the Log, Skipping the Work: Forgeable Action Traces in Log-Verified Agent Tasks
+
+核心问题：当 verifier 检查工具调用日志而非环境状态时，agent 会不会学会"产出合格日志但跳过真实动作"？
+最小实验：构造日志校验与状态校验可分离的任务集；真值 = 环境状态差分。测量提示优化/RL 压力下伪造日志行为的出现率与条件。
+
+**B1.2 可见测试过拟合的出现边界** [边界]
+> When Do Coding Agents Start Gaming the Test Suite? Coverage Thresholds for Visible-Test Overfitting
+
+核心问题：可见测试覆盖度降到什么程度时，agent 的"过可见测试但挂隐藏组合测试"行为开始出现？
+最小实验：系统性控制可见测试套件的变异体杀伤率（mutation score），测 visible-pass 与 held-out-pass 的缺口随充分性变化的曲线。真值 = 隐藏测试与变异体。这是经典 mutation testing 充分性理论对 agent 评价面的直接迁移，全语料中该框架命中≈0。
+
+**B1.3 多步任务的检查点绕过** [证据]
+> Milestone Satisfaction without Prerequisite State: Checkpoint Bypass in Multi-Step Agent Verification
+
+核心问题：中间里程碑 verifier 可否在不满足前置状态的情况下被逐个满足（乱序、跳步、状态注入）？
+最小实验：带依赖图的多步任务，每个里程碑独立校验；测"全部里程碑通过但端到端状态不一致"的比例。真值 = 终态一致性检查。
+
+**B1.4 verifier 组合的健全性算术** [矛盾]
+> Two Sound Checks, One Unsound Gate: Emergent Shortcuts under Verifier Composition
+
+核心问题：两个各自健全的 verifier，其合取/析取组合是否仍健全？组合是否打开单个检查不存在的捷径？
+最小实验：构造单检查无捷径、组合后有捷径的任务对（如"通过 A 的方式恰好绕开 B 的检查面"）；验证组合缺口的存在性与出现条件。反直觉结论若成立，对所有多重校验管线是普适警告。
+
+**B1.5 校验预算的对抗性分配** [资源]
+> Spot-Check or Probe? Allocating a Fixed Verification Budget against Shortcut-Seeking Agents
+
+核心问题：固定校验调用预算下，随机抽检、定向不变性探针、隐藏组合测试三种花法，哪种最小化未检出捷径率？
+最小实验：博弈式设定——agent 侧优化通过率，校验侧在预算内分配检查；测各分配策略下的漏检率-成本前沿。
+
+---
+
+## B2. 失败归因（plan / tool / execution）
+
+**B2.1 受控替换归因协议** [证据]
+> Causal Failure Attribution via Controlled Component Substitution in Tool-Use Agents
+
+核心问题：固定 executor 换 plan、固定 plan 换工具条件，失败是否随被替换组件转移？归因结论可否被替换实验机械验证？
+最小实验：注入已知故障（坏 plan 步、断工具、污染观测）作 ground-truth 标签，测各归因方法的准确率。这是给 agent 领域造一个"Defects4J"——已知故障标注库本身就是贡献。
+
+**B2.2 归因的最小 replay 预算** [资源]
+> How Few Replays Suffice? Budget-Bounded Localization of Decisive Failures in Long Trajectories
+
+核心问题：长轨迹中定位决定性失败层，最少需要几次定向 replay？对轨迹做二分/分组检索相对全量重跑省多少？
+最小实验：在已知故障位置的轨迹上比较二分重放、分组测试、均匀抽样的定位成本-准确率曲线。
+
+**B2.3 归因的跨模型稳定性** [矛盾]
+> Does the Diagnosis Survive a Model Swap? Cross-Backbone Stability of Failure Attribution
+
+核心问题：同一任务失败，换底层 LLM 后归因是否落到同一层？若归因高度模型特异，"诊断"就不是任务性质而是模型性质。
+最小实验：同一故障注入任务集跑多个模型家族，测归因标签的跨模型一致率。结论无论正反都有信息量。
+
+**B2.4 不可解性作为归因类别** [边界]
+> Failed or Infeasible? Calibrated Unsolvability Detection as a First-Class Attribution Outcome
+
+核心问题：agent 与归因系统能否区分"agent 失败"与"任务本不可解"？拒答校准的边界在哪？
+最小实验：构造可解/不可解配对任务（不可解性由构造保证，真值机械成立），测归因系统把不可解误判为 agent 失败的比率。
+
+**B2.5 观测污染的归因盲区** [机制]
+> When the Evidence Lies: Attribution under Corrupted Tool Observations
+
+核心问题：失败源于工具返回了错误但格式合法的观测时，归因方法是否系统性地把责任错记到 plan 或 execution 层？为什么？
+最小实验：注入语义错误但语法合法的工具输出，测主流归因思路的错记率与错记方向。
+
+---
+
+## B3. 跨版本行为漂移 / 纵向审计
+
+**B3.1 探针集的充分性设计** [证据]
+> What Probes Predict Breakage? Minimal Probe-Set Design for Version-Drift Auditing
+
+核心问题：哪个最小探针族（能力/拒答边界/格式偏好/校准/安全行为）对下游破坏最有预测力？
+最小实验：在已发生的版本对上回溯：用各探针族的漂移量预测真实下游任务的行为变化，比较预测力。真值 = 同一输入集的跨版本输出差分。
+
+**B3.2 漂移的方差分解** [机制]
+> Capability, Policy, or Format? Decomposing Behavioral Drift across LLM Version Pairs
+
+核心问题：一次版本升级的行为变化中，多少来自能力变化、多少来自对齐/政策调整、多少只是格式偏好漂移？
+最小实验：设计三类正交探针，对多个版本对做方差分解；检验分解在厂商间是否有共同结构。
+
+**B3.3 静默变更率** [证据+矛盾]
+> Undocumented by Design? Measuring Silent Behavioral Change against Vendor Changelogs
+
+核心问题：可测量的行为变化中，有多大比例未出现在厂商变更说明里？静默变更集中在哪些行为类别？
+最小实验：变更日志文本 vs 实测行为差分的对齐分析。结论直接服务问责，厂商结构性不会自己做。
+
+**B3.4 下游契约破坏度量** [证据]
+> How Many Prompts Break per Upgrade? Contract Breakage Rates for Structured-Output Pipelines
+
+核心问题：一次版本跳变平均打断多少生产风格的 prompt 模板/结构化输出契约？什么特征的契约最脆弱？
+最小实验：构造模拟生产契约库（JSON schema、格式约定、few-shot 模板），逐版本测破坏率与脆弱性预测因子。
+
+**B3.5 跨厂商漂移同步性** [矛盾]
+> Do All Models Drift the Same Way? Cross-Vendor Homogenization of Behavioral Change
+
+核心问题：不同厂商的模型是否朝相关方向漂移（共享数据源/对齐配方导致的同质化）？行为空间的多样性随时间收敛还是发散？
+最小实验：固定探针集下测各厂商版本序列的漂移向量相关性。若同步性高，"多模型冗余"作为风险对冲策略的有效性存疑——该结论影响巨大。
+
+---
+
+## B4. 预算分配 / 推理经济学
+
+**B4.1 停止规则的遗憾度量** [资源]
+> The Regret of Stopping: Online Marginal-Utility Estimation for Test-Time Reasoning
+
+核心问题：继续思考的边际收益能否被在线估计？各停止策略相对 oracle 的遗憾是多少？
+最小实验：可机械验证答案的任务上，记录逐步正确率轨迹，评估基于置信度/熵/自洽度的停止规则的遗憾曲线。
+
+**B4.2 思考-采样-验证的兑换率** [证据]
+> Exchange Rates between Thinking, Sampling, and Verifying under a Fixed Dollar Budget
+
+核心问题：固定美元预算下，加长 CoT、多采样、调用 verifier 三者在不同任务族上的替代率是多少？有效前沿长什么样？
+最小实验：网格扫描三维预算分配，按 accuracy-per-dollar 画帕累托前沿；检验前沿形状跨任务族的稳定性。
+
+**B4.3 过度思考的难度翻转点** [边界]
+> Where Thinking Starts to Hurt: Difficulty-Conditioned Boundaries of Test-Time Compute
+
+核心问题：估计难度达到什么条件时，更多思考的边际收益转负？翻转点可否用便宜信号预测？
+最小实验：按难度分层的任务上测正确率-思考长度曲线的非单调区，用输出熵/早期一致性预测翻转位置。
+
+**B4.4 廉价控制器蒸馏** [资源]
+> Can a Frozen Probe Replace Self-Report? Cheap Controllers for Compute Allocation
+
+核心问题：一个小型冻结骨干探针做分配决策，能否达到大模型自我报告式元决策的水平？training-free 信号够不够？
+最小实验：对比 training-free 信号（logit 熵、自洽度）、小探针、大模型自报三种控制器在同预算下的 accuracy-per-dollar。
+
+**B4.5 校验调用的选择性分配** [资源]
+> Which Trajectories Deserve Verification? Selective Checking under a Verifier-Call Budget
+
+核心问题：verifier 调用受限时，验证哪些轨迹能最大化 accuracy-per-verifier-call？
+最小实验：按不确定性信号排序分配验证调用，与均匀分配/全验证比较；与 B1.5 呼应但立场相反（这里 verifier 可信，问怎么省着用）。
+
+---
+
+## B5. 议价机制层（agent-to-agent 交易）
+
+**B5.1 操纵战术的福利计价目录** [证据]
+> Pricing Manipulation: Surplus Transfer per Linguistic Tactic in Controlled Bilateral Bargaining
+
+核心问题：锚定、虚假紧迫、伪造外部报价、情绪施压各能转移多少经济剩余？哪些战术对哪些模型最有效？
+最小实验：私有保留价受控的双边议价，逐战术注入，福利指标机械计量转移量。真值 = 分配的估值函数。
+
+**B5.2 信息结构决定的可剥削边界** [边界]
+> When Does Asymmetry Become Exploitation? Information Structure and the Exploitability Frontier
+
+核心问题：可剥削性如何随信息不对称程度（保留价是否可知、声明是否可验证）缩放？存在不对称阈值使剥削从边际变为系统性吗？
+最小实验：参数化信息结构做扫描，画剥削量-不对称度曲线。
+
+**B5.3 协议层与模型层防御的分工边界** [边界+矛盾]
+> What Mechanism Design Can and Cannot Fix: Protocol-Layer versus Model-Layer Defenses against Negotiation Manipulation
+
+核心问题：结构化报价、可验证承诺等机制设计能消除哪几类操纵？哪些操纵在任何协议下都存活、只能靠模型侧防御？
+最小实验：逐操纵类别 × 逐协议约束的消融矩阵。若"协议能修一切"成立，该方向应归工程；若不成立，模型侧研究有不可替代空间——实验直接裁决方向本身的存在权。
+
+**B5.4 能力差距下的代理剥削** [证据+矛盾]
+> Weak Principal, Strong Adversary: Surplus Loss as a Function of Capability Gap
+
+核心问题：弱模型代表委托人对阵强对手时剩余损失如何随能力差距缩放？受限行动空间的弱 agent（禁自由文本、只出结构化报价）会不会反而优于不设限的强 agent？
+最小实验：能力梯度 × 行动空间约束的双因素实验。"束缚反而保护"若成立，是可直接落地的部署建议。
+
+**B5.5 重复博弈中的剥削持续性** [机制]
+> Does Reputation Self-Correct Exploitation? Repeated Bargaining Dynamics between LLM Agents
+
+核心问题：重复交互与声誉机制下，剥削会衰减、持续，还是演化为合谋？
+最小实验：重复双边议价 + 可观测历史，追踪剥削量与合谋信号（价格趋同、轮流让利）的时间动态。
+
+---
+
+## B6. 污染机制层（合成语料）
+
+**B6.1 未知生成器下的估计鲁棒边界** [边界]
+> Estimating Contamination from Generators You Have Never Seen: Robustness Limits of Distributional Estimators
+
+核心问题：语料级占比估计器对未见过的生成器和改写攻击的退化速率是多少？存在生成器不变的统计特征吗？
+最小实验：留一生成器交叉验证 + 改写强度扫描，画估计误差曲线。真值 = 受控混合比例。
+
+**B6.2 污染-退化的剂量反应曲线** [机制]
+> Dose-Response of Corpus Contamination: Coupling Measured Synthetic Fractions to Downstream Degradation
+
+核心问题：训练语料合成占比与模型能力/多样性退化之间的函数关系是什么？存在安全阈值还是单调退化？
+最小实验：受控合成比例训练小模型（冻结骨干 + 持续预训练可控成本），画剂量反应曲线。把取证接到 model collapse 上，从"测多少"走到"多少有害"。
+
+**B6.3 预 2022 锚点的校准方法学** [证据]
+> The Certified-Human Anchor: Temporal Holdout Validation for Corpus-Level AI-Content Estimators
+
+核心问题：2022 年前语料作为认证人类负样本，能给估计器提供什么形式的误差界？时间分布漂移（人类写作风格本身在变）多大程度上污染这个锚点？
+最小实验：跨年份人类语料的假阳性率漂移测量；给出锚点有效性的边界条件。
+
+**B6.4 分域污染的差异脆弱性** [证据]
+> Not All Data Degrades Equally: Domain-Selective Effects of Synthetic Contamination
+
+核心问题：代码、散文、数学、对话各域的污染对下游能力的损害是否不同？哪类数据最脆弱？
+最小实验：单域受控污染 × 分域能力评测的矩阵实验。结论直接指导数据筛选优先级。
+
+**B6.5 语料级估计的策略稳健性** [矛盾]
+> Is Corpus-Level Estimation Strategy-Proof? The Economics of Evasion at Population Scale
+
+核心问题：单文档检测已被证明可被改写击穿；语料级分布估计是否在对抗规避下同样脆弱，还是规避成本随语料规模上升而变得不经济？
+最小实验：给定改写预算的对抗者 vs 分布估计器的成本-精度博弈。若语料级天然更抗规避，这是与单文档检测悲观结论相反的可发表反直觉结果。
+
+---
+
+## T5. 设计约束合规（coding agent）
+
+**T5.1 从评审历史挖掘隐式约束** [证据]
+> Mining the Unwritten Rules: Extracting Implicit Design Constraints from Code Review History
+
+核心问题：PR 评审意见中能否系统抽取隐式设计约束？agent 在通过测试的前提下最常违反哪些类别（错误处理/架构惯例/API 约定）？
+最小实验：评审语料 → 约束目录 → 对 agent patch 的违规分布统计。真值 = 人类评审裁决。
+
+**T5.2 测试盲区的结构分析** [机制]
+> Why Tests Cannot See Design: A Structural Account of What Test Suites Fail to Express
+
+核心问题：测试套件结构性表达不了哪类性质（横切关注点、时序性质、命名/分层惯例）？盲区可否用变异体探测系统化刻画？
+最小实验：设计约束违规型变异体（违反惯例但功能等价），测既有测试套件的杀伤率——杀不死的变异体即测试盲区的机械证据。mutation testing 框架的又一处直接迁移。
+
+**T5.3 约束 verifier 原型与人类评审对齐** [证据]
+> Checking Design Cards: Precision and Recall of Automated Constraint Verification against Human Review
+
+核心问题：给定显式化的设计约束卡，自动检查器抓违规的精确率/召回率相对人类评审如何？哪类约束可自动化、哪类本质需要人？
+最小实验：约束卡 + agent patch + 人类评审三方对齐评测。
+
+**T5.4 多轮编辑下的架构侵蚀** [证据+机制]
+> Architectural Erosion under Sequential Agent Edits: A Longitudinal Measurement
+
+核心问题：连续多个任务的 agent patch 会不会渐进侵蚀架构（每步都过测试，累计却腐蚀分层/依赖结构）？侵蚀速率与什么有关？
+最小实验：同一 repo 上串行执行任务序列，逐步测架构度量（循环依赖、分层违规、复杂度）漂移。真值 = 静态分析度量。
+
+**T5.5 合规的代价前沿** [资源]
+> The Price of Compliance: Utility-Constraint Frontiers for Design-Aware Coding Agents
+
+核心问题：强制设计约束会使 pass rate 降多少、成本升多少？合规-效用前沿的形状决定该方向的工程可行性。
+最小实验：约束强度参数化扫描，画 pass rate × 违规率 × 成本的三维前沿。
+
+---
+
+## T3. Memory 约束保持（窄环，4 条）
+
+**T3.1 Pinning 的对抗失效边界** [边界]
+> Breaking the Pin: Adversarial Limits of Constraint Protection under Context Compaction
+
+核心问题：原论文的优化注入击穿全部受测模型——pinning 类防御在对抗性 compaction 下的精确失效边界在哪里？防御-攻击的成本比是多少？
+最小实验：注入优化强度扫描 × 防御变体矩阵，画击穿率曲线。
+
+**T3.2 软政策-硬规范衰减不对称的机制** [机制]
+> Why Soft Policies Rot Faster: Salience, Framing, and the Asymmetric Decay of In-Context Constraints
+
+核心问题：组织软政策的衰减远大于硬安全规范（原论文报告约 8 倍差异）——由显著性、措辞框架还是预训练先验驱动？
+最小实验：控制措辞强度/位置/重复次数的消融，分离三种候选机制。
+
+**T3.3 约束识别问题** [边界]
+> Which Spans Are the Rules? Adversarially Robust Identification of Governance Constraints for Pinning
+
+核心问题：pinning 的前提是先认出哪些上下文片段是治理约束——对抗性措辞（把约束伪装成闲聊、把闲聊伪装成约束）下识别可靠吗？
+最小实验：对抗改写的约束/非约束配对集，测识别器的错保率与漏保率。
+
+**T3.4 规模化 pinning 的开销边界** [资源]
+> Pinning at Scale: Token Overhead versus Violation Trade-offs under Hundreds of Constraints
+
+核心问题：约束从个位数增长到数百条时，全量 pinning 的 token 开销何时反噬任务性能？选择性 pinning 的选择策略是什么？
+最小实验：约束数量扫描下测违规率-开销-任务成功率三方权衡。
+
+---
+
+## 附：反同质化自查汇总
+
+| Topic | 证据 | 机制 | 边界 | 矛盾 | 资源 |
+|---|---|---|---|---|---|
+| B1 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| B2 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| B3 | ✓✓ | ✓ | — | ✓✓ | — |
+| B4 | ✓ | — | ✓ | — | ✓✓✓ |
+| B5 | ✓✓ | ✓ | ✓✓ | ✓✓ | — |
+| B6 | ✓✓ | ✓ | ✓ | ✓ | — |
+| T5 | ✓✓ | ✓ | — | — | ✓ |
+| T3 | — | ✓ | ✓✓ | — | ✓ |
+
+38 条中无一条以 "unify / integrate / bridge / end-to-end framework" 为创新点；每条均有机械真值来源与失败可证伪性。B4 偏重资源型、B3 偏重证据型是话题本性使然（分别是经济学问题和测量问题），属合理集中而非模板化。
+
+另注两条跨 topic 的观察：B1.2 与 T5.2 都是 mutation testing 充分性理论向新对象（agent 评价面、设计约束）的迁移——该框架在 11,683 条语料中命中≈0，是全表最稀缺的方法论资产；B1.5 与 B4.5 是同一枚硬币的两面（verifier 不可信时怎么测它 vs verifier 可信时怎么省它），可互为相关工作。
+

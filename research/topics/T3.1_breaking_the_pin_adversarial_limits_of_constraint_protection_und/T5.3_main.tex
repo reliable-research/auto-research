@@ -1,0 +1,668 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{graphicx}
+\usepackage{balance}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+
+% ---- collaboration macros ----------------------------------------------
+% \wj{...}  : hypothesis/standpoint comment, rendered blue, greppable, strippable for camera-ready
+% \ph{...}  : pre-registered placeholder awaiting data; every \ph is bound to the estimand block (Sec. IV-G)
+\newcommand{\wj}[1]{\textcolor{blue}{\textbf{[WJ:} \textit{#1}\textbf{]}}}
+\newcommand{\ph}[1]{\colorbox{yellow!35}{\texttt{\footnotesize #1}}}
+\newcommand{\cardcheck}{\textsc{CardCheck}}
+\newcommand{\kh}{\kappa_{\mathrm{HH}}}
+\newcommand{\kv}{\kappa_{\mathrm{VH}}}
+\newcommand{\dk}{\Delta\kappa}
+
+\begin{document}
+
+\title{The Delegation Map: Which Design-Card Constraints Can Be Checked
+Automatically, and Which Only Look Like They Can}
+
+\author{\IEEEauthorblockN{Anonymous Author(s)}
+\IEEEauthorblockA{Submitted to ICSE 2027 --- double-blind review}}
+
+\maketitle
+
+\begin{abstract}
+Coding agents increasingly produce repository-scale patches that must respect a
+project's \emph{design cards}: lightweight, natural-language constraints on
+architecture, API usage, naming, and design intent that no test enforces.
+Checking every patch against every card by hand does not scale, and automated
+verifiers are commonly summarized by a single aggregate accuracy against human
+labels. We show that this summary is doubly broken: it hides that constraint
+categories differ sharply in \emph{operationalizability}, and it treats human
+review as a fixed oracle when human agreement itself varies by category. We
+contribute a \emph{delegation map}: a per-category partition of design-card
+constraints into \emph{automatable}, \emph{human-required},
+\emph{reference-unstable}, and \emph{inconclusive}, built from a three-way-aligned
+corpus of \ph{N} design cards, \ph{M} coding-agent patches across
+\ph{R} repositories and \ph{A} agents, and independent human adjudications. Our
+estimand is the per-category gap $\dk$ between the measured human--human
+agreement ceiling (Fleiss'~$\kappa$) and verifier--human agreement
+(Cohen's~$\kappa$); reference-unstable categories --- decided from human
+agreement alone, before any verifier output is examined --- report the ceiling
+only, since precision and recall against a reference annotators cannot agree on
+are undefined by construction. Using a frozen hybrid verifier (\cardcheck) purely
+as a measurement instrument, we find that \ph{K\_auto} structural categories
+reach the human band (precision $\geq$ \ph{P*}, recall $\geq$ \ph{R*}, coverage
+$\geq$ \ph{C*}), while intent-level categories sit \ph{DK} $\kappa$ below the
+ceiling and \ph{K\_unstable} categories are reference-unstable. The resulting
+routing rule cuts mandatory human review by \ph{RR}\% on our corpus mix and is
+released as a per-category table from which any team can recompute savings for
+its own card distribution. All criteria, thresholds, and falsifiers were fixed
+before data collection; corpus, protocol, and instrument are released.
+\end{abstract}
+
+\begin{IEEEkeywords}
+coding agents, design constraints, architecture conformance, LLM-as-judge,
+inter-rater agreement, pre-registration
+\end{IEEEkeywords}
+
+% =========================================================================
+\section{Introduction}\label{sec:intro}
+
+Human review of design-card compliance is not a fixed oracle: its reliability
+varies by constraint type, and any claim that automation ``matches human
+review'' is meaningless until that variation is measured. A design card states
+what an agent-generated patch may and may not do --- architectural boundaries it
+must not cross, APIs it must not call, naming conventions it must follow, or
+higher-level intent such as ``keep business logic separate from presentation.''
+For a constraint like \emph{``do not import package X from module Y,''} two
+reviewers will almost always agree, and a tool can compute the same verdict from
+the patch's import graph. For \emph{``do not mix business logic with
+presentation,''} reviewers themselves disagree, because the card names an intent
+it does not fully encode. These are not two points on one difficulty scale; they
+are two different verification problems, and the second lacks a stable reference
+against which \emph{any} checker --- human or automated --- can be scored. This
+paper measures that boundary.
+
+As coding agents move from local edits to repository-scale
+patches~\cite{jimenez2024swebench,yang2024sweagent}, manually checking every
+patch against every card stops scaling, and the natural response is an automated
+verifier that predicts violation from the patch. The field then summarizes such
+a verifier with one aggregate accuracy number. That aggregate hides the only
+decision a practitioner actually faces: \emph{which constraint categories can be
+safely delegated to automation, which still require a human, and which are so
+under-specified that even human review cannot serve as ground truth?} A verifier
+with strong average accuracy can be unsafe because it passes structural checks
+and silently misses intent violations; a verifier that looks weak in aggregate
+may already be reliable on the categories that dominate a team's review load.
+The right unit of analysis is the \emph{constraint category}, and the right
+reference is not human labels taken as truth but the \emph{measured human--human
+agreement ceiling} for that category.
+
+We produce a \emph{delegation map}: a category-level partition of design-card
+constraints into \emph{automatable}, \emph{human-required}, and
+\emph{reference-unstable}, plus an \emph{inconclusive} cell where the evidence
+does not yet decide. The category scheme is not invented for this study: it is
+derived from the rule-type structure of existing architecture-conformance
+tooling (dependency and layering rules in the style of
+import-linter~\cite{importlinter} and ArchUnit~\cite{archunit}; API-usage and
+deprecation rules; naming and location conventions; and the intent-level
+principles those tools explicitly do \emph{not} encode), so the taxonomy has
+provenance independent of our results, and we pre-register a
+granularity-sensitivity check on it (Sec.~\ref{sec:design:stability}). The map
+is built from a \emph{three-way-aligned corpus}: category-labeled design cards,
+coding-agent patches scoped to those cards, and independent human adjudications
+over the same card--patch pairs. For each category we estimate the gap between
+human--human agreement (Fleiss'~$\kappa$~\cite{fleiss1971}, the ceiling) and
+verifier--human agreement (Cohen's~$\kappa$~\cite{cohen1960}), and classify a
+category as automatable only when that gap's confidence interval sits within a
+pre-registered band of the ceiling. Categories classified
+\emph{reference-unstable} report the human ceiling \emph{only}: their precision
+and recall against human labels are left \emph{undefined by construction},
+because a reference the annotators themselves cannot agree on cannot ground a
+P/R number. Reference-unstable status is decided solely from human--human
+$\kappa$, \emph{before any verifier output on that category is examined}, so the
+exclusion cannot be steered by how the checker happens to perform.
+
+The instrument that produces verifier labels, \cardcheck{}, applies
+deterministic structural checks where a constraint's truth condition is
+computable from the patch, and a calibrated, abstaining LLM judgment where it is
+not. \cardcheck{} is not the contribution and is not tuned for leaderboard
+superiority; it is the measurement device, held frozen so the map reflects the
+constraints, not the checker. Because an instrument that abstains on every hard
+item would earn a flattering $\kappa$ on the easy remainder, abstention is a
+first-class outcome: every automatability verdict requires both the
+$\kappa$-band \emph{and} a pre-registered coverage floor
+(Sec.~\ref{sec:design:instrument}).
+
+Our headline result is that operationalizability is sharply category-dependent.
+On \ph{N} design cards and \ph{M} card--patch pairs across \ph{R} repositories
+and \ph{A} coding agents, \ph{K\_auto} structural categories are automatable ---
+verifier--human $\kappa$ within \ph{BAND} of the human ceiling, at precision
+$\geq$ \ph{P*}, recall $\geq$ \ph{R*}, and coverage $\geq$ \ph{C*} --- while
+intent-level constraints sit \ph{DK} $\kappa$ below the ceiling and are
+classified human-required. The partition itself is stable: the automatable set
+is invariant as the reference floor moves across \ph{KF}$\,\pm\,0.05$, with only
+the human-required/reference-unstable boundary shifting by
+$\leq$~\ph{SHIFT} categories, and no category changes verdict class under the
+pre-registered merge/split granularity check. Routing human review only to
+non-automatable categories cuts mandatory review load by \ph{RR}\% \emph{on our
+corpus's category mix}; because we release the full per-category routing table
+(category $\rightarrow$ verdict $\rightarrow$ $\dk$ $\rightarrow$ P/R where
+defined), any team can recompute the reduction for its own card distribution.
+The routed split survives a single-shot LLM-judge control budget-matched on
+tokens. The gap on intent constraints is not weak engineering:
+\ph{K\_unstable} categories are reference-unstable --- the humans themselves
+fall below usable agreement --- so their failure mode is a card that
+under-encodes its own truth condition, not a checker that can be improved.
+
+\smallskip\noindent This paper contributes:
+\begin{enumerate}[leftmargin=1.4em]
+  \item \textbf{An estimand.} The per-category $\kappa$-gap between the human
+  agreement ceiling and verifier--human agreement, which turns ``is automation
+  good enough here?'' into a measurable, category-local quantity with a
+  pre-registered decision band --- and which makes the reference-unstable case a
+  first-class, reportable outcome rather than a source of noisy P/R.
+  \item \textbf{A map, with a routing function.} A partition of
+  \ph{N\_cat} design-card constraint categories into automatable /
+  human-required / reference-unstable / inconclusive, shown stable under floor-
+  and granularity-perturbation, delivered as a per-category routing table from
+  which any team can recompute review savings for its own card mix.
+  \item \textbf{A diagnostic (secondary).} For every human-required and
+  reference-unstable card, a double-coded annotation of \emph{which}
+  under-encoding it exhibits --- quantifier scope, implicit boundaries, or
+  cross-file coupling --- with coder agreement reported, telling card authors
+  what to encode to move a category toward automatable.
+\end{enumerate}
+
+% =========================================================================
+\section{Background and Motivating Example}\label{sec:background}
+
+\subsection{Design cards as governance objects}
+Tests verify behavior; design cards encode architectural boundaries, security
+assumptions, maintainability rules, and project-specific intent that tests do
+not capture. An agent can produce a patch that compiles and passes every test
+while violating the constraints that keep the codebase safe to change ---
+the constraint classes that conformance research has targeted since reflexion
+models~\cite{murphy1995reflexion,knodel2007comparison,passos2010static}, now
+re-materialized as lightweight review gates for agent
+workflows~\cite{sadowski2018lessons,tufano2021towards}. As teams delegate more
+implementation to agents, the scarce resource stops being code generation and
+becomes \emph{review}: deciding whether generated code respects rules no test
+enforces.
+
+\subsection{Running example: two cards, two problems}\label{sec:background:example}
+Consider two cards from the same repository:
+\begin{itemize}[leftmargin=1.2em]
+  \item[$C_1$:] \emph{``Modules under \texttt{core/} must not import from
+  \texttt{web/}.''}
+  \item[$C_2$:] \emph{``Handlers must not mix business logic with presentation
+  logic.''}
+\end{itemize}
+$C_1$'s truth condition is computable from the patch's import graph; two
+reviewers and a ten-line script all return the same verdict. $C_2$ names an
+intent: whether a given conditional in a handler is ``business logic'' depends
+on a design rationale the card gestures at but does not encode. On such cards
+reviewers disagree with each other --- and when they do, a verifier--human
+disagreement is ambiguous between a verifier defect and a card defect. A single
+uniform checker scored by a single aggregate number treats $C_1$ and $C_2$ as
+one problem; a team that trusts the aggregate delegates exactly the checks it
+should have kept.
+
+\subsection{The reference must be measured, not assumed}
+Human labels are the natural reference for compliance, but on intent-laden
+cards, annotators disagree, and chance-corrected agreement is the standard
+instrument for quantifying how much~\cite{artstein2008inter,mchugh2012kappa}.
+Measuring the human--human ceiling per category resolves the ambiguity of a
+verifier--human disagreement into three interpretable cases: automation reaches
+the human band (\emph{automatable}); automation falls short of a usable band
+(\emph{human-required}); or humans do not themselves reach a usable band
+(\emph{reference-unstable}). The third case is the one existing evaluations
+mishandle. When annotators cannot agree, precision and recall against their
+labels are not merely noisy --- they are \emph{undefined}, because there is no
+reference to be precise or recall-complete against. Reporting a P/R number
+there manufactures false confidence. We make the reference-unstable verdict
+visible machinery with two safeguards fixed in advance
+(Sec.~\ref{sec:design:verdicts}).
+
+% =========================================================================
+\section{Study Design}\label{sec:design}
+
+\subsection{Research questions}\label{sec:design:rqs}
+\begin{itemize}[leftmargin=1.6em]
+  \item[\textbf{RQ1}] (\emph{Operationalizability gap}) Do structural constraint
+  categories reach the human-agreement ceiling while intent-level categories
+  remain measurably below it?
+  \item[\textbf{RQ2}] (\emph{Automatable quality}) On categories within the
+  human band, does the frozen instrument meet absolute precision/recall/coverage
+  floors and survive a token-budget-matched LLM-judge control?
+  \item[\textbf{RQ3}] (\emph{Partition stability}) Is the delegation map
+  invariant under perturbation of the reference floor and of the taxonomy's
+  granularity?
+  \item[\textbf{RQ4}] (\emph{Under-encoding diagnostic; secondary}) Which
+  under-encoding types explain the categories that resist automation?
+\end{itemize}
+
+\subsection{Estimand and verdict rules}\label{sec:design:verdicts}
+For category $c$, let $\kh(c)$ be Fleiss'~$\kappa$~\cite{fleiss1971} over
+independent human labels and $\kv(c)$ be Cohen's~$\kappa$~\cite{cohen1960}
+between the frozen verifier and the human majority label, computed over the
+items the verifier did not abstain on. The estimand is
+\begin{equation}
+  \dk(c) \;=\; \kh(c) \;-\; \kv(c),
+\end{equation}
+with confidence intervals from a cluster bootstrap over cards (card--patch
+pairs nest within cards; resampling pairs i.i.d.\ would understate variance).
+Verdicts are assigned by pre-registered rules, in this order:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Reference-unstable (verifier-blind).} If
+  $\kh(c) < $ \ph{KF} (anchored to the Landis--Koch ``moderate''
+  boundary, $\kappa=0.40$~\cite{landis1977}), category $c$ is
+  reference-unstable. This is decided from human labels alone, before any
+  verifier output on $c$ is examined. The category reports $\kh(c)$ only;
+  its P/R are undefined and omitted from every automatability claim. A
+  transparency appendix reports what the instrument's P/R \emph{would have
+  been}, labeled strictly as undefined-reference diagnostics that ground no
+  claim and enter no comparison.
+  \item \textbf{Automatable.} $c$ is automatable iff the CI upper bound of
+  $\dk(c)$ is $\leq$ \ph{BAND}, \emph{and} precision $\geq$ \ph{P*} and recall
+  $\geq$ \ph{R*} against the human majority label, \emph{and} the instrument's
+  coverage (fraction of items not abstained) is $\geq$ \ph{C*}.
+  \item \textbf{Human-required.} $c$ is human-required iff the CI lower bound of
+  $\dk(c)$ exceeds \ph{BAND}, or any absolute floor in rule~2 fails while
+  $\kh(c)$ is usable.
+  \item \textbf{Inconclusive.} Otherwise --- the CI straddles the band or the
+  cell is too thin to decide. Inconclusive is a reported verdict, not a
+  category silently dropped.
+\end{enumerate}
+
+Because $\kappa$ is prevalence-sensitive~\cite{mchugh2012kappa}, each category
+additionally reports raw percent agreement and prevalence-adjusted agreement
+(PABAK) as pre-registered robustness columns; $\kappa$ remains primary and no
+verdict is revised on the robustness columns alone.
+
+\wj{Standpoint for the verdict machinery: the verifier-blind ordering in rule~1
+is the paper's integrity core. We expect a hostile reviewer to read
+``P/R undefined by construction'' as ``the authors excluded their worst
+categories.'' Our answer is procedural, not rhetorical: the exclusion is
+computable from human labels alone, its threshold is anchored to a
+50-year-old convention rather than chosen by us, and the would-have-been
+numbers are printed anyway in the appendix. If the appendix numbers turn out
+\emph{good} on unstable categories, that is fine too --- it strengthens the
+claim that the exclusion is principled, since we excluded categories where the
+checker looked strong.}
+
+\subsection{Constraint taxonomy with external provenance}\label{sec:design:taxonomy}
+The category scheme is derived from the rule-type structure of existing
+conformance tooling, not invented post hoc: dependency/layering rules and
+API-usage/deprecation rules follow the rule vocabularies of
+import-linter~\cite{importlinter}, ArchUnit~\cite{archunit}, and the static
+conformance literature~\cite{knodel2007comparison,passos2010static};
+naming/location conventions follow linter rule classes; the intent-level
+remainder (separation of concerns, coupling discipline, abstraction
+boundaries) is precisely the class those tools document as out of scope.
+The full mapping from tool rule types to our \ph{N\_cat} categories is given in
+the artifact.
+% TODO-verify: if the Dong et al. constraint taxonomy checks out, cite it here
+% as convergent provenance; do NOT cite before verification.
+
+\subsection{Three-way-aligned corpus}\label{sec:design:corpus}
+The corpus aligns three layers over the same card--patch pairs.
+\emph{(i) Cards:} \ph{N} design cards drawn from \ph{R} repositories, each
+labeled with a taxonomy category by two coders (disagreements adjudicated;
+coder agreement reported).
+\emph{(ii) Patches:} \ph{M} card--patch pairs produced by \ph{A} coding agents
+given repository-scoped tasks that touch card-relevant code. Violations arise
+two ways, both pre-registered: \emph{natural} violations (the agent is never
+shown the card) and \emph{induced} variants (the task is chosen so that the
+straightforward implementation conflicts with the card, again without showing
+the card). The natural violation rate \ph{NVR} and the induced share are
+reported; no patch is hand-edited.
+\emph{(iii) Human labels:} each pair receives $\geq 3$ independent binary
+violation labels with confidence and a one-sentence rationale, from a pinned
+annotator pool \ph{POOL} (composition fixed before the pilot;
+Sec.~\ref{sec:threats}). Annotators see the card, the patch, and surrounding
+context, but never the verifier's output.
+
+\subsection{The frozen instrument: \cardcheck{}}\label{sec:design:instrument}
+\cardcheck{} maps a (card, patch) pair to \{\emph{violation},
+\emph{no-violation}, \emph{abstain}\}. Structurally checkable cards route to
+deterministic checkers over the patch's import graph, call sites, AST patterns,
+and file layout; remaining cards route to a calibrated LLM judgment with an
+explicit abstain option under low confidence. Three design rules make it an
+instrument rather than a contribution:
+\emph{(a) frozen:} all prompts, thresholds, and routing rules are fixed during
+an exploratory tuning phase on a disjoint tuning split and never changed during
+the confirmatory run;
+\emph{(b) abstention-honest:} abstentions are excluded from $\kv$ but counted
+against the coverage floor \ph{C*}, so selective abstention cannot buy
+agreement;
+\emph{(c) budget-accounted:} every call's token count is logged, enabling the
+budget-matched control.
+
+\wj{Standpoint on the instrument: we deliberately do not claim
+\cardcheck{} is better than anything. The hybrid design exists to make the map's
+verdicts attributable to the \emph{constraints} rather than to instrument
+weakness --- deterministic checks remove LLM noise where structure suffices,
+and abstention with a coverage floor removes the ``grade only the easy items''
+gaming path. If a reviewer asks ``why not a stronger verifier?'', the answer
+is: a stronger verifier can only shrink $\dk$ on categories with a usable
+reference; it cannot create a reference where humans have none, which is the
+boundary the paper measures.}
+
+\subsection{Baselines and budget-matched control}\label{sec:design:baselines}
+Three comparison points, all evaluated on the identical pairs:
+\emph{floor} --- a naive keyword/regex checker compiled from each card's
+surface text;
+\emph{ceiling} --- the human majority label (by construction $\kv \leq \kh$ in
+expectation);
+\emph{control} --- a single-shot LLM judge given the card and patch, matched to
+\cardcheck{} on \textbf{tokens} (primary unit; matched LLM-call count reported
+as a robustness column). The control answers the cheapest rival explanation:
+that any routed hybrid ``wins'' only by spending more.
+McNemar's test on paired verdicts compares \cardcheck{} to the control within
+each usable category, with Holm correction across the category family.
+
+\subsection{Partition stability checks}\label{sec:design:stability}
+Two perturbations are pre-registered.
+\emph{Floor sensitivity:} the entire partition is recomputed at
+\ph{KF}$-0.05$, \ph{KF}, and \ph{KF}$+0.05$. Claim form: the automatable set is
+invariant across the band; only the human-required$\,\leftrightarrow\,$%
+reference-unstable boundary may shift, by $\leq$ \ph{SHIFT} categories.
+\emph{Granularity:} the two most similar categories are merged and the largest
+category is split (rules fixed in the artifact), the classification is re-run,
+and every verdict-class migration is reported. If verdicts are
+granularity-stable, the map is real at this resolution; if not, the migration
+count bounds how fine a routing rule can be.
+
+\subsection{Pre-registered criteria and falsifiers}\label{sec:design:prereg}
+The central claim holds \textbf{iff}:
+(1)~$\geq$ \ph{K\_struct} structural categories have $\dk$ CI upper bound
+$\leq$ \ph{BAND};
+(2)~the intent-level categories have $\dk$ CI lower bound $>$ \ph{BAND};
+(3)~automatable categories reach precision $\geq$ \ph{P*}, recall $\geq$
+\ph{R*}, coverage $\geq$ \ph{C*};
+(4)~the automatable/human-required split survives the token-budget-matched
+control;
+(5)~the automatable set is invariant across the $\kappa$-floor sensitivity
+band.
+The claim is \textbf{falsified} if
+(a)~all categories show similar $\dk$;
+(b)~intent categories also reach the human band;
+(c)~$\kh$ is below the usable floor in so many categories that no stable
+partition exists; or
+(d)~the automatable set is not invariant across the sensitivity band.
+Cases (c) and (d) are findings, not failed experiments: (c) says design cards
+under-encode as a format; (d) bounds the granularity at which any routing rule
+can exist~\cite{nosek2018preregistration}.
+
+\wj{Standpoint on the criteria: (1)+(2) is the two-sided form of H1 --- we are
+not merely predicting ``structural is easier,'' which is folklore, but that the
+gap is large enough to clear a pre-registered band on both sides, with CIs. The
+band \ph{BAND} is the one threshold still deliberately unbound: it will be set
+from the pilot's human-$\kappa$ dispersion (derivation to be written into
+paper.md before the confirmatory run), because hardcoding it now, before we
+know human-ceiling variance, would be pseudo-rigor.}
+
+% =========================================================================
+\section{Experiment Setup}\label{sec:setup}
+
+\subsection{Repositories, agents, and scale}
+We select \ph{R} repositories spanning \ph{LANGS} languages and at least three
+architecture styles (layered, hexagonal/ports-adapters, plugin-based), each with
+enough conformance-relevant structure to author cards against; repository
+selection criteria are fixed in the artifact. Patches come from \ph{A} coding
+agents \ph{AGENT\_LIST}, each run under its default configuration with
+repository-scoped tasks of \ph{TASKS\_PER\_REPO} tasks per repository. The final
+corpus comprises \ph{N} cards ($\geq$ \ph{MIN\_PER\_CAT} per category) and
+\ph{M} card--patch pairs.
+
+\subsection{Annotation protocol}
+Each pair is labeled independently by three annotators from the pinned pool
+\ph{POOL}; order is randomized, cards from the same repository are never
+consecutive for the same annotator, and no annotator labels a pair from a
+repository they contributed code to. Fleiss'~$\kappa$ is computed from the raw
+independent labels; the majority label serves as the P/R reference only in
+categories that pass the usable-reference floor. For RQ4, every human-required
+and reference-unstable card is double-coded against the three under-encoding
+types (quantifier scope, implicit boundaries, cross-file coupling); if coder
+agreement on this secondary annotation falls below \ph{KF}, the diagnostic is
+demoted to qualitative discussion by pre-registered rule.
+
+\subsection{Tuning/confirmatory split and pilot}
+All \cardcheck{} tuning happens on a disjoint tuning split
+(\ph{TUNE\_FRAC} of cards, stratified by category) and is declared exploratory.
+The confirmatory run executes once, on the frozen instrument, on the remaining
+cards. Before the full corpus, a two-category pilot (API constraints vs.\
+design-principle constraints; 10 cards, 40 pairs, 3 annotators) must
+mechanically produce per-category $\kappa$/P/R, run the floor-sensitivity
+check, and reach usable human $\kappa$ in at least one category --- the
+pre-registered gate for scaling.
+
+\subsection{Statistical analysis}
+CIs: cluster bootstrap over cards, \ph{B} resamples. Verifier vs.\ control:
+McNemar within category, Holm-corrected across categories. All tests, the
+$\alpha$ level \ph{ALPHA}, and the handling of thin cells ($<$
+\ph{MIN\_CELL} pairs $\Rightarrow$ inconclusive by rule) are fixed here, before
+data.
+
+% =========================================================================
+\section{Results}\label{sec:results}
+
+\noindent\emph{Every number below is a pre-registered placeholder (\ph{~}); the
+hypotheses and their standpoints are stated now, before data, so that any
+outcome maps to committed wording.}
+
+\subsection{RQ1: The operationalizability gap}
+\textbf{H1} (criteria 1--2): at least \ph{K\_struct} structural categories have
+$\dk$ CI upper bound $\leq$ \ph{BAND}, while intent categories have $\dk$ CI
+lower bound $>$ \ph{BAND}.
+
+Table~\ref{tab:map} reports, per category: $\kh$, $\kv$, $\dk$ with CI, percent
+agreement, PABAK, coverage, and verdict.
+Structural categories show $\dk =$ \ph{DK\_struct\_range}; intent categories
+show $\dk =$ \ph{DK\_intent\_range}; \ph{K\_unstable} categories fall below the
+usable floor and report $\kh$ only.
+
+\wj{H1 standpoint: this is the load-bearing hypothesis and it is genuinely
+two-sided. If intent categories also reach the band (falsifier b), the paper
+inverts into ``design-card checking is more automatable than believed'' --- a
+publishable surprise with committed wording. If everything shows similar
+$\dk$ (falsifier a), the category axis is not where operationalizability
+lives, and we stop. The expected outcome, from the pilot's shape, is a clean
+split; the risk we rate highest is not the split failing but too many
+categories landing reference-unstable, which flips us into case (c):
+the format-level under-encoding finding. We commit to reporting whichever
+fires.}
+
+\begin{table}[t]
+\caption{The delegation map (per-category; placeholder values pending the
+confirmatory run). RU = reference-unstable: $\kh$ below \ph{KF}; P/R undefined
+by construction, reported only in the diagnostics appendix.}
+\label{tab:map}
+\centering
+\footnotesize
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Category & $\kh$ & $\kv$ & $\dk$ [CI] & Cov. & P / R & Verdict \\
+\midrule
+Dep./layering   & \ph{x} & \ph{x} & \ph{x} & \ph{x} & \ph{x}/\ph{x} & \ph{Auto} \\
+API usage       & \ph{x} & \ph{x} & \ph{x} & \ph{x} & \ph{x}/\ph{x} & \ph{Auto} \\
+Naming/location & \ph{x} & \ph{x} & \ph{x} & \ph{x} & \ph{x}/\ph{x} & \ph{Auto} \\
+Security invar. & \ph{x} & \ph{x} & \ph{x} & \ph{x} & \ph{x}/\ph{x} & \ph{?} \\
+Sep.\ of concerns & \ph{x} & \ph{x} & \ph{x} & \ph{x} & --- & \ph{HR/RU} \\
+Coupling/abstr. & \ph{x} & \ph{x} & \ph{x} & \ph{x} & --- & \ph{HR/RU} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{RQ2: Quality on automatable categories}
+\textbf{H2} (criteria 3--4): automatable categories meet precision $\geq$
+\ph{P*}, recall $\geq$ \ph{R*}, coverage $\geq$ \ph{C*}, improve F1 over the
+regex floor by \ph{F1\_gain}, and the split survives the token-matched control
+(McNemar, Holm-corrected: \ph{pvals}).
+
+\wj{H2 standpoint: the control is the criterion most likely to bite. If the
+single-shot judge matches \cardcheck{} within budget on structural categories,
+the honest conclusion is that deterministic checking buys nothing beyond a
+prompt --- which weakens the instrument story but leaves the map (contribution
+1--2) intact, since the map is about the reference, not the checker. We
+pre-commit to that wording rather than defending the hybrid.}
+
+\subsection{RQ3: Partition stability}
+\textbf{H3} (criterion 5): the automatable set is invariant across
+\ph{KF}$\pm0.05$ (boundary shift $\leq$ \ph{SHIFT} categories), and no category
+changes verdict class under the merge/split granularity check
+(migrations: \ph{MIG}).
+
+\wj{H3 standpoint: instability here is not fatal --- falsifier (d) converts it
+into a granularity bound (``routing rules coarser than $k$ categories are the
+finest supportable''). What we cannot survive is discovering instability only
+at rebuttal; hence the pilot runs this check mechanically before scaling.}
+
+\subsection{RQ4: Under-encoding diagnostic (secondary)}
+\textbf{H4}: among human-required and reference-unstable cards, the
+distribution over \{quantifier scope, implicit boundaries, cross-file
+coupling\} is \ph{DIST}, with double-coder agreement \ph{KD}.
+
+\wj{H4 standpoint: strictly secondary and pre-registered to demote itself
+(Sec.~\ref{sec:setup}) if coder agreement on the under-encoding annotation is
+itself unusable --- it would be self-refuting to hand-wave the diagnostic in a
+paper about unstable references. Its value if it survives: it converts the
+map's negative cells into an actionable card-authoring checklist.}
+
+\subsection{Routing yield}
+Under the map, routing human review only to non-automatable categories cuts
+mandatory review load by \ph{RR}\% at retained recall $\geq$ \ph{RC}\% on
+automatable categories, \emph{for our corpus's category mix}
+(\ph{MIX}). The released routing table makes the savings a function of the
+reader's card distribution rather than a corpus-specific percentage.
+
+% =========================================================================
+\section{Discussion}\label{sec:discussion}
+\textbf{From leaderboard to routing rule.} The practical reading of
+Table~\ref{tab:map} is procedural: send dependency, API, and naming cards to the
+tool; keep intent cards with humans; and treat reference-unstable cards as
+\emph{card-authoring} bugs --- the fix is encoding the truth condition
+(RQ4 names which one), not buying a better checker.
+\textbf{What the map does not claim.} Verdicts are claims about this reviewer
+population, this taxonomy resolution (bounded by RQ3), and this instrument
+generation; the released table and protocol let any team re-derive all three
+locally.
+\textbf{Relation to agent-evaluation gaming.} The abstention/coverage
+machinery is a small instance of a general principle: any evaluator with a
+discretionary opt-out must be scored jointly on agreement and coverage, or the
+opt-out becomes the gaming surface.
+
+% =========================================================================
+\section{Threats to Validity}\label{sec:threats}
+\textbf{Construct.} $\kappa$ is prevalence-sensitive; we report percent
+agreement and PABAK alongside, pre-registered as robustness-only. The majority
+label is a reference, not truth; that is precisely why verdicts are phrased as
+gaps to a measured ceiling rather than accuracy against ground truth.
+\textbf{Internal.} Instrument freeze is enforced by a disjoint tuning split and
+released hashes; annotators never see verifier output; reference-unstable
+status is computed verifier-blind.
+\textbf{External.} The ceiling is the ceiling \emph{for our pinned pool}
+\ph{POOL}; a category unstable for external reviewers might be stable for a
+project's own maintainers. The map generalizes only as far as \ph{R}
+repositories, \ph{A} agents, and the taxonomy's resolution; RQ3 bounds the
+latter, and the routing table lets teams re-derive verdicts with their own
+reviewers.
+\textbf{Conclusion.} Per-category tests are Holm-corrected; thin cells
+($<$ \ph{MIN\_CELL} pairs) are inconclusive by rule, never silently dropped.
+
+% =========================================================================
+\section{Related Work}\label{sec:related}
+\textbf{Architecture conformance checking.} Reflexion
+models~\cite{murphy1995reflexion} and their successors check code against
+architectural rules, with comparative studies of static
+approaches~\cite{knodel2007comparison,passos2010static} and industrial linting
+at scale~\cite{sadowski2018lessons}; modern rule engines (ArchUnit, import-%
+linter)~\cite{archunit,importlinter} mechanize exactly the structural rule
+types our taxonomy inherits. This line assumes the rule's truth condition is
+already encoded; it does not ask which natural-language constraints \emph{can}
+be so encoded, which is our estimand.
+\textbf{LLM-as-judge and its reliability.} LLM judges are widely used to score
+generation~\cite{zheng2023judging}, and agent benchmarks increasingly rely on
+automated graders~\cite{jimenez2024swebench,yang2024sweagent}. Reliability
+concerns are typically addressed by scaling or ensembling judges; our point is
+prior to that: for correctness-style tasks the human reference itself must be
+measured per category, since no ensemble fixes a reference that does not exist.
+\textbf{Agreement measurement.} We import chance-corrected agreement and its
+known pathologies from content
+analysis~\cite{cohen1960,fleiss1971,landis1977,artstein2008inter,mchugh2012kappa};
+the delegation-map construction --- verdicts defined by a gap to a measured
+ceiling, with an undefined-reference cell --- is, to our knowledge, new in
+SE evaluation of automated review.
+% TODO-verify: add 2024--2026 LLM-code-review-agreement refs here after
+% checking each against its venue page; none are cited on memory.
+\textbf{Idea-shape and pre-registration.} Our confirmatory design follows
+pre-registration practice~\cite{nosek2018preregistration}; the framing
+discipline (mechanism-level moves over bridge/synthesis) follows the measured
+gap between human and LLM research ideas~\cite{chen2026measuring}.
+
+% =========================================================================
+\section{Conclusion}\label{sec:conclusion}
+We reframed automated design-card checking from ``can we build a better
+verifier?'' to ``for which kinds of constraints is verification delegable at
+all?'' --- and made the second question measurable via a per-category
+$\kappa$-gap to a human ceiling that is measured rather than assumed, with an
+undefined-reference cell for the cards on which no checker, human or machine,
+can currently be scored. The resulting delegation map, its stability checks,
+and its per-category routing table are released so that both the verdicts and
+the savings can be recomputed by any team, for any card mix, with any reviewer
+pool. \ph{One-sentence headline number, bound to H1, inserted after the
+confirmatory run.}
+
+\balance
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{20}
+\bibitem{cohen1960} J. Cohen, ``A coefficient of agreement for nominal
+scales,'' \emph{Educ. Psychol. Meas.}, 20(1):37--46, 1960.
+\bibitem{fleiss1971} J. L. Fleiss, ``Measuring nominal scale agreement among
+many raters,'' \emph{Psychol. Bull.}, 76(5):378--382, 1971.
+\bibitem{landis1977} J. R. Landis and G. G. Koch, ``The measurement of observer
+agreement for categorical data,'' \emph{Biometrics}, 33(1):159--174, 1977.
+\bibitem{artstein2008inter} R. Artstein and M. Poesio, ``Inter-coder agreement
+for computational linguistics,'' \emph{Comput. Linguist.}, 34(4):555--596,
+2008.
+\bibitem{mchugh2012kappa} M. L. McHugh, ``Interrater reliability: the kappa
+statistic,'' \emph{Biochemia Medica}, 22(3):276--282, 2012.
+\bibitem{murphy1995reflexion} G. C. Murphy, D. Notkin, and K. Sullivan,
+``Software reflexion models: bridging the gap between source and high-level
+models,'' in \emph{Proc. FSE}, 1995.
+\bibitem{knodel2007comparison} J. Knodel and D. Popescu, ``A comparison of
+static architecture compliance checking approaches,'' in \emph{Proc. WICSA},
+2007.
+\bibitem{passos2010static} L. Passos, R. Terra, M. T. Valente, R. Diniz, and
+N. das Chagas Mendon\c{c}a, ``Static architecture-conformance checking: an
+illustrative overview,'' \emph{IEEE Software}, 27(5):82--89, 2010.
+\bibitem{sadowski2018lessons} C. Sadowski, E. Aftandilian, A. Eagle,
+L. Miller-Cushon, and C. Jaspan, ``Lessons from building static analysis tools
+at Google,'' \emph{Commun. ACM}, 61(4):58--66, 2018.
+\bibitem{tufano2021towards} R. Tufano, L. Pascarella, M. Tufano, D. Poshyvanyk,
+and G. Bavota, ``Towards automating code review activities,'' in \emph{Proc.
+ICSE}, 2021.
+\bibitem{zheng2023judging} L. Zheng \emph{et al.}, ``Judging LLM-as-a-judge
+with MT-Bench and Chatbot Arena,'' in \emph{Proc. NeurIPS Datasets and
+Benchmarks}, 2023.
+\bibitem{jimenez2024swebench} C. E. Jimenez \emph{et al.}, ``SWE-bench: can
+language models resolve real-world GitHub issues?'' in \emph{Proc. ICLR},
+2024.
+\bibitem{yang2024sweagent} J. Yang \emph{et al.}, ``SWE-agent: agent--computer
+interfaces enable automated software engineering,'' in \emph{Proc. NeurIPS},
+2024.
+\bibitem{nosek2018preregistration} B. A. Nosek, C. R. Ebersole, A. C. DeHaven,
+and D. T. Mellor, ``The preregistration revolution,'' \emph{PNAS},
+115(11):2600--2606, 2018.
+\bibitem{chen2026measuring} Chen, Zhao, and Cohan, ``Measuring the gap between
+human and LLM research ideas,'' arXiv:2607.01233, 2026.
+\bibitem{archunit} ``ArchUnit: unit test your Java architecture,''
+\url{https://www.archunit.org}.
+\bibitem{importlinter} ``Import Linter: enforce contracts between Python
+packages,'' \url{https://github.com/seddonym/import-linter}.
+\end{thebibliography}
+
+\end{document}

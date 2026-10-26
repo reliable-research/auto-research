@@ -1,0 +1,168 @@
+% refs.bib -- B8.1 differential conformance for agent-protocol versions.
+% Two provenance classes, both real (nothing invented):
+%  (1) trend_scan_2026-08.md §2.1 cited neighbors -- the B8-family arXiv IDs.
+%      Originally recorded from trend_scan shorthand (arXiv unreachable during the
+%      build); re-verified against the live arXiv API on 2026-08-15 (supervisor
+%      metadata repair) and again on 2026-08-21 (review pass) -- all IDs real,
+%      titles/authors match the published records. See pipeline.md.
+%  (2) Certain, well-known published methodology anchors (differential testing,
+%      survival analysis, RFC-2119, kappa, Holm) and the two protocol specs.
+
+% --- Protocol specifications ---
+
+@misc{mcp2024,
+  title        = {Model Context Protocol Specification},
+  author       = {{Anthropic}},
+  year         = {2024},
+  howpublished = {\url{https://modelcontextprotocol.io}},
+  note         = {Model Context Protocol (MCP)}
+}
+
+@misc{a2a2025,
+  title        = {{Agent2Agent (A2A)} Protocol Specification},
+  author       = {{A2A Project}},
+  year         = {2025},
+  howpublished = {Agent-to-agent interoperability protocol, version 1.0.1}
+}
+
+% --- trend_scan_2026-08.md §2.1 cited neighbors (B8 family; unverifiable via arXiv API) ---
+
+@article{agentrfc,
+  title   = {{AgentRFC:} Security Design Principles and Conformance Testing for Agent Protocols},
+  author  = {Shenghan Zheng and Qifan Zhang},
+  journal = {arXiv preprint arXiv:2603.23801},
+  year    = {2026}
+}
+
+@article{capgates,
+  title   = {Capability Gates Are Not Authorization: {Confused-Deputy} Failures in {LLM} Agent Frameworks},
+  author  = {David Mellafe Zuvic},
+  journal = {arXiv preprint arXiv:2606.28679},
+  year    = {2026}
+}
+
+@article{hcp,
+  title   = {From Tool Connection to Execution Control: Benchmarking Security Invariants in {MCP-Style} Agent Runtimes},
+  author  = {Ting Liu},
+  journal = {arXiv preprint arXiv:2606.29073},
+  year    = {2026}
+}
+
+@article{remotemcp,
+  title   = {A First Measurement Study on Authentication Security in {Real-World} Remote {MCP} Servers},
+  author  = {Huijun Zhou and Xiaohan Zhang and Haozhe Zhang and Haoyang Zhang and Mi Zhang and Min Yang},
+  journal = {arXiv preprint arXiv:2605.22333},
+  year    = {2026}
+}
+
+@article{govgaps,
+  title   = {Governance Gaps in Agent Interoperability Protocols: What {MCP,} {A2A,} and {ACP} Cannot Express},
+  author  = {Richard Kang and Yudho Diponegoro},
+  journal = {arXiv preprint arXiv:2606.31498},
+  year    = {2026}
+}
+
+@article{contextnest,
+  title   = {{ContextNest:} Verifiable Context Governance for Autonomous {AI} Agent},
+  author  = {Misha Sulpovar and Benn R. Konsynski and Qaish Kanchwala and Gabe Goodhart},
+  journal = {arXiv preprint arXiv:2607.02116},
+  year    = {2026}
+}
+
+% --- Review-pass additions (2026-08-21; each verified against the live arXiv API) ---
+
+@article{dci2026,
+  title   = {{Description-Code} Inconsistency in {Real-world} {MCP} Servers: Measurement, Detection, and Security Implications},
+  author  = {Yutao Shi and Xiaohan Zhang and Xiangjing Zhang and Xihua Shen and Hui Ouyang and Huming Qiu and Mi Zhang and Min Yang},
+  journal = {arXiv preprint arXiv:2606.04769},
+  year    = {2026}
+}
+
+@article{mcpzoo2026,
+  title   = {Rethinking {MCP} Security: A {Large-Scale} Study of Runtime {MCP} Servers and Security Scanner Reliability},
+  author  = {Pei Chen and Baichao An and Mengying Wu and Binwang Wan and Geng Hong and Jinsong Chen and Xudong Pan and Jiarun Dai and Min Yang},
+  journal = {arXiv preprint arXiv:2607.11086},
+  year    = {2026}
+}
+
+@article{exposedbydesign2026,
+  title   = {Exposed by Design: A Dynamic Security Assessment of {Internet-Facing} {MCP} Servers at Scale},
+  author  = {Nicol{\'a}s Padilla},
+  journal = {arXiv preprint arXiv:2608.00150},
+  year    = {2026}
+}
+
+@article{negotiate2026,
+  title   = {Do {LLM} Agents Negotiate Rationally? A {Mechanism-Design} Framework for Verifiable {Multi-Agent} Interaction over {A2A/MCP}},
+  author  = {Wael Albayaydh and Rui Zhao},
+  journal = {arXiv preprint arXiv:2608.14613},
+  year    = {2026}
+}
+
+% --- Certain, well-known published methodology anchors ---
+
+@article{mckeeman1998,
+  title   = {Differential Testing for Software},
+  author  = {McKeeman, William M.},
+  journal = {Digital Technical Journal},
+  volume  = {10},
+  number  = {1},
+  pages   = {100--107},
+  year    = {1998}
+}
+
+@inproceedings{yang2011csmith,
+  title     = {Finding and Understanding Bugs in {C} Compilers},
+  author    = {Yang, Xuejun and Chen, Yang and Eide, Eric and Regehr, John},
+  booktitle = {Proceedings of the 32nd ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI)},
+  pages     = {283--294},
+  year      = {2011}
+}
+
+@techreport{rfc2119,
+  title       = {Key words for use in {RFCs} to Indicate Requirement Levels},
+  author      = {Bradner, Scott},
+  institution = {IETF},
+  number      = {RFC 2119},
+  year        = {1997}
+}
+
+@article{cohen1960,
+  title   = {A Coefficient of Agreement for Nominal Scales},
+  author  = {Cohen, Jacob},
+  journal = {Educational and Psychological Measurement},
+  volume  = {20},
+  number  = {1},
+  pages   = {37--46},
+  year    = {1960}
+}
+
+@article{holm1979,
+  title   = {A Simple Sequentially Rejective Multiple Test Procedure},
+  author  = {Holm, Sture},
+  journal = {Scandinavian Journal of Statistics},
+  volume  = {6},
+  number  = {2},
+  pages   = {65--70},
+  year    = {1979}
+}
+
+@article{kaplanmeier1958,
+  title   = {Nonparametric Estimation from Incomplete Observations},
+  author  = {Kaplan, Edward L. and Meier, Paul},
+  journal = {Journal of the American Statistical Association},
+  volume  = {53},
+  number  = {282},
+  pages   = {457--481},
+  year    = {1958}
+}
+
+@article{turnbull1976,
+  title   = {The Empirical Distribution Function with Arbitrarily Grouped, Censored and Truncated Data},
+  author  = {Turnbull, Bruce W.},
+  journal = {Journal of the Royal Statistical Society: Series B},
+  volume  = {38},
+  number  = {3},
+  pages   = {290--295},
+  year    = {1976}
+}

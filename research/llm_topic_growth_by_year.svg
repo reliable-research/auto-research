@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-labelledby="title desc">
+  <title id="title">LLM topic growth by year, 2022 to 2025</title>
+  <desc id="desc">Line chart showing verifier and reward hacking, RAG and evidence, test-time compute, memory governance, planning and tool failure, and coding-agent maintainability shares from 2022 to 2025.</desc>
+  <rect width="960" height="440" fill="#fbfaf7"/>
+  <text x="48" y="42" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#252525">LLM Topic Growth by Year</text>
+  <text x="48" y="70" font-family="Arial, sans-serif" font-size="14" fill="#68655f">Share of LLM-related IdeaSeed proposals by inferred year</text>
+
+  <g font-family="Arial, sans-serif" font-size="12" fill="#77736c">
+    <line x1="90" y1="310" x2="820" y2="310" stroke="#c9c6bd"/>
+    <line x1="90" y1="250.91" x2="820" y2="250.91" stroke="#e4e1d9"/>
+    <line x1="90" y1="191.82" x2="820" y2="191.82" stroke="#e4e1d9"/>
+    <line x1="90" y1="132.73" x2="820" y2="132.73" stroke="#e4e1d9"/>
+    <line x1="90" y1="73.64" x2="820" y2="73.64" stroke="#e4e1d9"/>
+    <line x1="90" y1="50" x2="90" y2="310" stroke="#c9c6bd"/>
+    <text x="56" y="314">0%</text>
+    <text x="56" y="255">5%</text>
+    <text x="48" y="196">10%</text>
+    <text x="48" y="137">15%</text>
+    <text x="48" y="78">20%</text>
+    <text x="76" y="334">2022</text>
+    <text x="306" y="334">2023</text>
+    <text x="536" y="334">2024</text>
+    <text x="766" y="334">2025</text>
+  </g>
+
+  <polyline points="90,273.36 320,278.09 550,248.55 780,143.36" fill="none" stroke="#e34948" stroke-width="3"/>
+  <polyline points="90,273.36 320,187.09 550,158.73 780,77.18" fill="none" stroke="#eda100" stroke-width="3"/>
+  <polyline points="90,236.73 320,180 550,113.82 780,91.36" fill="none" stroke="#2a78d6" stroke-width="3"/>
+  <polyline points="90,273.36 320,232 550,207.18 780,195.36" fill="none" stroke="#4a3aa7" stroke-width="3"/>
+  <polyline points="90,273.36 320,258 550,267.45 780,203.64" fill="none" stroke="#1baf7a" stroke-width="3"/>
+  <polyline points="90,310 320,291.09 550,276.91 780,263.91" fill="none" stroke="#e87ba4" stroke-width="3"/>
+
+  <g>
+    <circle cx="90" cy="273.36" r="4" fill="#e34948"/><circle cx="320" cy="278.09" r="4" fill="#e34948"/><circle cx="550" cy="248.55" r="4" fill="#e34948"/><circle cx="780" cy="143.36" r="4" fill="#e34948"/>
+    <circle cx="90" cy="273.36" r="4" fill="#eda100"/><circle cx="320" cy="187.09" r="4" fill="#eda100"/><circle cx="550" cy="158.73" r="4" fill="#eda100"/><circle cx="780" cy="77.18" r="4" fill="#eda100"/>
+    <circle cx="90" cy="236.73" r="4" fill="#2a78d6"/><circle cx="320" cy="180" r="4" fill="#2a78d6"/><circle cx="550" cy="113.82" r="4" fill="#2a78d6"/><circle cx="780" cy="91.36" r="4" fill="#2a78d6"/>
+    <circle cx="90" cy="273.36" r="4" fill="#4a3aa7"/><circle cx="320" cy="232" r="4" fill="#4a3aa7"/><circle cx="550" cy="207.18" r="4" fill="#4a3aa7"/><circle cx="780" cy="195.36" r="4" fill="#4a3aa7"/>
+    <circle cx="90" cy="273.36" r="4" fill="#1baf7a"/><circle cx="320" cy="258" r="4" fill="#1baf7a"/><circle cx="550" cy="267.45" r="4" fill="#1baf7a"/><circle cx="780" cy="203.64" r="4" fill="#1baf7a"/>
+    <circle cx="90" cy="310" r="4" fill="#e87ba4"/><circle cx="320" cy="291.09" r="4" fill="#e87ba4"/><circle cx="550" cy="276.91" r="4" fill="#e87ba4"/><circle cx="780" cy="263.91" r="4" fill="#e87ba4"/>
+  </g>
+
+  <g font-family="Arial, sans-serif" font-size="12.5" fill="#37342f">
+    <rect x="90" y="364" width="11" height="11" rx="2" fill="#e34948"/><text x="108" y="374">verifier / reward hacking</text>
+    <rect x="300" y="364" width="11" height="11" rx="2" fill="#eda100"/><text x="318" y="374">RAG / evidence</text>
+    <rect x="455" y="364" width="11" height="11" rx="2" fill="#2a78d6"/><text x="473" y="374">test-time compute</text>
+    <rect x="630" y="364" width="11" height="11" rx="2" fill="#4a3aa7"/><text x="648" y="374">memory / context governance</text>
+    <rect x="90" y="392" width="11" height="11" rx="2" fill="#1baf7a"/><text x="108" y="402">planning / tool failure</text>
+    <rect x="300" y="392" width="11" height="11" rx="2" fill="#e87ba4"/><text x="318" y="402">coding-agent maintainability</text>
+  </g>
+</svg>

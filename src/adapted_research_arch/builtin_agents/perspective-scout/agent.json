@@ -1,0 +1,8 @@
+{
+  "schemaVersion":"1.0","id":"arch.literature.perspective-scout","version":"0.1.0","name":"Perspective Scout",
+  "description":"Finds missing viewpoints and research questions before retrieval.","maturity":"stable",
+  "capabilities":["literature.discover_perspectives"],"inputs":["research.objective.v1"],"outputs":["literature.query_plan.v1"],
+  "adapter":{"type":"command","command":["python3","{runtime_stub}"]},"risk":"R1",
+  "permissions":{"filesystem":{"read":[],"write":["attempt:artifacts"]},"network":{"mode":"disabled","hosts":[]},"process":true,"scheduler":false,"gpu":false,"externalWrite":false,"secretHandles":[]},
+  "tools":[],"evaluators":["schema.valid"],"budgets":{"maxWallSeconds":60,"maxToolCalls":0,"maxSources":0,"maxCostUsd":0},"routing":{"allowImplicit":true}
+}

@@ -1,0 +1,278 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{Passing Tests Is Not Passing Review:\\ Mining and Measuring Compliance with Unwritten Design Constraints in Coding-Agent Patches}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic T5.1), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}). Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets, not results.}
+\end{quote}
+
+\begin{abstract}
+Coding agents are increasingly trusted to open pull requests autonomously, and nearly every benchmark used to certify them --- from fail-to-pass unit tests to end-to-end freelance-task grading --- treats passing the project's test suite as the criterion for a mergeable patch. Yet the criterion a human maintainer actually applies also includes error-handling, architectural, and API conventions that are never written into any spec, linter rule, or test, and that a project's own contributors absorb only by accumulating review feedback over time: a patch can carry maximal behavioral evidence and zero compliance evidence at once. We build a pipeline that mines a per-repository catalog of these implicit design constraints from historical pull-request review threads, admitting only candidates that demonstrably induced a code change and clearing a multi-thread support threshold before a rule is catalogued; we validate the catalog and a downstream compliance judge against blind human annotation before either is trusted at scale; and we apply the validated instrument to test-passing coding-agent patches and their matched human gold patches across multiple repositories and agent systems. Unlike concurrent work that mines and validates per-issue design constraints with an LLM verifier (\textit{Does Pass Rate Tell the Whole Story?}, arXiv 2604.05955), our catalogs are repository-level, recurrence-filtered, and human-audited, and our comparison is agent-versus-matched-human on identical tasks; unlike trace-level procedural-compliance verification of agent executions (AgentLTL, MANTRA), we check the produced artifact --- the patch text --- against norms that were never written down. We report the catalog's extraction precision and recall, the fraction of mined constraints not already expressible in existing static-analysis tooling, and the category-wise distribution of violations in test-passing agent patches relative to matched human patches --- quantifying how far test-suite success actually falls short of design-constraint compliance.
+\end{abstract}
+
+\section{Introduction}
+
+Autonomous pull requests are no longer a research curiosity. As large language model agents are increasingly delegated to open, revise, and resubmit patches against real repositories, the question of what makes a patch acceptable has quietly narrowed to a single, machine-checkable signal: does it make the failing tests pass. Benchmarks built around this signal have driven rapid, measurable progress, and it is a genuinely useful signal --- but it is not the one a human maintainer actually applies when deciding whether to merge.
+
+Yet a central assumption behind this narrowing remains unexamined: the requirements a maintainer enforces on a patch --- how errors should be handled, which architectural boundaries a change may not cross, which of several equivalent APIs is the project's preferred one --- are settled in review dialogue and never encoded in the test suite at all. This is not a minor omission. A patch can pass every test the project has and still violate a norm that would get it sent back for changes, because the two signals are, by construction, orthogonal: nothing about the review-enforced norm has any reason to show up in a fail-to-pass check, and nothing about a failing assertion has any reason to encode a maintainer's taste in error handling. A benchmark that certifies only the first signal is silent about the second one entirely.
+
+This gap is no longer unnoticed --- but the instrument this paper builds for it does not yet exist. The closest prior work, \textit{Does Pass Rate Tell the Whole Story?} (arXiv 2604.05955), introduces design-aware issue resolution: it mines and validates design constraints from real-world pull requests on repositories aligned with SWE-bench, checks patches against them automatically, and thereby independently establishes the premise this paper starts from --- functional correctness and design-constraint compliance come apart. We concede that shared thesis outright and differ on the instrument and the estimand: its constraints are indexed to individual issues and validated by an LLM-based verifier, whereas the catalog mined here consists of repository-level recurring norms, admitted only on multi-thread, multi-reviewer recurrence behind a change-inducing behavioral filter and validated by blind dual human annotation; and it measures compliance of agent patches in isolation, whereas this paper measures test-passing agent patches against matched human gold patches on identical tasks, category by category --- a contrast per-issue constraint checking does not attempt. The remaining efforts approach the gap from adjacent but distinct angles. Automated code-review systems such as DefectCR generate live review comments for a single merge request, but explicitly optimize for defect detection over ``stylistic commentary,'' discarding rather than cataloguing the convention-enforcement content of review --- and even where a system like CodeReviewer learns to produce plausible review comments from historical (diff, comment) pairs, whatever convention knowledge it absorbs stays latent in model weights, never surfacing as an auditable, per-project rule that a new, unseen patch could be checked against. Work on rubric-based generation quality, such as RLAC, comes closer in spirit --- a learned critic proposes the rubric most likely to fail for a given output --- but the rubric is generated fresh per output rather than mined as a stable, historically-supported inventory, so it can report that something failed without ever saying which class of norm a codebase actually enforces or how often. And benchmarks that ground agent evaluation in real repositories, such as SWE-bench and SWE-Lancer, define patch correctness exclusively through tests or professionally graded end-to-end checks; SWE-Lancer's own motivation concedes that such grading under-captures full-system expectations, but neither benchmark measures convention conformance as a signal in its own right.
+
+Turning this gap into something measurable surfaces its own difficulties. There is no formal source of truth for an implicit constraint anywhere in a project --- not in a spec, a doc, or a lint config --- so any extraction method has to infer a general rule from unstructured review dialogue in which the overwhelming majority of comments are not constraints at all, which makes simply telling constraint-bearing comments apart from noise the first hard problem, distinct from the separate problem of recognizing that two differently worded comments state the same underlying rule. Test outcomes carry no signal about this at all by construction, so any compliance judgment has to be built and independently validated as its own instrument rather than borrowed from an existing oracle. The three natural constraint categories are neither mutually exclusive nor uniform in granularity --- a rule against raising a bare exception across a module boundary is simultaneously an error-handling and an architectural concern --- so consistent categorization has to be measured for reliability, not assumed. And the human judgments this entire measurement rests on are themselves noisy: reviewers disagree, norms drift over a project's lifetime, and a review verdict's underlying reason is frequently under-articulated even when the verdict itself is unambiguous.
+
+Our approach turns each of these obstacles into a specific design choice. Candidates are mined only from review comments that demonstrably induced a later code change, which turns ``most comments are not constraints'' from a per-comment judgment call into a checkable behavioral filter; differently phrased instances of one rule are merged at the level of rule semantics and admitted to the catalog only once they recur across multiple independent threads, so a catalog entry reflects a recurring norm rather than one reviewer's one-off phrasing. A compliance judge is built to operate independently of test outcomes and is validated against blind human annotation before any of its labels are trusted at scale, so a reported violation is evidence about a norm, not an artifact of an unvalidated instrument. Categories are assigned under measured inter-annotator reliability, with results reported at the level of individual catalog entries as well as categories, so a genuinely boundary-spanning rule cannot silently distort a single category's count. And the resulting comparison --- the shape of the violation distribution across categories, and the gap between agent and human-gold patches within it --- is computed from evidence aggregated across many reviewers and threads within a bounded, recent time window, so that no single noisy verdict or one drifting norm can carry the finding on its own.
+
+We evaluate this design on repositories drawn from SWE-bench Verified, applying the validated instrument to test-passing patches from multiple independent coding-agent systems and their matched human gold patches, and comparing catalog-guided compliance judgments against a catalog-free judging alternative to isolate what the mined catalog itself contributes.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item A formalization of the asymmetry between test-suite success and design-constraint compliance for coding-agent patches --- a premise independently established by concurrent work (arXiv 2604.05955), which we concede --- carried to the estimand that work does not measure: the per-category violation distribution over review-mined, repository-level unwritten norms, and the gap between test-passing agent patches and matched human gold patches within it.
+\item A validated pipeline for mining a per-repository, categorized catalog of implicit design constraints directly from pull-request review history, requiring no pre-existing formal specification of project conventions, with measured extraction precision and recall against human annotation.
+\item A compliance judge built and gated to operate independently of test outcomes, validated against blind human annotation before its labels are used at scale, together with a catalog-free ablation that isolates what the mined catalog specifically contributes over an on-the-fly rubric guess.
+\item An empirical account of which categories of implicit constraints --- error handling, architectural convention, or API convention --- test-passing coding-agent patches violate most often, and how that violation rate compares to matched human-authored patches on the same issues.
+\end{itemize}
+
+\section{Problem Definition}
+
+\noindent\textbf{Formal setup.} Consider a repository $r$ with a set of pull-request review threads $T_r = \{t\}$. Each thread $t$ consists of an in-line comment $c_t$ anchored to a diff hunk $h_t$, a pull-request verdict $v_t$, and any follow-up commits $F_t$. A mined catalog $K_r = \{k\}$ collects entries $k = (\text{stmt}_k, \text{scope}_k, \text{cat}_k, \text{supp}_k, \text{ev}_k)$ --- a normalized rule statement, its applicable scope, a category $\text{cat}_k \in \{\text{error-handling}, \text{architectural}, \text{API}, \text{other}\}$, a support count, and evidence links back to the threads that support it. A patch $p$ --- either an agent patch $p^a$ or its matched human gold patch $p^g$ for the same issue --- touches a set of files $\text{files}(p)$. A judge $J(p, k) \in \{\text{violated}, \text{compliant}, \text{not-applicable}\}$ evaluates a patch against a catalog entry. The object of study is twofold: (i) whether $K_r$ can be extracted with measured precision and recall against human annotation, and (ii) the category-wise distribution of $J(p^a, k) = \text{violated}$ relative to $J(p^g, k) = \text{violated}$ across matched agent and human-gold patches.
+
+\noindent\textbf{Why this is hard.} No formal source of truth for any entry in $K_r$ exists anywhere in a repository, so extraction must infer general rules from $T_r$'s unstructured dialogue, in which most threads are not constraint-bearing at all --- a classification problem distinct from the separate problem of recognizing that two constraint-bearing threads restate the same rule, which requires matching at the level of rule semantics rather than surface text. The judge $J$ has no existing oracle to draw on, since fail-to-pass test outcomes are silent about $\text{cat}_k$ by construction; $J$ must therefore be built and validated as an independent instrument before its output is treated as evidence. The category space $\{\text{error-handling}, \text{architectural}, \text{API}\}$ is neither mutually exclusive nor uniform in granularity --- a single $\text{stmt}_k$ can legitimately span two categories --- so $\text{cat}_k$ assignment must be measured for inter-annotator reliability rather than assumed correct. And $v_t$, $F_t$, and any human annotation of $J$ are themselves noisy: annotators disagree, a repository's norms drift over its lifetime, and the reasoning behind a given $v_t$ is frequently under-articulated even when $v_t$ itself is unambiguous, so any category-wise comparison must be computed from evidence aggregated across many threads and reviewers, not a single one.
+
+\section{Method Overview}
+
+At a conceptual level, the study is a single measurement pipeline with five cooperating parts. Historical review threads and repository context enter the pipeline; a behavioral filter and an extraction pass turn raw dialogue into constraint candidates, which a clustering-and-merge stage turns into a validated, categorized catalog; a compliance judge, itself independently validated, then applies that catalog to test-passing patches; and a stability layer turns the resulting per-patch judgments into a condition-level violation distribution robust to any single noisy verdict.
+
+The \textbf{change-inducing candidate extractor} takes raw review threads and retains only comments that demonstrably induced a later code change, running an LLM extraction pass over each such comment and its surrounding diff context to emit either a normalized rule statement or an explicit no-constraint verdict --- addressing the difficulty that most review dialogue is not a constraint at all. The \textbf{constraint catalog builder} takes the resulting candidates, clusters and merges differently phrased instances of the same rule, and admits an entry to the catalog only once it is supported by multiple independent threads --- addressing the difficulty that the same rule surfaces with high lexical variability. The \textbf{compliance judge} takes the validated catalog and a patch, and determines violation status per catalog entry independently of whether the patch passes any tests --- addressing the fact that test outcomes carry no signal about this question by construction --- and is itself validated against blind human annotation before its labels are trusted at scale. The \textbf{category annotation} module assigns and measures the reliability of each catalog entry's category label, reporting both category-level and entry-level results --- addressing the difficulty that the three named categories can genuinely overlap. The \textbf{stability and comparison design} aggregates violation evidence across many reviewers, threads, and patches within a bounded time window to compute the category-wise violation distribution and the agent-versus-human-gold gap, addressing the fact that the underlying human ground truth is itself noisy.
+
+\section{Methodology}
+
+\subsection{Change-Inducing Candidate Extractor}
+\textbf{Challenge.} No formal source of truth exists for an implicit constraint anywhere in a project, so a valid extraction method must infer general, reusable rules from unstructured review dialogue in which the large majority of individual comments are not constraints at all --- a classification problem, not a matching problem.
+
+\textbf{Insight.} Whether a comment expresses an enforced expectation does not have to be judged from its wording alone: if a later commit in the same pull request edits exactly the lines the comment anchored to, the reviewer's expectation was, by that behavior, actually enforced --- turning ``is this a constraint'' from a subjective read into a checkable, behavioral filter.
+
+\textbf{Method.} A comment is retained as an extraction candidate only if a follow-up commit posted after it edits lines overlapping its anchored diff hunk. Each retained candidate, together with its diff hunk and surrounding file context, is passed through an LLM extraction step that emits either a normalized imperative rule statement with a provisional category and scope, or an explicit no-constraint verdict for comments judged non-generalizable (a one-off fix, a question, praise). A keyword/directive-pattern extractor (regex over should/must/please/avoid/never plus code-element mentions) is run in parallel as a mechanism-necessity check, not a competitor: if it recovers as much as the LLM extractor, semantic understanding is not doing real work in candidate identification.
+
+\subsection{Constraint Catalog Builder}
+\textbf{Challenge.} The same underlying constraint surfaces with high lexical and contextual variability --- differently phrased across reviewers and threads, sometimes only partially stated, sometimes only implied by the requested change rather than stated outright --- so deduplication has to operate on rule semantics, not surface text, and this is a genuinely different problem from deciding whether a single comment is a constraint at all.
+
+\textbf{Insight.} A stable, admissible catalog entry should require corroboration from more than one occurrence: turning ``is this a recurring norm or one reviewer's one-off phrasing'' from an eyeballing judgment into a pre-specified, countable admission rule removes the ambiguity at the point where it would otherwise be resolved arbitrarily.
+
+\textbf{Method.} Candidate rule statements are embedded with a sentence-embedding model and clustered; an LLM merges each cluster into one canonical catalog entry carrying a support count of distinct supporting threads and distinct reviewers. Entries supported by fewer than three distinct threads are quarantined rather than admitted to the catalog. The resulting catalog's genuinely unwritten content is checked by mapping each admitted entry against existing ruff, pylint, and import-linter rule inventories; an entry not expressible in any of them is treated as evidence of unwritten content specifically relative to that checked tool surface, not as an absolute claim that no static-analysis tool anywhere could ever express it --- a narrower, and more defensible, claim than ``unwritten'' taken at face value.
+
+\subsection{Compliance Judge}
+\textbf{Challenge.} Test outcomes do not encode these constraints by construction, so a patch can be behaviorally correct on every test and still violate a norm --- meaning the compliance signal has to be built as an entirely independent instrument, with no existing oracle to draw on or calibrate against.
+
+\textbf{Insight.} A judge built this way should be expected to find violations on patches that already pass every test; if it consistently fails to, that would itself be informative --- it would mean the asymmetry this paper is built around does not actually hold in practice, and the judge's independent validity is what makes that a real possibility to check rather than something assumed away.
+
+\textbf{Method.} For a given patch, the catalog entries applicable to its touched files are retrieved, and an LLM judge evaluates each (patch, entry) pair, emitting a violated/compliant/not-applicable label with a file:line localization and a one-sentence rationale. Before any of this judge's labels are used at scale to support a comparative claim, its agreement with blind dual-human annotation on a held-out sample of (patch, rule) pairs is measured, and only once that agreement clears a pre-registered threshold are the judge's labels treated as evidence.
+
+\subsection{Category Annotation}
+\textbf{Challenge.} The three named categories --- error handling, architectural convention, API convention --- are neither mutually exclusive nor uniform in granularity, so assigning a category to a mined entry is inherently ambiguous in some cases and cannot be assumed correct by construction.
+
+\textbf{Insight.} Reporting a category-wise result only at the aggregate category level would let a genuinely boundary-spanning entry's ambiguity silently distort whichever category it happened to be filed under; reporting at the individual entry level as well makes that ambiguity visible and auditable instead of hidden inside a single number.
+
+\textbf{Method.} Two annotators independently assign a category (or ``other'') to each catalog entry; disagreements are adjudicated and Cohen's kappa is reported. All downstream category-wise results are reported both in aggregate and at the level of individual entries, so an entry whose category assignment was contested can be identified rather than silently absorbed into one category's count.
+
+\subsection{Stability and Comparison Design}
+\textbf{Challenge.} The human judgments this entire measurement rests on --- review verdicts, annotator labels --- are themselves noisy: reviewers disagree, norms drift over a project's lifetime, and the reasoning behind a verdict is often under-articulated even when the verdict itself is clear, so a single-pair or single-thread finding risks being an artifact of exactly this noise.
+
+\textbf{Insight.} This noise cannot be designed away, only bounded: restricting mining to a recent time window limits how much drift a single catalog has to average over, and aggregating support and violation evidence across many reviewers, threads, and patches limits how much any single noisy judgment can carry a reported finding on its own.
+
+\textbf{Method.} Mining is restricted to a recent, bounded time window per repository. Violation evidence is aggregated across many independently drawn (agent, human-gold) matched patch pairs per repository and agent system, from which the category-wise violation distribution and the agent-versus-human-gold gap are computed as two distinct, separately falsifiable readouts of one comparison design: the shape of the distribution itself, and the size of the gap within it.
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Datasets.} SWE-bench Verified (500 human-validated repository-issue tasks) supplies the pilot repositories, the issue set, and the matched human gold patch for every agent patch tested --- the pairing that makes a matched-pair comparison possible at all. Public SWE-bench leaderboard submission patches supply test-passing agent patches from multiple independent agent systems, so the violation distribution is not an artifact of any one agent's idiosyncratic style. A PR review-history corpus is harvested from the same repositories that SWE-bench Verified draws its issues from, so the catalog and the patches judged against it come from the same projects' actual norms rather than a mismatched pairing of corpora.
+
+\textbf{Baselines} (sanity-check and necessity comparators, not competitors to beat --- this is a measurement study, and no research question here is framed as ``our procedure beats baseline X''). A keyword/directive-pattern extractor checks whether semantic understanding is doing real work in candidate identification, or whether a naive lexical pattern-matcher already recovers as much. Existing linter and architecture rule inventories (ruff, pylint, import-linter) establish what fraction of the catalog is already formalized elsewhere, which is what ``unwritten'' has to mean operationally. A catalog-free zero-shot LLM judge --- adapting the per-output, instance-generated latent-rubric protocol from RLAC rather than comparing against RLAC's own reported results --- isolates whether a stable, multi-thread-supported, mined catalog finds anything a same-model judge without that catalog would not already find on its own; a null result here (catalog-guided and catalog-free judging materially agree) would not refute the orthogonality finding, but would refute the catalog's own specific contribution. Matched human gold patches are the necessary reference distribution for the agent-versus-human comparison, and the ``why do this at all'' control: if human gold patches already violate the catalog at the same rate as agent patches, there is no agent-specific compliance gap to characterize.
+
+\textbf{Metrics.} Extraction precision and recall against human annotation; linter-expressibility rate; judge-versus-human agreement (Cohen's kappa); category-annotation inter-annotator agreement (Cohen's kappa); per-category violation rate and the agent-versus-human-gold matched-pair delta.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.6em]
+\item RQ1 --- Does the mined catalog clear a pre-registered precision bar against human annotation?
+\item RQ2 --- Does recognizing a constraint require semantic understanding, or does a naive lexical pattern already suffice?
+\item RQ3 --- Is the catalog's content genuinely absent from existing static-analysis tooling?
+\item RQ4 --- Does the compliance judge agree with blind human annotation closely enough to trust at scale?
+\item RQ5 --- Do test-passing patches nonetheless carry validated constraint violations?
+\item RQ6 --- Is category assignment reliable enough to support a category-wise comparison?
+\item RQ7 --- Is the category-wise violation distribution uniform or skewed?
+\item RQ8 --- Do test-passing agent patches violate mined constraints more often than matched human gold patches?
+\end{enumerate}
+
+\subsubsection{RQ1: Does the mined catalog clear a pre-registered precision bar against human annotation?}
+\textbf{Setup.} A stratified sample of 300 catalog entries from the pilot repositories is dual-annotated as genuine project constraints or spurious; recall is estimated by having annotators independently mine constraints from 100 held-out review threads and checking what fraction the pipeline recovered. Wilson 95\% confidence intervals are computed on both proportions.
+
+\textbf{Expected outcome.} Catalog-entry precision's Wilson 95\% CI lower bound is at least 0.60.
+
+\textbf{Falsification condition.} Refuted if the precision CI lower bound falls below 0.60 on the 300-entry sample --- the paper's fallback position in that case is to claim extraction is feasible only with human-in-the-loop verification, reporting the achieved precision and its CI as the operating point rather than claiming full automation.
+
+\textbf{Hypothesis (plain language).} Implicit constraints can be mined into a catalog whose entries are, at a stated and checked rate, genuine project norms rather than noise.
+
+\textbf{Metrics.} Precision (Wilson 95\% CI); recall proxy (Wilson 95\% CI); Cohen's kappa for the underlying dual-annotation agreement (reported, not gated --- the gate applies to precision itself, not to annotator agreement).
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ2: Does recognizing a constraint require semantic understanding, or does a naive lexical pattern already suffice?}
+\textbf{Setup.} The LLM extractor and the keyword/directive-pattern baseline are run over the same change-inducing comments, and their thread-level constraint-detection outputs are compared via a paired McNemar's test, $\alpha = 0.05$.
+
+\textbf{Expected outcome.} The LLM extractor achieves significantly higher paired thread-level detection accuracy than the keyword baseline, McNemar $p < 0.05$ in the LLM-favoring direction, with a minimum paired-accuracy gap of at least 8 percentage points as the effect floor --- significance without this floor does not satisfy the hypothesis.
+
+\textbf{Falsification condition.} Refuted if McNemar's test shows no significant difference, if $p < 0.05$ but the paired-accuracy gap is below 8 percentage points, or if the keyword baseline performs as well or better --- any of these would mean semantic extraction is not shown to add value over lexical pattern-matching at this sample size; in that case the paper drops the ``LLM-based'' framing from the candidate-identification claim and retains only whatever precision/recall the (still-gated) pipeline achieves as an operating point. (This comparison is a necessity check on the mechanism, not a claim that this paper's system outperforms a rival system to be beaten.)
+
+\textbf{Hypothesis (plain language).} Telling a genuine constraint apart from ordinary review chatter requires understanding what a comment and its surrounding diff actually say, not just matching surface phrases.
+
+\textbf{Metrics.} Paired thread-level detection accuracy; McNemar's test statistic and $p$-value; paired-accuracy gap in percentage points (the effect-floor metric).
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ3: Is the catalog's content genuinely absent from existing static-analysis tooling?}
+\textbf{Setup.} Each admitted catalog entry (support $\geq$ 3 threads) is checked for expressibility as an existing rule in ruff, pylint, or import-linter's rule inventories.
+
+\textbf{Expected outcome.} Fewer than half of admitted entries are expressible in any of the three checked tools (linter-expressibility rate $< 0.50$).
+
+\textbf{Falsification condition.} Refuted if the linter-expressibility rate is at or above 0.50 --- in that case the paper narrows its claim to ``a measurable minority of mined constraints are unwritten relative to the checked tools'' rather than claiming most of the catalog is unwritten. This test is scoped specifically to the three named, commonly used static-analysis tools checked here; it cannot rule out that some other static-analysis surface not tested (a project's own custom linter rules, a type checker, a bespoke AST-based checker) already expresses a given entry, and the claim of ``unwritten'' content is reported as bounded to this checked tool surface rather than as an absolute claim that no tool anywhere could express it.
+
+\textbf{Hypothesis (plain language).} The catalog captures norms that existing, commonly used static-analysis tooling does not already formalize --- not merely a re-discovery of what a linter already checks.
+
+\textbf{Metrics.} Linter-expressibility rate.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ4: Does the compliance judge agree with blind human annotation closely enough to trust at scale?}
+\textbf{Setup.} A sample of 400 (patch, rule) pairs is independently labeled by the automated compliance judge and by two blind human annotators; agreement is computed as Cohen's kappa.
+
+\textbf{Expected outcome.} Judge-versus-human agreement reaches $\kappa \geq 0.6$.
+
+\textbf{Falsification condition.} Refuted if $\kappa$ falls below 0.6 --- the pre-committed response is to fall back to a reduced, fully manually labeled sample for RQ5/RQ7/RQ8 rather than trusting automated labels at scale.
+
+\textbf{Hypothesis (plain language).} An automated judge can be built to agree with human compliance judgments closely enough to stand in for them at scale, but only if that agreement is actually measured and gated, not assumed.
+
+\textbf{Metrics.} Cohen's kappa (judge vs. human, pooled and per category).
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ5: Do test-passing patches nonetheless carry validated constraint violations?}
+\textbf{Setup.} With judge validity established (RQ4), the validated judge is applied to a sample of held-out test-passing patches, and the rate of confirmed violations (judge output corroborated by human spot-check) is measured.
+
+\textbf{Expected outcome.} A nonzero rate of confirmed violations is found among test-passing patches.
+
+\textbf{Falsification condition.} Refuted if the confirmed violation rate on test-passing patches is statistically indistinguishable from zero --- this would directly refute the paper's central orthogonality claim, since it would mean test-suite success already carries the compliance information this paper argues it structurally cannot.
+
+\textbf{Hypothesis (plain language).} Passing every test in a project's suite does not imply a patch is free of mined-constraint violations.
+
+\textbf{Metrics.} Confirmed violation rate among test-passing patches, with 95\% CI.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ6: Is category assignment reliable enough to support a category-wise comparison?}
+\textbf{Setup.} Two annotators independently assign a category (or ``other'') to every catalog entry; disagreements are adjudicated and Cohen's kappa is computed, together with the distribution of adjudicated ``other'' assignments.
+
+\textbf{Expected outcome.} Category labeling reaches a pre-registered kappa threshold, with residual disagreement concentrated in entries adjudicated to ``other'' rather than spread uniformly across the three named categories.
+
+\textbf{Falsification condition.} Refuted if kappa falls below the pre-registered threshold, or if disagreement is spread roughly uniformly across all three categories rather than concentrating in ambiguous, boundary-spanning entries --- either would mean the category scheme itself, not just individual hard cases, is unreliable, and category-wise comparisons (RQ7, RQ8) would need to be reported at the entry level only.
+
+\textbf{Hypothesis (plain language).} The three-category scheme is reliable enough to support a category-wise violation comparison, with its genuine ambiguity confined to an identifiable, boundary-spanning minority of entries rather than undermining the scheme as a whole.
+
+\textbf{Metrics.} Cohen's kappa (category assignment); fraction of entries adjudicated to ``other.''
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ7: Is the category-wise violation distribution uniform or skewed?}
+\textbf{Setup.} Category-wise violation rates are computed across all tested test-passing patches and compared for uniformity via a chi-square goodness-of-fit test, $\alpha = 0.05$, with a per-repository stratified sensitivity check since patches are not independent within a repository. Patches are stratified by repository $\times$ category $\times$ arm (agent/human-gold); any repository $\times$ category cell with fewer than 20 test-passing patches is pre-declared inconclusive for that stratum and excluded from the per-repo sensitivity table rather than silently pooled into a null result. The pooled (non-stratified) test is treated as the primary analysis only if at least 4 of the 5 pilot repositories clear the $n \geq 20$-per-category threshold; otherwise the claim is explicitly narrowed to the repositories that clear it.
+
+\textbf{Expected outcome.} The distribution is non-uniform, with error-handling and architectural-convention violation rates each exceeding the API-convention rate, chi-square goodness-of-fit $p < 0.05$, with Cram\'er's V $\geq 0.15$ as the effect floor --- significance without this floor does not satisfy the hypothesis.
+
+\textbf{Falsification condition.} Refuted if the chi-square test cannot reject uniformity at $\alpha = 0.05$, if it rejects uniformity but Cram\'er's V falls below 0.15, or if the API-convention rate is as high as or higher than either of the other two categories. If non-uniformity itself fails (chi-square cannot reject uniformity, or $V < 0.15$), the category-ranking claim is dropped as moot --- not merely narrowed --- and only the agent-versus-human-gold comparison (RQ8), if it independently clears its own gate, is retained. If non-uniformity holds but the a-priori EH/ARCH $>$ API ranking does not, the paper reports the observed ranking as the finding instead of the a-priori predicted one.
+
+\textbf{Hypothesis (plain language).} Violations do not spread evenly across constraint categories --- some categories of unwritten norms are structurally more likely to survive a passing test suite than others.
+
+\textbf{Metrics.} Per-category violation rate with Wilson 95\% CI; chi-square statistic and $p$-value; Cram\'er's V (the effect-floor metric).
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ8: Do test-passing agent patches violate mined constraints more often than matched human gold patches?}
+\textbf{Setup.} Category-wise violation rates for agent patches and their matched human gold patches are compared via a matched-pair McNemar's test per category, Holm-Bonferroni corrected across the three categories, $\alpha = 0.05$.
+
+\textbf{Expected outcome.} Agent violation rate exceeds the matched human-gold rate by at least 8 percentage points (matched-pair rate difference) in at least one category after correction --- significance without this floor does not satisfy the hypothesis in that category.
+
+\textbf{Falsification condition.} Refuted if no category shows a significant agent-versus-human-gold gap after Holm-Bonferroni correction, or if a category clears significance but the matched-pair gap is below 8 percentage points --- the latter is reported as ``detected but small,'' not as satisfying the hypothesis. If the gap fails in every category, the paper reports that, on this sample, test-passing agents and humans are statistically indistinguishable on mined-constraint compliance: a direct, publishable bound on the size of the compliance gap rather than a null result to be hidden.
+
+\textbf{Hypothesis (plain language).} Test-passing coding-agent patches are not merely as compliant with unwritten design norms as human-authored patches on the same issues --- they are measurably less so, in at least one constraint category.
+
+\textbf{Metrics.} Per-category agent-vs-human-gold matched-pair delta (the effect-floor metric); McNemar statistic and Holm-Bonferroni-corrected $p$-value per category.
+
+\textbf{Result.} \ph
+
+\vspace{0.5em}
+\noindent\textbf{Mechanism analysis (secondary, non-gating).} Beyond the headline category-wise rate (RQ7) and the agent-versus-human gap (RQ8), validated violations are cross-tabulated against (a) agent-system identity, to check whether any excess concentrates in specific agent systems rather than spreading uniformly across the $\geq$3 systems sampled, and (b) patch size / files touched, to check whether violation likelihood scales with patch size --- which would point to an exposure-opportunity confound rather than a genuine per-patch compliance gap. This analysis explains the RQ7/RQ8 distribution but does not gate the headline claims.
+
+\vspace{0.5em}
+\noindent\textbf{Further evaluation.} With more time, two natural extensions fall outside this study's scope by design rather than oversight: characterizing violations in test-\emph{failing} patches (this study examines only test-passing patches, since that is exactly the case where a test-based benchmark would otherwise certify a patch as acceptable), and testing whether feeding the mined catalog back into an agent's generation loop reduces its violation rate (a training/intervention question distinct from the measurement question this paper answers).
+
+\section{Related Work}
+
+The closest prior work is \textit{Does Pass Rate Tell the Whole Story?} (arXiv 2604.05955), and it is worth stating the delta plainly before surveying the wider landscape. That work introduces design-aware issue resolution, mining and validating design constraints from real-world pull requests on SWE-bench-aligned repositories and automatically checking patches against them --- the same thesis, on the same substrate. We concede the shared premise and differ on every axis of the instrument: its constraints are indexed to individual issues and validated by an LLM-based verifier, ours are repository-level norms admitted only on recurrence across multiple independent threads and reviewers, behind a change-inducing behavioral filter, and validated by blind dual human annotation with pre-registered agreement gates; it measures agent compliance in isolation, we measure agents against matched human gold patches on identical tasks; and only this paper measures how much of the mined catalog is genuinely absent from the checked static-analysis surface. Among the older neighbors, DefectCR already automates code review end-to-end for individual merge requests, and RLAC already treats generation quality as satisfaction of many implicit rubrics --- but DefectCR explicitly discards convention-style commentary rather than cataloguing it, and RLAC generates one likely-failing rubric per output rather than mining a stable, historically-supported, per-project inventory; neither produces the explicit, auditable, multi-thread-validated catalog this paper is built to extract, and neither applies it to the specific question of whether test-passing patches comply with it.
+
+\textbf{Boundary: written rules, and traces versus artifacts.} Two concurrent lines sit deliberately outside this paper's scope. First, compliance of coding agents with \emph{written} contribution rules --- CONTRIBUTING and AGENTS files --- has been examined directly (arXiv 2607.26819); this paper's subject is the complement, norms written down nowhere, and its unwrittenness measurement (RQ3) is precisely what separates the two. Second, a crystallizing procedural-compliance cluster verifies that agent \emph{executions} comply with process specifications: AgentLTL (arXiv 2607.02599) checks temporal-logic obligations over agent traces, and MANTRA (arXiv 2605.06334) synthesizes SMT-validated trace-compliance benchmarks. That line answers ``did the agent behave according to the process rules?'' over runtime event sequences; this paper answers ``does the produced artifact --- the patch text --- conform to the repository's design norms?'', a static property checked after the fact against norms mined from human review dialogue. The routing rule is explicit: a candidate constraint whose natural statement is a temporal obligation over runtime or tool-call events belongs to the trace-compliance line, not this catalog; the two are complementary layers of an oversight stack, and neither subsumes the other.
+
+\textbf{Rule induction from code history.} A long line of work induces conventions and rules from code or edits alone: NATURALIZE learns surface naming and formatting conventions from a codebase, Getafix learns fix patterns from historical edits, MUDetect mines API-misuse patterns, and classic specification mining (Daikon; Ammons et al.) infers invariants from program runs. All of these require the norm to leave a regularity signature in the code itself --- and therefore cannot capture norms whose only evidence is a reviewer's stated rationale, such as a layering rule or an error-handling policy that compliant code simply never violates visibly. Review dialogue is the uniquely informative substrate for exactly those norms, which is why this paper mines threads rather than code.
+
+\textbf{Human-centered agent-evaluation taxonomies.} At the thesis level, the nearest neighbor is From Correctness to Collaboration (Dong et al., arXiv:2512.23844), which shares this paper's core premise --- correctness-only evaluation of SE agents misses what maintainers actually require, including an explicit ``Adhere to Standards and Processes'' behavior category --- and, like this paper, validates its taxonomy against human judgment rather than asserting it. The delta lies in what is mined and what is measured: it derives a qualitative, cross-company four-expectation taxonomy from static enterprise agent-rule files and practitioner interviews, whereas this paper mines the dynamic, per-project PR review dialogue itself, grounds every catalog entry in a multi-thread, multi-reviewer support requirement over a specific repository's own review history rather than in rules someone already chose to write down, and turns compliance into a measured, per-category violation rate on already-test-passing patches against matched human gold --- a quantitative agent-versus-human gap claim that a taxonomy-only design does not produce or attempt. Its finding that agents are treated as static tools unless explicitly guided is itself indirect support for the asymmetry this paper is built around: even a written-down rule file does not on its own certify compliance without the ongoing review dialogue mined here.
+
+\textbf{Automated code review and review-comment learning.} DefectCR runs repository-aware static slicing, multiple candidate-generating reviewer models, and a validating meta-reviewer to produce merge-request-level findings, explicitly optimizing for defect detection over stylistic commentary; CodeReviewer pre-trains an encoder-decoder on large-scale (diff, review-comment) pairs to generate plausible review comments and estimate change quality. Both operate at the level of a single merge request and leave whatever convention knowledge they encode either filtered out entirely or latent inside model weights, producing no persistent, auditable, per-project catalog that a new, unseen patch could be checked against independently of the model that produced it.
+
+\textbf{Rubric-based and repo-context-aware generation quality.} RLAC treats free-form generation quality as satisfaction of many latent rubrics, with a learned critic proposing the rubric most likely to fail for a given output and a validator checking only that one; Coeditor encodes prior edits as explicit diffs and predicts future edits consistent with a developer's ongoing intent using retrieved signatures and a pretrained sequence model. Both capture something like project-specific expectations, but only implicitly and per-instance --- RLAC generates a rubric fresh each time rather than mining a stable inventory, and Coeditor's conditioning on prior diffs cannot name which rule an edit broke, so neither can report which class of norm a codebase enforces or how often it is violated.
+
+\textbf{Test-based agent benchmarks and constraint-heavy generation.} SWE-bench defines patch correctness exclusively through fail-to-pass repository tests derived from paired GitHub issues and their resolving pull requests, and SWE-Lancer grades real freelance software tasks against professionally written end-to-end tests and market payouts, with SWE-Lancer's own motivation conceding that test-based grading under-captures full-system expectations. FHE-Coder shows that reliable agentic generation in a different constraint-heavy domain requires explicit constraint supply, grounding generation in curated cryptographic-scheme documentation --- but per-project design conventions, by definition, have no equivalent documentation to retrieve from, so that approach cannot transfer to the setting this paper studies.
+
+\textbf{Foundational empirical studies of code review.} Bacchelli and Bird's mixed-method study of code review at Microsoft found that, beyond defect detection, review's dominant real-world outcomes include knowledge transfer and enforcement of code conventions; Bosu et al.\ built a classifier and taxonomy of which review-comment types developers rate as useful. Both establish, empirically, that convention enforcement is a real and central part of what code review does --- but both stop at human-readable taxonomies of comment types, not a machine-applicable, per-repository rule set that could be checked against a previously unseen, agent-authored patch.
+
+\section{Conclusion}
+
+This work reframes test-suite success for coding-agent patches as a necessary but insufficient certification signal, and turns the gap between ``passes tests'' and ``would pass human review'' into a directly measurable quantity rather than an assumed one. Concurrent work (arXiv 2604.05955) has independently confirmed that premise; what this paper contributes over it is the instrument --- review-history-mined, recurrence-filtered, human-audited repository-level catalogs --- and the estimand: the category-wise violation distribution and the matched agent-versus-human gap. The central methodological wager is that this measurement is only credible once its own instruments are validated first: a catalog is only as trustworthy as its precision and recall against human annotation, and a compliance judgment is only as trustworthy as its agreement with blind human labels --- weaker designs risk reporting violations of rules that are not real, or compliance gaps that are artifacts of an unvalidated judge rather than genuine agent behavior. Whichever category-wise pattern dominates for current coding agents, the finding is decision-relevant for anyone treating test-pass rate as sufficient certification for autonomously generated pull requests: a persistent agent-versus-human compliance gap would mean test-based benchmarks are systematically overstating how close agent patches are to being mergeable without human review, and a null result would itself be a useful, publishable bound on how large that gap actually is. Two limitations bound this claim from the outset and point directly to future work rather than serving as an afterthought: the study is scoped to test-passing patches only, leaving both violations among test-failing patches and whether feeding the mined catalog back into an agent's own generation loop reduces its violation rate as open questions; and the ``unwritten'' claim (RQ3) is bounded to the specific static-analysis tools actually checked, not a claim that no tool anywhere could formalize a given entry, pointing toward a broader static-analysis surface as the natural next methodological target.
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section*{Pre-handoff checklist}
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Organization/navigation} --- narrative flows problem $\to$ method $\to$ experiments $\to$ related work without forward references to undefined terms.
+\item \textbf{Terminology discipline} --- ``constraint catalog,'' ``compliance judge,'' ``change-inducing,'' ``category reliability'' each defined at first use in Problem Definition/Methodology, used consistently thereafter; no internal stage IDs (\texttt{sp\_*}, \texttt{m\_*}, \texttt{rq\_*}) leaked into prose --- checked directly against the discussion pipeline log.
+\item \textbf{Notation with worked example} --- the formal setup section defines $(r, T_r, t, c_t, h_t, v_t, F_t, K_r, k, p, p^a, p^g, J)$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+\item \textbf{RQ framing matches outcomes} --- all 8 RQs are graded/quantitative (rates, agreement statistics, kappa, McNemar/chi-square outcomes), each answered in its own subsection with an explicit falsifiable expected outcome and an explicit falsification condition, not a binary yes/no.
+\item \textbf{No typesetting artifacts} --- only explicit placeholder markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+\item \textbf{Artifact plan} --- the per-repository constraint catalogs and the violation-labeled agent/human patch set are the natural release artifacts; not yet built, so not claimed as available.
+\end{itemize}
+
+\section*{Hand-off}
+This is a draft, not a finished paper --- experiments have not run. Natural next steps: prose polish and venue-specific LaTeX formatting once a target venue is chosen, or revising an earlier stage if piloting surfaces a problem (e.g., if extraction precision on the pilot repos is far below the RQ1 target).
+
+\end{document}

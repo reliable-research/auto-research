@@ -1,0 +1,274 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[round]{natbib}
+\usepackage{microtype}
+\emergencystretch=1.5em
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{Poison Half-Life: A Censoring-Aware Survival Analysis of\\ Agent Memory Poisoning Under Memory-Management Policies}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic B7.2), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}) and post stage-review (two REVISE fixes applied). Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets with stated rationale, not results. This is defensive-security measurement research: poison is instantiated only from already-published attacks used as a fixed treatment, and every question is about how long adversarial content persists under benign management policies, to inform defenses --- no attack recipe is given.}
+\end{quote}
+
+\begin{abstract}
+Autonomous agents that persist across sessions keep a long-lived memory, and the memory-management policies that make that memory useful --- summarization, consolidation and reflection, eviction and time-to-live, deduplication --- are tacitly trusted to also let benign traffic wash adversarial content out over time. We show this trust rests on a measurement that cannot express its own answer: the persistence of memory poisoning is reported as a fixed-checkpoint binary (is the poisoned claim present after a repair step?), which cannot state a neutralization \emph{rate} and silently equates a claim's literal removal with the end of its behavioral influence. We treat each injected poisoned claim as the subject of a survival analysis and estimate its behavioral-adoption survival function, hazard, and half-life over benign interaction time, under a censoring-aware estimator that handles both right-censoring (poison that outlives the horizon) and the interval-censoring of intermittent probes. Neutralization is defined behaviorally --- the agent's action ceases to be steered by the claim, read out by a validated mechanical probe --- not by literal detectability, so \emph{laundering} (a claim that survives summarization in a detector-invisible but behaviorally-active form) becomes its own measurable state rather than a false ``repair.'' We make memory-policy aggressiveness the manipulated treatment, replaying identical benign traffic across policy levels with a matched-salience benign tracer as the isolating control, and separate content-neutralization from structural eviction as competing risks. The central pre-registered test asks whether utility-improving policies \emph{lengthen} poison half-life --- reclassifying the step the field scores as repair as a persistence-amplifying laundering step --- or whether persistence is invariant to policy, which would cleanly refute it.
+\end{abstract}
+
+\section{Introduction}
+
+Autonomous agents that persist across sessions now keep a long-lived memory: a store of past observations, distilled reflections, and reusable facts that the agent writes to, reads from, and acts on across many interactions \citep{packer2023memgpt,park2023generative}. Because that store grows without bound, every practical deployment runs a memory-management policy over it --- summarizing old context to fit a window, consolidating episodes into reflections, expiring stale entries by time-to-live, deduplicating near-repeats. These policies are chosen for utility, and they carry an unstated security dividend that operators increasingly lean on: the belief that a long stream of benign interactions, filtered through summarization and eviction, will eventually wash adversarial content out of memory on its own --- that poisoning is a transient the system self-heals.
+
+Yet a security question about that memory is measured with an instrument that cannot express its answer. The persistence of a memory-poisoning attack is reported as a fixed-checkpoint binary --- after a write, an execution, and a repair step, is the poisoned claim still there? \citep{chen2026memsecbench}. A binary at one observation time cannot state how \emph{fast} poison is neutralized, cannot distinguish a policy that cleans slowly from one that never finishes, and --- most consequentially --- conflates two things a defender must keep apart: whether the claim's literal text has been removed from the store, and whether the claim has stopped steering the agent's behavior. These are already known to come apart. Injection and execution dissociate across models \citep{leong2026injexec}, and adversarial content can survive summarization in a form a content detector no longer flags while still shaping what the agent does \citep{wang2026statecontam}. A measurement built on literal presence scores such a laundered claim as repaired at the exact moment it becomes most dangerous.
+
+The nearest prior work approaches this from an adjacent angle. Persistence benchmarks establish that poisoning survives repair at high rates, but as a checkpoint probability, not a survival curve, with the memory policy fixed inside the benchmark rather than manipulated \citep{chen2026memsecbench}. Mechanistic evaluations show injection and execution decouple across defenses and models, but over short horizons and without a persistence-over-time estimand \citep{leong2026injexec}. The laundering mechanism itself has been demonstrated as an existence result --- that content \emph{can} survive summarization invisibly --- but on a single pathway, never as a rate that scales with how aggressively memory is managed \citep{wang2026statecontam}. None of these treats the memory-management policy as a variable to turn up or down, and none reports a neutralization time. The gap is not that persistence is unstudied; it is that persistence has never been measured as a rate that a management policy can move.
+
+Turning persistence into a measurable rate surfaces its own difficulties. Neutralization is never observed directly: probes are intermittent, so the event falls between two observations (interval censoring), and some poison outlives the horizon entirely (right censoring) --- a fixed checkpoint discards exactly this structure. The event itself must be defined as loss of \emph{behavioral} adoption rather than literal removal, or laundering is scored as repair and the study builds its own opposite into the instrument. Memory policies are chosen for utility and change what the agent sees and stores, so a raw correlation between an aggressive policy and longer persistence could be salience or reduced exposure to corrective evidence rather than laundering --- and because aggressive summarization compresses the same benign stream, holding the input stream fixed does not hold \emph{exposure} fixed. Finally, a claim can stop being adopted for two unrelated reasons --- its content was corrected, or its whole memory slot was evicted by a time-to-live rule regardless of content --- and a half-life that lumps these together is uninterpretable.
+
+Our design turns each of these obstacles into a specific measurement choice rather than a hedge. Each poisoned claim becomes a survival subject, and its behavioral-adoption survival function and hazard are recovered from interval-censored probes with a censoring-aware estimator, so a half-life with a confidence interval replaces a checkpoint. The event is read behaviorally by a validated mechanical probe, with literal detectability tracked as a \emph{separate} covariate, so the laundering state --- literally absent yet still behaviorally adopted --- becomes a cell one can count rather than a blind spot. Memory-policy aggressiveness is the manipulated treatment, with identical benign traffic and identical injected claims replayed across policy levels and a matched-salience benign tracer as the isolating control, so the residual exposure confound is closed by the tracer's invariance rather than assumed away. And content-neutralization is separated from structural eviction as competing risks, so the laundering claim can be made specific: that aggressive policy lowers the rate at which a claim's \emph{content} is corrected, not the rate at which its slot is mechanically evicted.
+
+We evaluate this design across long benign interaction streams drawn from a long-term memory benchmark, with poison instantiated only from published attacks used as fixed treatments, on a grid of memory-management policies crossed with published defenses, comparing against a single-checkpoint evaluation, an append-only control policy, and the benign tracer placebo.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item A censoring-aware persistence estimand for agent memory poisoning --- a behavioral-adoption survival function, hazard, and half-life over interaction time --- of which the fixed-checkpoint persistence binary used by current benchmarks is the degenerate single-observation-time special case.
+\item A behavioral event definition that separates a poisoned claim's continued steering of the agent from its literal detectability, making \emph{laundering} (detector-invisible but behaviorally active) an explicitly measured state rather than a false repair, together with a validated mechanical acceptance probe for reading it.
+\item A policy-as-treatment design, with matched replayed traffic and a matched-salience benign tracer as the isolating control, that estimates the causal effect of memory-management aggressiveness on the persistence hazard and separates laundering from salience and from reduced exposure to corrective evidence.
+\item A pre-registered test of the reclassification hypothesis --- that utility-improving memory management \emph{lengthens} poison half-life, making the step the field scores as repair a persistence-amplifying laundering step --- with a competing-risks decomposition that pins any such effect on the content-neutralization hazard specifically, and a clean falsification (half-life invariant to policy) stated in advance.
+\end{itemize}
+
+\section{Problem Definition}
+
+\textbf{Formal setup.} An agent maintains a memory store $M_t$ that evolves over benign interaction time $t = 0, 1, \dots, T$ under a memory-management policy $\pi$ and an optional defense $d$. At $t=0$ a fixed, already-published attack injects a set of poisoned claims $P = \{p_1, \dots, p_n\}$ into the store; the attack is a treatment, not a contribution of this work. For each claim $p_i$, an acceptance probe $a(p_i, t) \in \{\text{adopted}, \text{not-adopted}\}$ decides, mechanically, whether the agent's action at time $t$ is steered by $p_i$. The neutralization time is $\tau_i =$ the first $t$ after which $a(p_i, \cdot)$ is \emph{durably} not-adopted (remains not-adopted through all subsequent probes), and $\tau_i$ is right-censored at $T$ if no such $t$ exists. A separate literal-presence indicator $\ell(p_i, t) \in \{\text{present}, \text{absent}\}$ records whether $p_i$'s content is still detectable in $M_t$ by a content detector. The object of study, per $(\pi, d)$ cell, is the survival function $S_{\pi,d}(t) = \mathbb{P}(\tau > t)$, the hazard $h_{\pi,d}(t)$, and the half-life $t_{1/2} = \inf\{t : S(t) \leq 0.5\}$; the state $\{\ell = \text{absent}, a = \text{adopted}\}$ is the \emph{laundering} signature. Because $a$ is observed only at intermittent probe times spaced $\Delta$ apart, $\tau_i$ is additionally interval-censored to the window between the last adopted and first durably-not-adopted probe.
+
+\textbf{Why this is hard.} Four properties of this estimand defeat a fixed-checkpoint measurement. First, $\tau$ is observed only through a discrete probe schedule and a finite horizon, so both interval-censoring (the event lies inside a probe gap) and right-censoring (the event never occurs before $T$) are structural, not incidental --- a single checkpoint discards them and returns a probability at one time in place of a rate. Second, the event must be behavioral adoption, not literal presence: $\ell$ and $a$ provably diverge under laundering, so an estimator keyed on $\ell$ would record $\tau$ at the moment a claim becomes detector-invisible while it is still steering behavior --- the exact inversion the study exists to detect. Third, $\pi$ is chosen for utility and alters both what enters $M_t$ and how much of the benign stream the agent is exposed to (aggressive summarization compresses it), so a correlation between aggressive $\pi$ and larger $\tau$ could be salience or reduced exposure to corrective evidence rather than laundering; holding the \emph{input} stream fixed does not hold \emph{exposure} fixed. Fourth, $\tau$ can be reached by two competing causes --- the claim's content is corrected, or its slot is evicted by a time-to-live/dedup rule regardless of content --- whose naive pooling biases each other's hazard and renders $t_{1/2}$ uninterpretable, while the laundering hypothesis is specifically a claim about the content-correction cause.
+
+\section{Method Overview}
+
+At a conceptual level the study is a single measurement pipeline with five cooperating parts that turn a stream of intermittent yes/no probes into a policy-attributable, cause-resolved persistence rate. Injected claims and a benign traffic stream enter the pipeline; a censoring-aware estimator turns the probe sequence into a survival curve and a half-life; a behavioral probe (paired with a literal-presence detector) decides what the event \emph{is} and exposes the laundering state; a policy-as-treatment contrast turns the curve into a causal effect of memory-management aggressiveness; a validation protocol makes the probe's readings trustworthy; and a competing-risks decomposition makes the resulting half-life interpretable by separating content-correction from structural eviction.
+
+The \textbf{censored persistence estimator} takes each claim's interval-censored probe sequence and the horizon and returns a survival function, a hazard, and a half-life with a confidence interval, reporting cells that never cross the half-life as right-censored rather than dropping them. The \textbf{behavioral acceptance probe} decides neutralization by whether the agent's action is steered by the claim, records literal detectability in parallel, and defines the laundering cell where the two disagree. The \textbf{policy-as-treatment contrast} makes memory-management aggressiveness the manipulated variable, replays identical claims and traffic across policy levels, fits a proportional-hazards model with policy as the covariate, and uses a matched-salience benign tracer as the control that isolates laundering from salience and exposure. The \textbf{acceptance-probe validation} anchors the event's ground truth in a mechanical task outcome and validates it against human raters before any curve is trusted. The \textbf{competing-risks decomposition} separates content-neutralization from structural eviction as cause-specific hazards on a normalized interaction-time axis, so the laundering effect can be pinned on the content cause specifically.
+
+\section{Methodology}
+
+\subsection*{Censored Persistence Estimator}
+
+\textbf{Challenge.} Neutralization is observed only through intermittent probes and a finite horizon, so the raw data are interval-censored and right-censored; a fixed-checkpoint binary discards this and cannot express a neutralization rate or a half-life at all.
+
+\textbf{Insight.} Re-reading ``is the claim adopted at time $t$?'' as repeated interval-censored observations of one survival subject recovers the full survival and hazard functions, of which the checkpoint binary is simply the survival function evaluated at one time and thresholded --- so the continuous estimand strictly contains the checkpoint, rather than competing with it.
+
+\textbf{Method.} Each poisoned claim is a survival subject with event time $\tau$ (durable loss of behavioral adoption). From the probe sequence we estimate the survival function $S(t)$ with a nonparametric estimator appropriate to interval-censored data (Turnbull's estimator when probe gaps straddle events; Kaplan--Meier on the right-censored reduction when events are localized to a single gap), and the cumulative hazard with a Nelson--Aalen estimator \citep{kaplan1958nonparametric}. The half-life is the median survival time with a bootstrap confidence interval; cells whose $S(t)$ does not reach $0.5$ within $T$ are reported as half-life $\geq T$ (right-censored), never coerced to a point value. We additionally test each cell's hazard against the constant-hazard (exponential) null, because a non-constant hazard is precisely the time structure a single checkpoint cannot summarize.
+
+\subsection*{Behavioral Acceptance Probe}
+
+\textbf{Challenge.} If neutralization is scored by whether the claim's literal text is still retrievable, a laundered claim --- surviving summarization in a detector-invisible but behaviorally-active form --- is recorded as repaired while it is still steering the agent, building the study's opposite conclusion into its instrument.
+
+\textbf{Insight.} Separating behavioral adoption from literal detectability is what makes laundering \emph{observable} as its own state rather than a blind spot: a single content-match metric conflates the two and cannot see the $\{$literally absent, behaviorally adopted$\}$ cell where laundering lives.
+
+\textbf{Method.} Neutralization is scored by a mechanical acceptance probe --- a task whose correct output flips if and only if the poisoned claim is behaviorally adopted (for example, a query whose ground-truth answer differs depending on whether the agent acts on the injected claim), so the event's ground truth is a task outcome, not a subjective judgment. In parallel, a content detector records the literal-presence indicator $\ell$ on the same schedule; the detection instrument is the trajectory-signature detector of published defense work \citep{leong2026forensic}, used here as the literal-presence covariate. The laundering cell is defined as $\{\ell = \text{absent}, a = \text{adopted}\}$, and its per-cell frequency is a first-class reported quantity.
+
+\subsection*{Policy-as-Treatment Contrast}
+
+\textbf{Challenge.} Memory-management aggressiveness is chosen for utility and co-varies with content salience and with how much benign, potentially corrective traffic the agent is exposed to, so a raw association between aggressive policy and longer persistence is not yet evidence of laundering.
+
+\textbf{Insight.} Replaying identical injected claims and identical benign traffic across policy levels converts the utility--persistence confound into a within-subject contrast --- but this alone does not close the loop, because aggressive summarization compresses the identical stream and so reduces \emph{exposure} to corrective evidence; the matched-salience benign tracer is the load-bearing control that closes exactly this gap, since if reduced exposure (not laundering) were the mechanism, a benign claim of matched salience would persist longer under aggressive policy too. The poison hazard ratio is interpretable as laundering only conditional on the tracer's hazard ratio being null.
+
+\textbf{Method.} Memory-policy aggressiveness is the manipulated treatment, instantiated at three levels --- append-only (minimal), periodic summarization (moderate), and consolidation/reflection with deduplication and time-to-live (aggressive) --- drawn from documented memory-control-plane configurations \citep{yang2026controlplane}. The same claims and benign stream are replayed across levels. Because adoption is observed only on the fixed probe grid, the hazard regression is specified as a \emph{grouped-time} proportional-hazards model --- a complementary log-log link on per-interval event indicators, the discrete-time counterpart of the Cox model \citep{cox1972regression} that is exact under interval-censored observation rather than an approximation to it --- yielding a hazard ratio for aggressive-versus-minimal policy; the proportionality assumption is checked with policy-by-time interaction diagnostics, and where it fails, the pre-registered fallback contrast is the difference in restricted mean survival time over the horizon, which needs no proportionality and remains estimable in heavily censored cells where the median does not. A matched-salience benign tracer claim, injected alongside the poison and probed identically, is run through the same contrast as the placebo whose hazard ratio must be shown equivalent to null (not merely non-significant) for the poison effect to read as laundering.
+
+\subsection*{Acceptance-Probe Validation}
+
+\textbf{Challenge.} An unreliable probe injects measurement noise indistinguishable from real hazard, so an unvalidated event reading would make the survival curve a measurement of the probe rather than of the poison --- and its error could be comparable to the effect being estimated.
+
+\textbf{Insight.} Anchoring the event's ground truth in a mechanical task outcome makes it reproducible, but reproducibility must still be demonstrated against human judgment before any curve is trusted; this is a measurement-reliability step, logically separate from the construct choice of what the event \emph{is}.
+
+\textbf{Method.} The probe is pre-registered as a deterministic decision rule and validated against at least two independent human raters on a held-out probe set, requiring Cohen's $\kappa \geq 0.7$ and an adjacent/borderline-only confusion structure (no systematic misread of one adoption type), audited on 50 probes in the pilot and 300 before scale-up. A $\kappa$ below threshold blocks scale-up and triggers probe-rule refinement rather than being absorbed into noisier curves.
+
+\subsection*{Competing-Risks Decomposition}
+
+\textbf{Challenge.} A poisoned claim can stop being adopted because its content was corrected or because its whole memory slot was evicted by a time-to-live/dedup rule regardless of content; a half-life that pools these two exits is uninterpretable, and the laundering hypothesis is specifically about the content-correction rate.
+
+\textbf{Insight.} The laundering prediction is sharp only under a competing-risks view: aggressive policy should lower the \emph{content-neutralization} cause-specific hazard (correction stalls once the claim is detector-invisible) while leaving the \emph{structural-eviction} cause-specific hazard unchanged --- a directional prediction a pooled survival curve cannot even state.
+
+\textbf{Method.} We model content-neutralization and structural-eviction as competing risks via cause-specific hazards and cumulative incidence functions, on an interaction-turn-normalized time axis so cells with different traffic volume are comparable. The per-cell persistence classification (e.g.\ fast-cleaned / slow-cleaned / laundered / structurally-evicted) is computed from the cause-specific curves, and its stability is checked by recomputing it on two disjoint random half-samples of the injected claims.
+
+\section{Experiments}
+
+\subsection*{Experimental Setup}
+
+\textbf{Benign streams and configurations.} Long benign interaction streams are drawn from a long-term memory benchmark \citep{uddin2026recall} --- chosen because the central hazard-ratio question and its placebo need streams long enough that the right-censoring fraction at horizon $T$ stays low enough for the half-life confidence interval to close; a short stream would leave most subjects censored and underpower the headline contrast. Memory-management policy levels (minimal / moderate / aggressive) are instantiated from documented memory-control-plane configurations \citep{yang2026controlplane}. All runs are sandboxed with no live-deployment side effects.
+
+\textbf{Treatments (published, used as fixed treatments --- not contributions).} Poison is instantiated only from already-published attacks: the persistence-benchmark attack of \citet{chen2026memsecbench}, the memory-poisoning attack of \citet{devarangadi2026mempoison}, and the summarization-surviving (laundering-prone) contamination of \citet{wang2026statecontam}, spanning single-fact, procedural, and consolidation-surviving poison types. Defenses enter the grid as fixed treatments, not as systems evaluated on their own leaderboards: A-MemGuard \citep{wei2025amemguard}, MemLineage \citep{ouyang2026memlineage}, the trajectory-signature detector \citep{leong2026forensic}, and the repair (``Forget'') step of the persistence benchmark \citep{chen2026memsecbench}.
+
+\textbf{Baselines} (sanity-check comparators, not competitors --- this is a measurement study, and no research question is framed as ``our procedure beats baseline X''). The fixed-checkpoint Write--Execute--Forget protocol \citep{chen2026memsecbench} is run as a single-observation-time evaluation to show empirically that thresholding one checkpoint mis-estimates the continuous survival curve. An append-only / no-management policy is the null against which ``aggressiveness'' is defined. The matched-salience benign tracer is the placebo whose persistence must be policy-invariant.
+
+\textbf{Design grid and sample size.} Full grid: 3 policy levels $\times$ 5 defense conditions $\times$ ${\geq}3$ attack families $\times$ ${\geq}3$ backbones. Pilot: 1 backbone $\times$ 3 policies $\times$ $\{$no defense, A-MemGuard$\}$ $\times$ 1 attack family. Per $(\text{policy} \times \text{defense})$ cell we inject $n = 60$ poisoned claims (survival subjects) --- sized so that under an anticipated ${\sim}50\%$ censoring fraction the Kaplan--Meier median (half-life) confidence-interval half-width falls below $0.15 \cdot T$; a pilot cell exceeding that width triggers a pre-committed enlargement to 150 claims/cell, not a null claim. Horizon $T = 200$ benign interaction turns; probes every $\Delta = 10$ turns (the interval-censoring width). All parameters are frozen and hashed before evaluation.
+
+\textbf{Compute budget and determinism.} The full grid is $3 \times 5 \times 3 \times 3 = 135$ cells per replication. Each cell runs one $T = 200$-turn stream plus, at each of the 20 probe times, one probe battery over its 120 subjects (60 poison + 60 tracer claims): ${\approx}27{,}000$ stream turns and ${\approx}324{,}000$ probe calls per full-grid replication --- order $10^5$--$10^6$ model calls per backbone, dominated by probe calls, which is why probes are batched per probe time and why the 6-cell pilot must price a per-cell cost before any scale-up is committed. Backbone model identifiers and versions are pinned in the frozen configuration; probe and detector calls run at temperature 0 with fixed decoding parameters; agent-turn non-determinism is handled by re-running every pilot cell once with a different seed and reporting the between-run half-life discrepancy as a floor on interpretable cross-cell differences before any cross-cell comparison is made.
+
+\textbf{Metrics.} The behavioral-adoption survival function, its Nelson--Aalen hazard, and the half-life with bootstrap CI; the constant-hazard-null test outcome per cell; the policy hazard ratio for aggressive-vs-minimal (grouped-time proportional-hazards; pooled and per backbone); the laundering-cell frequency and its trend across policy levels; the content-neutralization and structural-eviction cause-specific hazards; and the split-half persistence-classification agreement rate.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.8em,itemsep=0.1em]
+\item RQ1 --- Does continuous survival estimation recover persistence structure a fixed checkpoint cannot?
+\item RQ2 --- Does poison half-life increase with memory-management aggressiveness?
+\item RQ3 --- Is the policy effect specific to adversarial content, or does a matched-salience benign tracer persist too?
+\item RQ4 --- Is the persistence increase carried by laundering rather than by literal retention?
+\item RQ5 --- Does the persistence effect appear in the content-neutralization hazard specifically (Forget-as-amplification)?
+\item RQ6 --- Is the per-cell persistence classification stable across independent random sub-samples?
+\item RQ7 --- Does the mechanical acceptance probe agree with human adjudication?
+\end{enumerate}
+
+\subsubsection*{RQ1: Does continuous survival estimation recover persistence structure a fixed checkpoint cannot?}
+
+\textbf{Setup.} For each $(\text{policy} \times \text{defense})$ cell, estimate the interval-censored survival function and half-life with bootstrap CI, and test the cell's hazard against the constant-hazard (exponential) null. Compare the continuous estimate against the fixed-checkpoint binary evaluated at the benchmark's repair time.
+
+\textbf{Expected outcome.} For at least 80\% of tested cells the estimator returns a half-life whose 95\% CI half-width is below $0.15 \cdot T$, and the hazard is statistically non-constant (rejects the exponential null at $\alpha = 0.05$, Holm-corrected) in at least half of tested cells --- establishing that persistence has a time structure a single checkpoint cannot summarize, and that the checkpoint's thresholded value falls outside the continuous estimator's band in a nontrivial fraction of cells.
+
+\textbf{Falsification condition.} Refuted if the hazard is statistically constant (exponential not rejected) in the large majority of cells --- then a single rate suffices and the continuous estimator adds nothing over a checkpoint --- or if the half-life CIs fail to close (half-width $\geq 0.15 \cdot T$) in most cells even after the pre-committed enlargement, meaning the estimand is not recoverable at feasible sample sizes.
+
+\textbf{Hypothesis (plain language).} Poison neutralization has a shape over time, not just an endpoint, and that shape is measurable --- so a checkpoint binary is a lossy special case of the rate, not an equivalent summary.
+
+\textbf{Metrics.} Per-cell half-life and CI half-width; fraction of cells rejecting the constant-hazard null; checkpoint-vs-curve discrepancy rate.
+
+\textbf{Result.} \ph
+
+\subsubsection*{RQ2: Does poison half-life increase with memory-management aggressiveness?}
+
+\textbf{Setup.} Grouped-time proportional-hazards model (complementary log-log link on probe-interval event indicators --- the discrete-time Cox specification, exact under interval censoring) of the behavioral-adoption hazard on policy level (minimal / moderate / aggressive), with identical claims and benign stream replayed across levels; hazard ratio for aggressive-vs-minimal, Holm-corrected across defenses and backbones; sign and magnitude checked per backbone; proportionality checked by policy-by-time interaction, with restricted-mean-survival-time difference as the pre-registered fallback contrast where it fails.
+
+\textbf{Expected outcome.} Poison half-life is monotonically non-decreasing in memory-policy aggressiveness, with a hazard ratio for aggressive-vs-minimal policy $\leq 0.7$ ($|\log \text{HR}| \geq 0.36$, Holm-corrected $p < 0.05$) under the behavioral-adoption event --- i.e.\ the more aggressively memory is managed for utility, the \emph{longer} poison survives.
+
+\textbf{Falsification condition.} Refuted toward \emph{policy-invariance} if the aggressive-vs-minimal hazard-ratio CI contains 1 in the majority of cells (half-life does not move with policy) --- the clean refutation of the reclassification hypothesis; refuted toward the \emph{cleanup intuition} if $\text{HR} > 1$ with $|\log \text{HR}| \geq 0.36$ (aggressive policy significantly \emph{shortens} half-life), meaning utility-improving management does wash poison out faster, as operators assume.
+
+\textbf{Hypothesis (plain language).} Utility-improving memory management prolongs, rather than shortens, the time a poisoned claim keeps steering the agent.
+
+\textbf{Metrics.} Policy hazard ratio and CI (pooled and per backbone); half-life by policy level; monotonicity across the three levels; proportionality diagnostic and, where invoked, the restricted-mean-survival-time difference.
+
+\textbf{Result.} \ph
+
+\subsubsection*{RQ3: Is the policy effect specific to adversarial content, or does a matched-salience benign tracer persist too?}
+
+\textbf{Setup.} Run the matched-salience benign tracer claims through the identical policy contrast (same replayed traffic, same probe schedule, same grouped-time hazard specification) as RQ2, with the tracer arm sized identically to the poison arm ($n = 60$ tracer claims per cell) so the placebo cannot pass by being underpowered; compare the tracer's aggressive-vs-minimal hazard ratio against the poison's.
+
+\textbf{Expected outcome.} The benign tracer shows no policy-dependent persistence effect, demonstrated by equivalence rather than by failure to reject: its aggressive-vs-minimal log-hazard-ratio falls within a pre-registered equivalence margin of $|\log \text{HR}| < 0.18$ (half the poison effect floor of RQ2) under a two-one-sided-tests (TOST) procedure at $\alpha = 0.05$ --- so the poison effect in RQ2 is specific to adversarial content, not generic retention of, or reduced corrective exposure for, any salient content.
+
+\textbf{Falsification condition.} Refuted if the benign tracer \emph{also} persists significantly longer under aggressive policy (its hazard-ratio CI excludes 1 in the same direction as the poison's) --- then the RQ2 effect is generic retention or reduced exposure to corrective traffic, not poison-specific laundering, and the causal reading of RQ2 is invalid (the run measures a salience/exposure artifact, per the placebo discipline). Distinctly, the control is \emph{unresolved} --- not passed --- if the tracer arm can neither show a directional effect nor establish equivalence at the pre-registered margin: an underpowered placebo is treated as a failed control that blocks the causal reading, never as a passed one. This is the study's primary placebo: anything other than demonstrated tracer equivalence invalidates the causal claim regardless of how strong RQ2 looks.
+
+\textbf{Hypothesis (plain language).} The policy effect is about adversarial content being laundered, not about aggressive memory simply holding on to whatever is salient.
+
+\textbf{Metrics.} Benign-tracer hazard ratio and CI; TOST equivalence outcome at the pre-registered margin; poison-vs-tracer hazard-ratio difference.
+
+\textbf{Result.} \ph
+
+\subsubsection*{RQ4: Is the persistence increase carried by laundering rather than by literal retention?}
+
+\textbf{Setup.} Within each policy level, measure the frequency of the laundering cell $\{$literally absent, behaviorally adopted$\}$ and the frequency of literal retention $\{$literally present, behaviorally adopted$\}$; test whether the laundering-cell frequency increases with policy aggressiveness and whether it, rather than literal retention, accounts for the RQ2 hazard shift.
+
+\textbf{Expected outcome.} The laundering-cell frequency is strictly greater than zero and increases with policy aggressiveness, and the policy$\rightarrow$persistence effect is carried by this cell rather than by increased literal retention --- behaviorally-active-but-detector-invisible claims become more common exactly as memory is managed more aggressively.
+
+\textbf{Falsification condition.} Refuted if the persistence increase is accounted for by rising literal presence (aggressive policy \emph{retains} more poison literally) with the laundering cell flat or empty across policy levels --- then the mechanism is retention, not laundering, and the ``detector-invisible persistence'' claim falls even if RQ2 holds.
+
+\textbf{Hypothesis (plain language).} Aggressive management does not keep the poison's text around; it keeps the poison's influence around after the text is gone.
+
+\textbf{Metrics.} Laundering-cell and literal-retention-cell frequencies by policy level; mediation of the RQ2 hazard shift by the laundering cell.
+
+\textbf{Result.} \ph
+
+\subsubsection*{RQ5: Does the persistence effect appear in the content-neutralization hazard specifically (Forget-as-amplification)?}
+
+\textbf{Setup.} Estimate cause-specific hazards for content-neutralization versus structural-eviction (and their cumulative incidence functions) per policy level; test whether the aggressive-policy effect lands in the content-neutralization hazard and not the structural one. Additionally compare behavioral-adoption hazard immediately before and after the benchmark's ``Forget''/repair operation under aggressive consolidation.
+
+\textbf{Expected outcome.} The two cause-specific hazards are separately estimable, and the aggressive-policy effect appears in the content-neutralization hazard specifically --- aggressive management lowers the rate at which a claim's content is corrected while leaving structural eviction unchanged --- so the operation the benchmark scores as repair does not durably lower behavioral adoption under aggressive consolidation.
+
+\textbf{Falsification condition.} Refuted if the aggressive-policy effect appears in the \emph{structural-eviction} hazard (aggressive policy simply evicts slots more slowly) rather than the content-neutralization hazard, or if post-``Forget'' behavioral adoption drops below tolerance and stays down --- in which case the Forget step genuinely repairs and the amplification reclassification fails.
+
+\textbf{Hypothesis (plain language).} The step called repair does not correct the claim's content; under aggressive consolidation it stops correction from finishing.
+
+\textbf{Metrics.} Content-neutralization vs.\ structural-eviction cause-specific hazards by policy level; pre-vs-post-Forget behavioral-adoption hazard.
+
+\textbf{Result.} \ph
+
+\subsubsection*{RQ6: Is the per-cell persistence classification stable across independent random sub-samples?}
+
+\textbf{Setup.} Split each cell's injected claims into two disjoint random halves; compute the persistence classification (fast-cleaned / slow-cleaned / laundered / structurally-evicted) independently on each half; compare agreement across cells.
+
+\textbf{Expected outcome.} The two half-sample classifications agree in at least 80\% of tested cells --- the persistence label describes the cell, not which particular claims happened to be sampled.
+
+\textbf{Falsification condition.} Refuted if agreement falls below 80\% of cells, meaning the classification is driven by sampling noise rather than a stable cell-level property, and per-cell persistence labels should not be reported.
+
+\textbf{Hypothesis (plain language).} The persistence verdict for a cell is a property of the policy-and-defense condition, not an artifact of the specific poisoned claims drawn.
+
+\textbf{Metrics.} Split-half classification agreement rate across cells.
+
+\textbf{Result.} \ph
+
+\subsubsection*{RQ7: Does the mechanical acceptance probe agree with human adjudication?}
+
+\textbf{Setup.} On a held-out probe set (50 probes in the pilot, 300 before scale-up), compare the mechanical acceptance-probe verdict against at least two independent human raters; compute Cohen's $\kappa$ and inspect the confusion structure.
+
+\textbf{Expected outcome.} The probe agrees with human adjudication at Cohen's $\kappa \geq 0.7$, with disagreements confined to adjacent/borderline cases rather than a systematic misread of one adoption type --- validating the event definition that every survival curve depends on.
+
+\textbf{Falsification condition.} Refuted if $\kappa < 0.7$, or if disagreements show a systematic structure (one adoption type consistently misread) rather than adjacent-case noise --- either blocks scale-up and forces probe-rule refinement, since an event read with error comparable to the effect floor would make the survival curves measure the probe.
+
+\textbf{Hypothesis (plain language).} The mechanical probe reads ``is the agent steered by the poison?'' the way a careful human would, reliably enough to trust the curves built on it.
+
+\textbf{Metrics.} Cohen's $\kappa$ against human raters; confusion-structure (adjacent vs.\ systematic).
+
+\textbf{Result.} \ph
+
+\medskip
+\noindent\textbf{Further evaluation.} With more time, a natural extension is multi-agent contagion --- how a laundered claim in one agent's shared memory re-seeds others, and whether a transmission/reproduction number governs it --- explicitly out of scope here because it changes the unit of analysis from a single claim's trajectory in one store to a population process across stores, and would need its own identifiability design rather than an extension of the single-subject survival estimand above; Byzantine-tolerant collaborative-memory defenses \citep{lee2026byzantine,wang2026byzrag} are the natural treatment set for that follow-up.
+
+\subsection*{Threats to Validity}
+
+\textbf{Construct validity.} The persistence estimand is only as sound as its event definition and its probe. The central construct choice --- neutralization as durable loss of \emph{behavioral} adoption, with literal detectability tracked separately --- is what keeps laundering from being scored as repair; the mechanical acceptance probe that reads it is validated against ${\geq}2$ human raters at Cohen's $\kappa \geq 0.7$ with an adjacent-only confusion structure (RQ7), and a threshold miss blocks scale-up rather than being absorbed into noisier curves. A distinct construct threat is that behavioral adoption is probed on a fixed task family per attack, so a claim that steers behavior only in rare, unprobed contexts could read as neutralized while merely dormant; this bounds the claim to the probed behavioral surface and motivates adaptive probe design as future work.
+
+\textbf{Internal validity.} The causal reading of the policy contrast rests on two controls. Identical claims and benign traffic are replayed across policy levels, so composition is held fixed; but because aggressive summarization compresses the stream and thereby reduces exposure to corrective evidence, the matched-salience benign tracer (RQ3) is the load-bearing placebo --- a non-null tracer hazard ratio invalidates the causal claim regardless of the poison result, the tracer's null must itself be demonstrated by equivalence test at a pre-registered margin with a tracer arm sized like the poison arm (a merely underpowered tracer is a failed control, not a passed one), and this is checked before RQ2 is interpreted. Attack instantiation and benign-stream content are frozen and hashed before evaluation, so no threshold or policy choice can be tuned on the outcome.
+
+\textbf{External validity.} The study is scoped to sandboxable, single-store agent memory with published attacks and defenses across the tested policy levels, attack families, and backbones (pilot: 1 backbone $\times$ 1 attack family; scale-up: ${\geq}3 \times {\geq}3$); it does not cover multi-agent shared-memory contagion, non-sandboxable live deployments, or attack families outside the published treatment set, and findings are not asserted beyond the tested grid without further runs.
+
+\textbf{Conclusion validity.} A single poisoned claim's trajectory cannot separate a policy-driven persistence change from ordinary probe noise, so every rate claim is licensed only through the censoring-aware estimator and the grouped-time hazard model over many independently injected claims, with a pre-registered power target ($n = 60$ claims/cell sized for a half-life CI half-width $< 0.15 \cdot T$ under ${\sim}50\%$ censoring) and a pre-committed enlargement rule (to 150/cell) rather than a null claim for underpowered cells. Half-life is uninterpretable if content-correction and structural eviction are pooled, so the competing-risks decomposition (RQ5) separates them, and the per-cell classification is certified only when it is split-half stable (RQ6), never from a single sample.
+
+\section{Related Work}
+
+The single closest prior work is the memory-poisoning persistence benchmark of \citet{chen2026memsecbench}, with the mechanistic persistence evaluation of \citet{leong2026injexec} second; it is worth stating the delta plainly before surveying the wider landscape. \citet{chen2026memsecbench} already measure whether poisoning survives a repair step, and \citet{leong2026injexec} already shows that a poisoned claim's literal presence and its behavioral effect come apart --- so this paper concedes both the persistence question and the literal-vs-behavioral distinction as prior art. What neither does, and what this paper is built to do, is measure persistence as a \emph{continuous, censoring-aware hazard over the behavioral-adoption event} with the \emph{memory-management policy as a manipulated treatment}; the fixed Write--Execute--Forget checkpoint is exactly the single-observation-time special case of that estimand (evaluate the survival function at one time and threshold it), which is why the reviewer question ``isn't this just the benchmark with more timepoints?'' is answered by subsumption rather than avoided --- the extra timepoints change the estimand from a probability into a rate that a policy can move.
+
+\textbf{Attacks on agent memory.} The attack surface itself was established by the memory- and knowledge-base-poisoning line: AgentPoison optimizes triggered poison records against retrieval-backed agent memory \citep{chen2024agentpoison}, and query-only memory injection shows poison can be planted through nothing but ordinary interaction \citep{dong2025minja}. These attacks define the threat model whose \emph{aftermath} this paper measures --- our treatments are drawn from their published successors --- and neither reports how long its poison persists under ongoing memory management, only whether it lands and fires. The persistence question is sharpened by misattribution: poisoned-memory failures are routinely misread as model failure \citep{ahad2026misattribution}, so a store that is never suspected is never manually repaired, which makes persistence under \emph{default} management policies --- exactly this paper's estimand --- the operative security regime rather than an edge case.
+
+\textbf{Persistence and mechanism of memory poisoning.} Benchmarks establish that agent memory poisoning survives repair at high rates \citep{chen2026memsecbench}, and mechanistic evaluations show injection and execution dissociate across many defenses and models \citep{leong2026injexec}. Both make persistence and the literal-vs-behavioral gap visible, but as checkpoint probabilities over short horizons with the memory policy fixed inside the benchmark --- neither reports a neutralization rate or turns the policy into a variable. The laundering mechanism these rely on is itself demonstrated as an existence result: adversarial content can survive summarization in a form a content detector no longer flags while still shaping behavior \citep{wang2026statecontam}, shown on a single pathway rather than as a rate that scales with management aggressiveness --- the very scaling this paper measures.
+
+\textbf{Defenses for agent memory.} Proactive frameworks guard the memory itself \citep{wei2025amemguard}, lineage-guided enforcement constrains what may be written and propagated \citep{ouyang2026memlineage}, and trajectory-signature detectors flag poisoning from behavioral traces \citep{leong2026forensic}. Each is designed to reduce poisoning, and each enters this study as a fixed \emph{treatment} on the grid rather than as a system evaluated on its own leaderboard; crucially, a detector's visibility is exactly what laundering evades, which is why detection here doubles as the literal-presence covariate rather than the neutralization event. None of these defenses is evaluated as a continuous persistence-rate modifier under varying memory policies, which is the axis this paper adds.
+
+\textbf{Memory management and benign forgetting.} A separate line studies how \emph{benign} memory decays: benchmarks of long-term retention and forgetting for personalized agents \citep{uddin2026recall}, architectural studies showing that where the memory control plane sits shapes what is forgotten across many configurations \citep{yang2026controlplane}, and operating-system-style and reflection-based memory managers that summarize and consolidate for utility \citep{packer2023memgpt,park2023generative}. These characterize benign forgetting and supply the policy axis and the benign streams this study manipulates, but none measures \emph{adversarial}-content persistence, and none asks whether a policy tuned for benign utility inverts on adversarial content --- the question this paper's policy-as-treatment design is built to answer.
+
+\textbf{Survival analysis and competing risks.} The estimand borrows standard, decades-validated statistical machinery --- the Kaplan--Meier survival estimator \citep{kaplan1958nonparametric}, Cox proportional-hazards regression for covariate effects on the hazard \citep{cox1972regression}, and cause-specific hazards for competing risks --- applied here not as a novel statistical contribution but as the instrument that turns intermittent adoption probes into a policy-attributable, cause-resolved persistence rate. The contribution is the estimand's construction for this problem (behavioral event, interval-censored probes, laundering cell, policy treatment), not the survival mathematics, which is used off the shelf.
+
+\section{Conclusion}
+
+This work reframes a security assumption --- that utility-improving memory management also washes adversarial content out of a long-lived agent's memory --- as an empirical question with a precise identifiability structure, rather than trusting the checkpoint benchmark whose binary cannot even state a rate. The central methodological wager is that poison persistence is only decision-relevant once it is measured as a \emph{behavioral-adoption} hazard over interaction time, with the memory policy as a manipulated treatment and content-correction separated from structural eviction --- because the alternative, a fixed-checkpoint binary keyed on literal presence, scores a laundered claim as repaired at the moment it is most dangerous. Whichever way the central test resolves, the finding is actionable: if aggressive management lengthens half-life, then the memory-management step operators lean on as free hygiene is a persistence amplifier that demands a continuously-running companion defense, and the benchmark checkpoint labeled ``repair'' is mislabeled; if half-life is invariant to policy, that null is itself the license the field currently lacks to treat washout as real, made credible by the pre-registered power behind it. Two limitations bound the claim from the outset and are next steps rather than afterthoughts: behavioral adoption is read on a fixed probe surface per attack, so a claim that steers behavior only in rare, unprobed contexts could read as neutralized while dormant, pointing toward adaptive probing; and the estimand is single-store, leaving multi-agent shared-memory contagion --- where a laundered claim re-seeds other agents --- as a distinct population-level problem needing its own identifiability design.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

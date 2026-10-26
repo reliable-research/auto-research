@@ -1,0 +1,275 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{Force Is Not Register:\\ Measuring Adversarially Robust Identification of Governance Constraints for Memory Pinning}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic T3.3), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}), post per-topic review (\texttt{review\_2026-08.md}, 2026-08-21: one [major] + two [moderate] findings applied --- SEP premise concession, StyleAdv instrument-family concession, 2026 neighbor refresh). Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets, not results.}
+\end{quote}
+
+\begin{abstract}
+Memory-pinning mechanisms for LLM agents assume that governance constraints --- rules the agent must keep obeying across a long-running context --- can first be reliably picked out from surrounding conversational content. We show this precondition has never been measured as a span-level, adversarially stressed identification problem: existing treatments of ``which text is binding'' either assign that status by channel position known in advance rather than computing it from content, or measure it only behaviorally --- as whether a model executes an embedded probe --- with no per-span retention decision, so an adversary who preserves a rule's binding force while flattening its register into casual chit-chat (evasion), or who inflates idle talk into authoritative-sounding phrasing without creating a real obligation (spoofing), can defeat identification without ever touching the pinning mechanism itself. We build GovSpan-Adv, a validity-gated, bidirectional-rewrite testbed that provably decouples binding force from surface register, and measure five identifier families' miss-pin and false-pin rates as separate, paired statistics under adversarial versus original phrasing, in isolation and embedded in long unsegmented transcripts under a query-access adaptive attacker. A blind boundary audit decomposes any measured fragility into genuine identifier failure versus contested ground truth, and a cross-family ablation rules out attacker-defender self-consistency as an alternative explanation. We report which failure direction dominates and how much of the measured robustness gap is attributable to identification itself, rather than to label ambiguity or model-family coupling.
+\end{abstract}
+
+\section{Introduction}
+
+Large language model agents are increasingly trusted to operate over long-running, multi-session interactions in which certain rules --- a safety policy, a user's stated boundary, an organization's access-control constraint --- must keep being obeyed no matter how much conversation piles up around them. Because a full transcript eventually outgrows any context budget, systems that manage agent memory turn to pinning: identifying which pieces of context are these governance constraints and deliberately keeping them resident even as everything else is truncated, summarized, or dropped. The mechanism that performs the pinning is only as good as the step that decides what counts as a rule in the first place.
+
+Yet that upstream step has quietly been assumed rather than tested. Current treatments of ``which text is binding'' typically assign that status by channel position --- a system message, a designated policy field --- known in advance of any content ever arriving. The one line of work that does pose the question content-side --- instruction--data separation, formalized and behaviorally measured by the SEP benchmark of Zverev et al. --- scores whether a model \emph{executes} a probe embedded in data, not whether an identifier can make a per-span retention decision, and its manipulations are not validated register rewrites. Position-assignment works only as long as governance constraints always arrive through a privileged channel and everything else does not. Once an adversary can choose the register a rule is phrased in, that assumption breaks in two directions at once: a constraint can be flattened into casual, chit-chat-sounding phrasing while its underlying obligation survives intact (evasion), and idle conversation can be inflated into authoritative-sounding, rule-like phrasing while creating no real obligation at all (spoofing). Neither maneuver touches the pinning mechanism itself --- both simply exploit the fact that identification, the step pinning depends on, was never checked for robustness against exactly this kind of disguise.
+
+The nearest existing work approaches this gap from three sides without closing it. The SEP benchmark of Zverev et al. gives the question its closest existing formulation --- can a model treat instructions differently from data --- but operationalizes it as a behavioral separation score over probe execution, one-directional and without certified register control, so a per-span identification decision is never measured. ASIDE, building on that formulation, offers the closest architectural answer to ``which text is executable and binding versus merely conversational data,'' but it answers the question by relocating the role label into a fixed embedding-subspace rotation applied at ingestion --- the label is assigned by where a token arrives, not computed from what it says, which is precisely the assumption an adversary who controls register can exploit. SeqMonitor offers the closest existing treatment of evasion through benign-looking surface form, reframing safety monitoring as sequence labeling over a growing conversation prefix --- but its threat model covers only accumulating harmful intent hidden in innocuous-looking subtasks, a one-directional evasion story with no notion of the opposite failure (chit-chat spoofing its way into authority) and no per-span retention decision to get right. Attack-and-defense benchmarks such as ChatInject and TensorTrust demonstrate that unprivileged content can be dressed up as authoritative --- but through structural forgery (fake role tags) rather than register alone, and their outcome measure is end-to-end compromise, never the span-level identification error that produced it. Long-horizon retention work such as PrefEval shows that models do forget or misapply rules stated far earlier, but its distractors are ordinary unrelated conversation, not adversarially crafted look-alikes, so neither evasion nor spoofing pressure is ever actually exercised. And memory architectures like MemoryCallback that revisit early context to fix benign ``premature pruning'' assume salience can eventually be reassessed --- an assumption that fails by design against a disguised rule engineered to look unimportant at the moment it is written.
+
+Turning this gap into a measurable question surfaces genuine difficulties of its own. Binding force and surface register are, in principle, separable properties of the same span --- but showing that requires a paraphrase that provably preserves or withholds force while register moves, not merely phrasing that looks disguised, which demands an explicit, checkable validity criterion rather than a stylistic rewrite taken on faith. Real deployments never hand an identifier pre-cut spans, so any evaluation built only from pre-segmented pairs measures the classification half of the problem while leaving boundary detection invisible by construction. The two error directions are pursued by adversaries with opposite goals --- an evader wants a constraint to slip through unpinned, a spoofer wants filler wrongly pinned to exhaust a bounded pin budget or launder authority --- so pooling them into one aggregate accuracy number hides exactly the tradeoff a defender who shifts a decision threshold would be exposed to. And because constraint-hood can be genuinely indexical --- whether ``let's keep this between us'' is a binding confidentiality rule or idle phatic talk depends on speaker authority and conversational state --- some fraction of any measured failure will reflect contested ground truth rather than identifier weakness, a possibility that has to be measured rather than assumed away.
+
+Our approach turns each of these obstacles into a specific design choice. A validity-gated bidirectional rewriter constructs Evade and Spoof paraphrases whose force-preservation or force-withholding is certified by an entailment back-check and independent human validation before any identifier ever sees them, so the force/register decoupling is checked rather than presumed. Miss-pin and false-pin rates are reported as separate, paired, threshold-swept statistics rather than one pooled number, exposing the evasion/spoofing tradeoff directly. The same validated items are additionally embedded at controlled depths inside long, unsegmented transcripts --- without given span boundaries --- so that localization failure becomes a measurable, depth-stratified quantity, and a final adaptive round lets the rewriter query the strongest identifier directly. A blind, independently-run re-annotation pass, given full context and structurally separated from the original labeling process, decomposes every observed failure into genuine identifier error versus contested ground truth. And because two of the five identifier families under test adapt mechanisms from prior work --- a position/privilege signal and a cumulative-context monitor --- a cross-family ablation swaps the rewriter's model family and re-measures, ruling out the possibility that any observed gap merely reflects one model family's self-consistent notion of register.
+
+We evaluate this design on GovSpan-Adv, a paired corpus of governance-constraint and non-constraint spans drawn from real defense prompts and real conversational logs, comparing five identifier families' behavior on original versus validity-gated adversarial phrasing, against a trivial keyword baseline and a family-swapped, distribution-matched control, and via a secondary transfer check against an existing long-horizon preference-retention benchmark.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item A validity-gated bidirectional rewriting instrument that operationalizes the separability of binding force from surface register, turning ``is this disguise real'' from an assumption into a checked precondition before any identifier is evaluated.
+\item A paired, per-direction measurement protocol that reports evasion and spoofing failure as separate, threshold-swept statistics rather than a single pooled accuracy, making the evader/spoofer tradeoff a directly measurable quantity instead of a hidden aggregate.
+\item An in-context localization and adaptive-attack extension that measures whether identification degrades further once disguised constraints must be found, not just classified, inside long unsegmented transcripts under a querying attacker.
+\item A blind boundary audit that decomposes measured adversarial fragility into genuine identifier failure versus contested, genuinely indexical ground truth, together with a cross-family ablation that rules out attacker-defender self-consistency as an alternative explanation for any observed gap.
+\end{itemize}
+
+\section{Problem Definition}
+
+\noindent\textbf{Formal setup.} A context window is a span sequence $S = (s_1, \dots, s_n)$. Each span $s_i$ carries a latent ground-truth label $y_i \in \{1 \text{ (constraint)}, 0 \text{ (non-constraint)}\}$. An identifier $f_\theta$ maps a span, optionally with context, to a pin decision and confidence: $f_\theta(s_i, \text{ctx}) \rightarrow (\hat{y}_i, c_i)$, $\hat{y}_i \in \{0,1\}$, $c_i \in [0,1]$. Two rewrite operators, each certified by a validity gate $V$, transform a span while holding its label fixed: $\text{Evade}(s \mid y{=}1)$ shifts a constraint's register to casual phrasing while $V$ certifies its obligation is preserved; $\text{Spoof}(s \mid y{=}0)$ shifts chit-chat's register to imperative phrasing while $V$ certifies no new obligation was introduced. The object of study is whether $f_\theta$'s decisions on $\{s_i\}$ remain reliable once register is moved by a validity-gated rewrite while the underlying label $y_i$ is held fixed by construction, and --- separately --- whether any observed unreliability is attributable to $f_\theta$ itself rather than to $y_i$ being contested in the first place.
+
+\noindent\textbf{Why this is hard.} Binding force and surface register are, by the seed asymmetry, separable properties of the same span, but demonstrating that separability requires more than phrasing that merely \emph{looks} disguised --- it requires a rewrite whose label-preservation is independently certified, since an uncertified rewrite risks silently flipping $y_i$ rather than moving register around a fixed $y_i$. Deployed context windows are not pre-segmented into $s_1, \dots, s_n$ with boundaries given; an identifier evaluated only on pre-cut spans is never tested on the joint problem of finding a span before it can classify one. The two rewrite directions are adversarially opposed --- $\text{Evade}$ favors a miss-pin outcome ($\hat{y}_i = 0$ when $y_i = 1$) and $\text{Spoof}$ favors a false-pin outcome ($\hat{y}_i = 1$ when $y_i = 0$) --- so any single decision threshold on $c_i$ that suppresses one error direction mechanically raises the other, and reporting one pooled error rate over both directions would erase this tradeoff rather than reveal it. Finally, $y_i$ itself is not always intrinsic to $s_i$ in isolation: constraint-hood can depend on speaker authority and conversational state not fully captured at construction time, so a nonzero fraction of any measured $f_\theta$ error will reflect this genuine label ambiguity rather than a property of $f_\theta$, and the two sources of error are indistinguishable without a dedicated audit.
+
+\section{Method Overview}
+
+At a conceptual level, this is a single measurement pipeline built around one construction and two axes of stress-testing. A validity-gated bidirectional rewriter turns the force/register asymmetry from an assumption into a certified, checkable property of every adversarial item; a paired, per-direction metrics protocol turns the resulting original-versus-adversarial decisions into a measured robustness gap and its evasion/spoofing tradeoff; an in-context localization and adaptive-attack extension stresses that same measurement under deployment-realistic conditions (unsegmented transcripts, a querying attacker); and a blind boundary audit, together with a cross-family ablation, rules out the two most consequential alternative explanations for any observed gap --- genuinely contested ground truth, and attacker-defender model-family self-consistency.
+
+The \textbf{validity-gated bidirectional rewriter} takes a validated constraint or non-constraint span and produces a register-shifted counterpart certified to preserve the original label, giving every downstream measurement a checked, rather than assumed, adversarial item. The \textbf{paired per-direction metrics protocol} takes an identifier's decisions on original and adversarial phrasing of the same underlying items and reports miss-pin and false-pin as separate, threshold-swept statistics, exposing the evasion/spoofing tradeoff directly. The \textbf{in-context localization and adaptive-attack extension} takes the same validated items and embeds them at controlled depths inside long, unsegmented transcripts, requiring joint localization and classification, then lets the rewriter query the strongest identifier to test adaptive degradation. The \textbf{blind boundary audit} takes every observed error (plus a matched sample of correct decisions) and re-annotates it, blind and with full context, to separate genuine identifier failure from contested ground truth. The \textbf{cross-family confound ablation} swaps the rewriter's model family and re-measures, ruling out attacker-defender self-consistency as an alternative explanation for the measured gap.
+
+\section{Methodology}
+
+\subsection{Validity-Gated Bidirectional Rewriting}
+\textbf{Challenge.} Testing whether an identifier is keyed on register rather than binding force requires a rewrite that provably preserves or withholds force while register moves --- phrasing that merely \emph{sounds} disguised does not establish this, since an unchecked rewrite could silently flip the true label rather than hold it fixed.
+
+\textbf{Insight.} Validity gating turns ``is this rewrite valid'' from an assumption into a checked precondition: an entailment-style back-check plus independent human validation, run before any identifier is evaluated, is what makes a subsequent robustness-gap measurement mean what it claims to mean.
+
+\textbf{Method.} Two LLM-based rewrite operators are applied to validated spans from GovSpan-Adv. $\text{Evade}$ takes a constraint span and produces a casual-register paraphrase; a natural-language-inference-style back-check confirms the paraphrase still entails the original obligation, and two human annotators independently confirm the obligation survives. $\text{Spoof}$ takes a non-constraint span and produces an imperative-register paraphrase; the same two-part gate confirms no new obligation was introduced. Rewrites failing either gate are discarded and regenerated. The rewriter's model family is kept disjoint from every identifier family evaluated downstream.
+
+\subsection{Paired Per-Direction Metrics}
+\textbf{Challenge.} An evader benefits from miss-pins and a spoofer benefits from false-pins --- two failure modes with opposite causes and opposite remedies --- so a single pooled accuracy number can look acceptable while hiding a tradeoff an adversary is positioned to exploit.
+
+\textbf{Insight.} Reporting the two directions as separate, paired, threshold-swept statistics is what makes the evasion/spoofing tradeoff a directly observable quantity rather than an artifact hidden inside one aggregate score.
+
+\textbf{Method.} For each identifier, decisions on the same underlying item under original and validity-gated adversarial phrasing are compared as matched pairs. Miss-pin rate ($\text{FN}/(\text{FN}+\text{TP})$ on constraint spans) and false-pin rate ($\text{FP}/(\text{FP}+\text{TN})$ on non-constraint spans) are reported separately per identifier per direction, with Holm-corrected McNemar exact tests on the paired decision flips. Sweeping each identifier's decision threshold over its confidence score $c_i$ traces an AUROC-style frontier, making any tradeoff between suppressing one error direction and inflating the other directly visible rather than fixed at one arbitrarily chosen operating point.
+
+\subsection{In-Context Localization and Adaptive Attack}
+\textbf{Challenge.} An identifier evaluated only on pre-segmented span pairs is never tested on finding a disguised span in the first place; deployed context windows are continuous and unsegmented, so boundary detection is a genuinely separate failure mode from classification.
+
+\textbf{Insight.} Embedding validated items at controlled depths inside long, unsegmented transcripts is what turns ``does position or context length matter'' from an assumption into a depth-stratified, measurable quantity --- and the same embedded-transcript infrastructure supports a second, independent stress test: whether an attacker with query access to the strongest identifier can widen the gap beyond what a static rewrite achieves.
+
+\textbf{Method.} Validated GovSpan-Adv items are embedded, without given span boundaries, at controlled depths (early, middle, late thirds) inside long transcripts built from unrelated filler conversation. Identifiers must jointly localize (span-level F1 with IoU $\geq 0.5$ overlap credit) and classify each embedded item, with miss-pin rate reported per depth tercile. In a final adaptive round, the rewriter is given bounded query access to the best-performing identifier from the isolated-pair stage and re-runs Evade/Spoof against it, measuring whether an adaptive attacker degrades identification beyond what the static rewrite achieved.
+
+\subsection{Blind Boundary Audit}
+\textbf{Challenge.} An aggregate error rate silently blends two different things --- an identifier being genuinely wrong, and a label being genuinely contested once full context and speaker authority are taken into account --- and the two are indistinguishable without a dedicated check.
+
+\textbf{Insight.} A blind re-annotation pass, run independently of the original labeling process and given full context, is the only way to separate ``the identifier failed'' from ``the ground truth itself was ambiguous,'' which is what makes a robustness claim in this space checkable rather than assumed.
+
+\textbf{Method.} Every item on which the identifier under audit errs, plus a matched random sample of items it gets right, is re-annotated blind by two independent annotators given the item's full surrounding context. Cases where both annotators agree with the original gold label are counted as genuine identifier failures; cases where annotators split from each other or from gold are counted as contested. The contested fraction is reported with a Wilson confidence interval, decomposing the headline robustness gap into an identifier-attributable component and a ground-truth-ambiguity component.
+
+\subsection{Cross-Family Confound Ablation}
+\textbf{Challenge.} Two of the five identifier families under test adapt mechanisms from prior work whose model family may coincide with the rewriter's; if so, part of any measured robustness gap could reflect that shared family's own self-consistent notion of register rather than a family-independent force/register decoupling.
+
+\textbf{Insight.} Swapping the rewriter's model family while holding the identifier fixed is the one manipulation that isolates ``the gap is a genuine, family-independent property of the disguise'' from ``the gap is an artifact of two systems from the same family agreeing with each other.''
+
+\textbf{Method.} The full rewrite-and-measure pipeline is re-run with the adversarial rewriter's model family swapped for a disjoint alternative, holding the identifier and all other protocol details fixed, and the resulting robustness gap for the primary identifier is compared against the original-family measurement.
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Datasets.} GovSpan-Adv (constructed) --- approximately 300 constraint spans drawn from TensorTrust's released, human-written defense-prompt corpus (real access-control rules), plus approximately 300 non-constraint spans sampled from LMSYS-Chat-1M, length- and topic-matched to the constraint spans; every span carries a validated ground-truth label (target inter-annotator $\kappa \geq 0.7$) before any rewrite is applied. A second, structurally different constraint-source pool --- agent/system-prompt policy documents, to be assembled from publicly documented agent-framework policy templates rather than TensorTrust's game-derived rules alone --- is included specifically to address source-pool representativeness: reporting the robustness gap per source, not only pooled, is what lets cross-source consistency serve as the generalization check for the headline finding. PrefEval is used as a secondary transfer check: whether Stage-1 identifiers flag PrefEval's implicit preference statements as pin-worthy, bridging identification scores to an existing long-horizon retention benchmark.
+
+\textbf{Baselines} (sanity-check comparators, not competitors to beat --- this is a measurement study, and no research question here is framed as ``our identifier beats baseline X''). A keyword/deontic-cue heuristic matcher, run only on original (non-adversarial) phrasing, is the trivial/no-mechanism control: if it already fails on original phrasing, identification is hard even without an adversary; if it succeeds on original but collapses on adversarial phrasing, that specifically justifies studying the adversarial gap. A cross-family rewriter ablation (RQ8) isolates whether any measured gap is register-disguise fragility rather than attacker-defender family self-consistency. A second, distinct confound --- that an identifier might key on spurious length or topic statistics correlated with the label rather than on force or register at all --- is addressed by construction (matching constraint and non-constraint spans on token length and embedding-cluster topic) rather than by a dedicated research question; that construction choice is itself verified, not merely asserted, by a pre-registered corpus-validity check reported alongside the main results: a two-sample distributional test (e.g., Kolmogorov--Smirnov on span length; cosine-similarity distribution on topic embeddings) confirming no significant length or topic gap remains between the matched constraint and non-constraint pools before any identifier is run, analogous in role to the annotation-quality $\kappa$ reported for labels.
+
+\textbf{Identifier families under test.} A keyword/deontic-cue heuristic (regex over modals, imperatives, ``always/never/must''); a fine-tuned span classifier trained on original, non-adversarial pairs; a zero-shot prompted LLM-as-judge (model family disjoint from the rewriter); a position/privilege-signal identifier adapting ASIDE's channel-derived role mechanism (not ASIDE's own reported results); and a cumulative-context prompted monitor adapting SeqMonitor's trajectory-level architecture (not SeqMonitor's own reported results).
+
+\textbf{Metrics.} Miss-pin rate and false-pin rate per identifier per direction; the robustness gap $\Delta$ (adversarial $-$ original error) and its AUROC-swept frontier; span-level F1 with IoU $\geq 0.5$ overlap credit for the localization extension; Cohen's $\kappa$ for annotation quality; the contested-label fraction with Wilson confidence intervals.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.6em]
+\item RQ1 --- Does the validity gate reliably certify label-preserving rewrites?
+\item RQ2 --- Does validated adversarial phrasing degrade identification relative to original phrasing?
+\item RQ3 --- Does miss-pin dominate false-pin under adversarial phrasing?
+\item RQ4 --- Does suppressing one error direction mechanically inflate the other?
+\item RQ5 --- Does identification degrade further when constraints must be localized, not just classified?
+\item RQ6 --- Does an adaptive attacker widen the gap beyond a static rewrite?
+\item RQ7 --- How much of the measured fragility is contested ground truth rather than identifier failure?
+\item RQ8 --- Is the measured gap stable to a swap of the rewriter's model family?
+\end{enumerate}
+
+\subsubsection{RQ1: Does the validity gate reliably certify label-preserving rewrites?}
+\textbf{Setup.} Apply Evade and Spoof to the full GovSpan-Adv base corpus; measure the fraction of raw rewrites certified on first generation pass by the entailment back-check and two-annotator validation, and the inter-annotator $\kappa$ on the validation decision itself.
+
+\textbf{Expected outcome.} The gate certifies 70--80\% of raw rewrites on first pass (20--30\% rejection and regeneration), with post-gate inter-annotator $\kappa \geq 0.7$ on rewrite validity.
+
+\textbf{Falsification condition.} Refuted if post-gate $\kappa$ falls below 0.7 (the validity judgment itself is not reliable enough to trust downstream measurement), or if the certified fraction is so low (e.g., below 40\%) that the rewrite operators cannot produce enough valid items to power the remaining research questions, or so high (e.g., above 95\%) that the gate is suspected of being too permissive to be doing real work.
+
+\textbf{Hypothesis (plain language).} The rewrite operators can be certified as genuinely label-preserving at a workable yield, and that certification judgment is itself reliable across annotators.
+
+\textbf{Metrics.} Certification (pass) rate; inter-annotator $\kappa$ on the validity judgment.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ2: Does validated adversarial phrasing degrade identification relative to original phrasing?}
+\textbf{Setup.} For each of the five identifier families, compare decisions on original versus validity-gated adversarial phrasing of the same underlying items, per direction. Pilot stage: 2 backbones $\times$ 2 phrasing conditions $\times$ 300 pairs per direction. Statistical test: Holm-corrected McNemar exact test on paired decision flips, one test per identifier $\times$ direction (10 tests), $\alpha = 0.05$; effect sizes as discordant-pair odds ratios with 95\% CIs.
+
+\textbf{Sample-size rationale.} $n = 300$ pairs per direction is sized to detect an approximately 8-percentage-point paired error-rate shift at power $\approx 0.8$ via McNemar's test.
+
+\textbf{Expected outcome.} For at least four of the five identifier families, adversarial error is significantly higher than original-phrasing error in at least one direction; for the pre-registered primary identifier (LLM-as-judge), the mean robustness gap $\bar\Delta \geq 0.10$ across the two directions.
+
+\textbf{Falsification condition.} Refuted for the primary identifier if the Holm-corrected McNemar test finds no significant original-versus-adversarial difference ($p \geq 0.05$) or if $\bar\Delta < 0.10$ --- i.e., if validated register disguise fails to move identification error materially, the central fragility claim does not hold, and the finding pivots to characterizing current identification as robust to semantic-register disguise specifically (as distinct from structural forgery).
+
+\textbf{Hypothesis (plain language).} Current identifier families are not adversarially robust to validated register disguise, even though the underlying binding force never changes.
+
+\textbf{Metrics.} Per-identifier, per-direction miss-pin/false-pin rate and $\Delta$; McNemar $p$-values (Holm-corrected); discordant-pair odds ratios with 95\% CIs.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ3: Does miss-pin dominate false-pin under adversarial phrasing?}
+\textbf{Setup.} Under adversarial phrasing, compute the difference (miss-pin rate $-$ false-pin rate) per identifier, pooled and per backbone; construct a 10,000-resample bootstrap 95\% CI on the difference.
+
+\textbf{Expected outcome.} The bootstrap CI on (miss-pin $-$ false-pin) under adversarial phrasing lies strictly above 0, indicating miss-pin dominates.
+
+\textbf{Falsification condition.} Refuted if the CI includes 0 (no dominant direction) or lies strictly below 0 (false-pin dominates instead) --- either would re-center the threat model toward spoofing (authority laundering) rather than evasion as the primary risk.
+
+\textbf{Hypothesis (plain language).} Flattening an imperative rule into casual register is an easier way to fool an identifier than inflating idle talk into a convincing, gate-passing rule --- so silent constraint evasion is the dominant risk.
+
+\textbf{Metrics.} (miss-pin $-$ false-pin) rate difference under adversarial phrasing, with bootstrap 95\% CI.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ4: Does suppressing one error direction mechanically inflate the other?}
+\textbf{Setup.} For each identifier, sweep the decision threshold over its confidence score across the full range and trace miss-pin rate and false-pin rate as a joint frontier under adversarial phrasing; test whether the two rates move in opposite directions as the threshold varies (negative correlation across the swept range).
+
+\textbf{Expected outcome.} Miss-pin rate and false-pin rate trace a negatively sloped frontier for every identifier family --- no single threshold minimizes both simultaneously.
+
+\textbf{Falsification condition.} Refuted if any identifier family exhibits a threshold range where both miss-pin and false-pin rates are simultaneously at or near their respective minima (a non-negative-sloped region), which would mean the evasion/spoofing tradeoff is not fundamental to that identifier's decision structure.
+
+\textbf{Hypothesis (plain language).} Hardening an identifier against one adversary's goal necessarily softens it against the other's --- there is no free operating point.
+
+\textbf{Metrics.} Threshold-swept miss-pin/false-pin curve; sign of local slope across the curve; AUROC.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ5: Does identification degrade further when constraints must be localized, not just classified?}
+\textbf{Setup.} Embed validated GovSpan-Adv items at controlled depths (early/middle/late thirds) inside approximately 100 long transcripts (roughly 8k--32k tokens) built from unrelated filler conversation, 3--5 items per transcript, without given boundaries. Compute span-level F1 (IoU $\geq 0.5$) and miss-pin rate per depth tercile; compare in-context miss-pin rate against the isolated-pair miss-pin rate from RQ2 via paired bootstrap.
+
+\textbf{Expected outcome.} In-context miss-pin rate exceeds isolated-pair miss-pin rate, with the paired-bootstrap 95\% CI on the difference strictly above 0; degradation is largest at the earliest depth tercile.
+
+\textbf{Falsification condition.} Refuted if in-context miss-pin rate is statistically indistinguishable from isolated-pair miss-pin rate (the paired-bootstrap CI includes 0) --- that would mean the cheap isolated-pair pilot already upper-bounds the deployed localization risk, a positive methodological finding in its own right.
+
+\textbf{Hypothesis (plain language).} Requiring an identifier to first find a disguised constraint, not just classify a span it is handed, makes the problem measurably harder, especially for constraints introduced early in a long transcript.
+
+\textbf{Metrics.} Span-level F1 (IoU $\geq 0.5$); depth-stratified miss-pin rate; paired-bootstrap CI on (in-context $-$ isolated) miss-pin.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ6: Does an adaptive attacker widen the gap beyond a static rewrite?}
+\textbf{Setup.} Give the rewriter bounded query access ($\leq 20$ queries per item) to the best-performing Stage-1 identifier, and re-run Evade/Spoof adaptively against it within the in-context transcripts from RQ5; compare the resulting robustness gap $\Delta_{\text{adaptive}}$ against the static-rewrite $\Delta_{\text{static}}$ for the same identifier via paired bootstrap.
+
+\textbf{Expected outcome.} $\Delta_{\text{adaptive}}$ exceeds $\Delta_{\text{static}}$, with a paired-bootstrap 95\% CI on the difference strictly above 0.
+
+\textbf{Falsification condition.} Refuted if $\Delta_{\text{adaptive}}$ is statistically indistinguishable from or smaller than $\Delta_{\text{static}}$ (the CI on the difference includes or falls below 0) --- that would mean query access to the identifier does not meaningfully help an attacker beyond a static, validity-gated rewrite.
+
+\textbf{Hypothesis (plain language).} An attacker who can query the identifier directly can degrade identification further than one restricted to a single, static disguise attempt.
+
+\textbf{Metrics.} $\Delta_{\text{adaptive}}$ vs. $\Delta_{\text{static}}$; paired-bootstrap 95\% CI on the difference.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ7: How much of the measured fragility is contested ground truth rather than identifier failure?}
+\textbf{Setup.} Re-annotate, blind and with full context, every item on which the identifier under audit errs (across RQ2--RQ6 conditions) plus a matched random sample of correctly-decided items, using two independent annotators; classify each error as identifier-failure (annotators agree with gold) or contested (annotators split or disagree with gold); compute the contested fraction with a Wilson 95\% CI.
+
+\textbf{Expected outcome.} The contested-label fraction among adversarial errors has a Wilson 95\% CI upper bound below 0.50 --- a majority of measured fragility is genuine identifier failure, not label ambiguity.
+
+\textbf{Falsification condition.} Refuted if the Wilson CI upper bound on the contested fraction is at or above 0.50 --- that would mean the measured ``adversarial fragility'' is majority a ground-truth well-posedness problem rather than an identifier property, and the paper's central contribution shifts from a robustness measurement to a contested-case taxonomy.
+
+\textbf{Hypothesis (plain language).} Most of the measured robustness gap reflects identifiers actually getting it wrong, not an unavoidably ambiguous ground truth.
+
+\textbf{Metrics.} Contested-label fraction with Wilson 95\% CI; a small taxonomy of contested cases.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ8: Is the measured gap stable to a swap of the rewriter's model family?}
+\textbf{Setup.} Re-run the full rewrite-and-measure pipeline with the adversarial rewriter's model family swapped for a disjoint alternative, holding the primary identifier and all other protocol details fixed; compare the resulting $\Delta$ against the original-family measurement from RQ2.
+
+\textbf{Expected outcome.} The measured $\Delta$ for the primary identifier changes by no more than 50\% relative to the original-family measurement.
+
+\textbf{Falsification condition.} Refuted if $\Delta$ moves by more than 50\% relative under the family swap --- that would indicate the originally measured gap was substantially an artifact of attacker-defender model-family self-consistency rather than a family-independent property of register disguise.
+
+\textbf{Hypothesis (plain language).} The measured robustness gap is a genuine property of the disguise, not an artifact of the rewriter and identifier happening to share a model family's notion of register.
+
+\textbf{Metrics.} Relative change in $\Delta$ under the family-swapped rewriter vs. the original-family measurement.
+
+\textbf{Result.} \ph
+
+\vspace{0.5em}
+\noindent\textbf{Further evaluation.} With more time, a natural extension is a downstream, end-to-end pinning-budget study --- given a fixed pin budget and the measured false-pin rates here, how often does spoofing actually exhaust the budget or crowd out a genuine constraint in practice? This is explicitly out of scope here because it introduces independent failure modes (budget allocation policy, retrieval behavior) that this study deliberately brackets in order to isolate the identification stage cleanly; the PrefEval transfer check is a first, minimal bridge toward that larger question rather than a substitute for it.
+
+\section{Related Work}
+
+The three closest existing treatments of this paper's problem approach it from different sides without closing it, and it is worth stating the delta plainly before surveying the wider landscape. SEP (Zverev et al.) formalizes instruction--data separation and measures it behaviorally, as whether a model executes a probe embedded in data --- content-side and quantitative, but its measurand is the model's end behavior on a probe, one-directional, without certified register rewrites, and with no per-span retention decision for an identifier to get right. ASIDE offers the closest architectural treatment of that formulation of ``which text is executable and binding versus merely conversational data,'' but it answers the question by relocating the role label into a fixed embedding-subspace rotation assigned at ingestion, not by computing it from content --- the label is given, not identified, which is exactly the assumption this paper's adversary is built to exploit. SeqMonitor offers the closest existing treatment of evasion via benign-looking surface form, reframing safety monitoring as sequence labeling over an accumulating conversation prefix --- but its threat model is one-directional (harmful intent hidden in innocuous subtasks) and trajectory-level (a binary halt decision), with no notion of the opposite failure (chit-chat spoofing its way into authority) and no per-span retention decision to evaluate. None of the three measures span-level constraint-identification error under a validated, bidirectional register-disguise attack, which is precisely the gap this paper is built to close.
+
+\textbf{Instruction--data separation and role-based authority.} SEP (Zverev et al.) defines instruction--data separation formally and measures it with a behavioral separation score --- whether a probe embedded in the data channel gets executed --- establishing that current models separate poorly even without an adaptive adversary; but its unit of measurement is model behavior on a probe, not a per-span identification decision, and its probe variations are not certified force-preserving register rewrites. ASIDE assigns instruction-versus-data role by a fixed orthogonal rotation applied to data-token embeddings, requiring only architectural and instruction-tuning changes; the Instruction Hierarchy trains models to prioritize instructions by channel role (system over user over tool), the canonical statement of the privilege-by-position paradigm ASIDE's baseline instantiates. The latter two establish that role can be assigned reliably once it is known which channel a token arrived through, but neither computes role from content itself --- a rule delivered in a low-privilege channel receives no special status, and filler delivered in a privileged channel is over-trusted --- leaving span-level, content-based identification under adversarial register pressure untested by all three.
+
+\textbf{Structural and behavioral attack-defense benchmarks.} ChatInject shows that unprivileged tool content wrapped in forged chat-template role tags is treated as high-priority conversational structure, directly instantiating a structural version of the spoofing threat; TensorTrust crowdsources a large corpus of human-authored prompt-injection attacks and real defense prompts, filtered for cross-model transferability into hijacking and extraction benchmarks. Both measure attack success at the level of end-to-end behavior compromise, never the span-level identification error that produced it, and both operate through structural forgery or goal hijack rather than the purely semantic register disguise this paper isolates.
+
+\textbf{Label-preserving style and register attacks.} StyleAdv (Qi et al.) established that text-style transfer yields label-preserving adversarial examples against text classifiers --- the method family this paper's rewriter belongs to, and a precedent we adopt rather than claim. The rewriter differs in what it certifies and how: the preserved invariant is binding force --- an indexical, pragmatic property checked per item by an obligation-entailment back-check plus independent human validation --- rather than a topical class label preserved in expectation; the attack runs bidirectionally with opposed adversary goals (evasion and spoofing); and certification precedes measurement, making the force/register decoupling a checked precondition rather than a modeling assumption.
+
+\textbf{Long-horizon retention and memory architectures.} PrefEval curates explicit and implicit user-preference statements interleaved with long, unrelated distractor conversation and evaluates whether a model infers, retains, and applies them correctly across sessions; MemoryCallback stores and retrieves intermediate memory states via learned callback queries specifically to fix ``premature pruning,'' where information is overwritten before its relevance becomes clear. Both demonstrate that current systems do fail at retention over long horizons, but PrefEval's distractors are benign rather than adversarially disguised, conflating inference, retention, and application into one following-failure signal, and MemoryCallback assumes salience can eventually be reassessed --- an assumption a disguised constraint engineered to look unimportant at write time defeats by construction. TrustMem gates memory-write operations behind a learned transition verifier scoring coverage, preservation, and faithfulness --- but its threat model is benign consolidation error (omission, corruption, hallucination), not an adversary disguising a rule's register so that the write-time decision itself goes wrong: a verifier that checks a transition faithfully preserves what was recognized cannot recover a constraint that was never recognized as one.
+
+\textbf{Fixed-taxonomy guardrails and cooperative constraint extraction.} R2-Guard combines category-specific unsafety classifiers with an explicit probabilistic reasoning layer to enforce inter-category safety logic robustly against jailbreaks that exploit independent per-category decisions; RECAST mines explicit constraints from cooperative instruction data into a reusable pool, verified for response compliance and used as an RL reward signal. Both demonstrate robust classification or verification machinery, but over a fixed, enumerable safety taxonomy or under fully-stated, cooperative conditions respectively --- neither transfers to recognizing an arbitrary, adversarially disguised, open-ended governance constraint. NormBench extends the cooperative line to span-grounded deontic structure --- parsing which statutory clause overrides which --- but its inputs are explicitly normative legal and policy documents; whether an arbitrary conversational span is a constraint at all, under adversarial register pressure, is outside its scope.
+
+\section{Conclusion}
+
+This work reframes a quietly assumed precondition of memory-pinning --- that governance constraints can first be reliably picked out from surrounding content --- as a measurable, falsifiable question rather than a settled fact. The central methodological wager is that binding force and surface register are separable enough that a validity-gated rewrite can move one while holding the other fixed, and that doing so, together with per-direction reporting, in-context localization, and a blind contested-label audit, is what makes ``is identification adversarially robust'' checkable rather than merely asserted. Whichever direction the results run, the finding is decision-relevant: material degradation under validated register disguise would mean systems currently trusting position- or format-based identification are exposed to a live, easily executed attack surface; a clean or contested-dominated result would instead redirect defensive attention toward structural forgery or downstream pinning-budget mechanics rather than semantic disguise. Two limitations bound this claim from the outset. First, the study is deliberately scoped to the identification stage alone; a robust identifier does not guarantee robust end-to-end constraint preservation once budget limits and retrieval behavior are introduced, which the PrefEval transfer check only partially bridges. Second, because constraint-hood can be genuinely indexical, the boundary audit's contested-fraction estimate is itself a target for refinement --- a natural next step is a richer, context-sensitive formalization of when constraint-hood is well-posed at all, rather than treating the current binary label as the last word.
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section*{Pre-handoff checklist}
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Organization/navigation} --- narrative flows problem $\to$ method $\to$ experiments $\to$ related work without forward references to undefined terms; each Methodology subsection and each RQ is self-contained given the Problem Definition's notation.
+\item \textbf{Terminology discipline} --- ``binding force,'' ``surface register,'' ``miss-pin/false-pin,'' ``robustness gap $\Delta$,'' ``contested'' each defined at first use in Problem Definition, used consistently thereafter; no internal stage IDs (\texttt{sp\_*}, \texttt{m\_*}, \texttt{rq\_*}) leaked into prose --- checked directly against the discussion pipeline log.
+\item \textbf{Notation with worked example} --- the formal setup section defines $(S, s_i, y_i, f_\theta, \hat y_i, c_i, \text{Evade}, \text{Spoof}, V)$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+\item \textbf{RQ framing matches outcomes} --- all 8 RQs are graded/quantitative (rates, CIs, relative changes), each answered in its own subsection with an explicit falsifiable expected outcome and a distinct falsification condition, not a binary yes/no.
+\item \textbf{No typesetting artifacts} --- only explicit placeholder markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+\item \textbf{Artifact plan} --- GovSpan-Adv (the validated corpus plus its validity-gated rewrites and per-item validation metadata) is the natural release artifact; not yet built, so not claimed as available.
+\end{itemize}
+
+\section*{Hand-off}
+This is a draft, not a finished paper --- experiments have not run. Natural next steps: prose polish and venue-specific LaTeX formatting once a target venue is chosen, or revising an earlier stage if piloting surfaces a problem (e.g., if the validity gate's rejection rate in RQ1 is far outside the 20--30\% design target).
+
+\end{document}

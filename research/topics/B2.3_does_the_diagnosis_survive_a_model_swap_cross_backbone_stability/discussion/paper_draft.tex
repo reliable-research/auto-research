@@ -1,0 +1,293 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{natbib}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{}{0em}{}
+
+\title{\textbf{Same Fault, Different Verdict?\\ Cross-Backbone Stability of LLM-Agent Failure Attribution}}
+\author{}
+\date{}
+
+\newcommand{\ph}{\textit{[placeholder --- fill in after experiments are run]}}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+
+\begin{quote}
+\small\textit{Assembled from the six confirmed stage outputs of an \texttt{auto-research-discussion} run (seed topic B2.3), post research-taste audit (\textcolor{ForestGreen}{\textbf{PASS}}). Revised 2026-08-21 per \texttt{review\_2026-08.md}: repositioned against Who\&When Pro and the 2025--26 attribution wave (concede-and-claim), judge-axis universal negative narrowed, rewriter-fidelity gate added, RQ7's Spearman criterion fixed to the exact $K$-adjusted threshold, compute-budget gate added. Status: \textbf{specification / paper draft --- no experiments have been run.} All numbers below are pre-registered design targets, not results.}
+\end{quote}
+
+\begin{abstract}
+Failure-attribution frameworks for LLM-agent pipelines label a failed task trace as a planning, tool-use, or execution failure, and these labels increasingly drive which team patches what and whether a project keeps its current backbone. Yet every attribution framework we are aware of validates its labels inside one fixed execution stack, so a label that looks like a property of the failure itself may in fact be a property of the particular backbone that produced and judged the trace --- an assumption practitioners lean on every time they swap the underlying model without re-checking the diagnosis. We hold the \emph{cause} of an agent failure fixed by construction, via programmatic single-layer fault injection over GAIA and WebArena-style tasks, and ask whether a fixed, pre-registered attribution procedure's label survives a swap of the executing backbone. Every agreement statistic is gated on the failure-overlap rate rather than reported blind; a judge-by-agent factorial crossing vendor-disjoint judges with agent backbones apportions any instability into agent-driven, judge-driven, and surface-style shares; and a ground-truth accuracy check exposes whether backbones that agree with each other also agree with the injected layer. We report which of these sources dominates, and whether failure attribution is a property of the task or, in part, of the backbone that happened to produce it.
+\end{abstract}
+
+\section{Introduction}
+
+Autonomous LLM agents now run multi-step pipelines against real tools and real environments, and when one of these pipelines fails, someone has to say why. Over the past two years this ``why'' has become a formalized, benchmarked task in its own right: a failure-attribution tool ingests a failed trace and outputs a label --- the plan was wrong, a tool call was misused, the final execution step went astray --- and teams use that label to decide which component to patch, which benchmark result to trust as evidence a fix worked, and increasingly, whether the underlying LLM behind the agent is worth keeping. Attribution has, in other words, quietly become load-bearing infrastructure for how agent failures get triaged.
+
+Yet a basic question about this infrastructure remains unexamined: does the label survive if the backbone changes? Attribution tools are built and validated against traces produced by one execution stack --- one agent backbone, often judged by one backbone as well --- and every downstream user then treats the resulting label as if it described the failure, not the pairing of failure and backbone that produced the trace. Practitioners routinely swap the underlying LLM behind an agent scaffold for cost, latency, or a capability upgrade, all while continuing to trust a diagnostic tool that was never re-validated against that swap. If the label changes when the backbone does, then every decision built on it --- which module a team patches, which paper's claimed fix gets credited with an improvement --- is really a claim about a (task, backbone) pair, silently reported as a claim about the task alone.
+
+The nearest existing work approaches this gap from directly inside the attribution problem but never crosses the axis this paper is built to test. Who\&When \citep{WhoWhen2025} formalizes automated failure attribution as a first-class judging problem, defining a decisive error as the earliest agent-step pair whose correction flips a failed trajectory to success, and evaluates several LLM-judge strategies for finding it; AgenTracer \citep{AgenTracer2025} scales the same idea by programmatically injecting faults into successful trajectories so the injected step is the decisive error by construction, then trains a compact tracer on the resulting supervision. Both are the closest work to this paper --- both attribute failures via a decisive-error definition applied to a single execution stack --- and the line has since industrialized: Who\&When Pro \citep{WhoWhenPro2026} scales prefix-replay fault injection to a 12,326-trajectory golden-label benchmark across 26 benchmarks and reports systematic differences in how attributor models from different families label the \emph{same} fixed traces. Yet none of this work --- including the newest wave of attribution methods and benchmarks it anchors --- re-runs the same task and the same injected fault under more than one agent backbone, so none can say whether its labels are a property of the failure or of the backbone that generated the trace being labeled; that is precisely the axis this paper adds. A second, adjacent line of work makes the judge side of the pipeline independently suspect: LLM judges have been shown to systematically favor outputs from a generator related to themselves \citep{PreferenceLeakage2025}, and to be flipped by structured surface perturbations of a response discovered automatically \citep{BiasScope2025} --- both demonstrated on short pairwise-preference tasks --- and, closest to our judge axis, inter-backbone agreement among judge backbones reading agent trajectories has been measured directly (and found low) for requirement-satisfaction judgments \citep{AaaJBackbone2026}; but no existing design varies the judge backbone and the agent backbone jointly, on failure-layer attribution, against an injected ground truth, so judge-side and agent-side variance have never been separated in an attribution setting. A third, more distant line establishes backbone-level comparison as a legitimate axis of evaluation at all \citep{BreakingBackbones2025}, but only for attack-susceptibility scores on single model calls, deliberately stripped of the multi-step propagation that makes a failure-layer diagnosis ambiguous in the first place.
+
+Turning ``does the label survive the swap'' into a measurable question surfaces its own difficulties. Programmatic fault injection can hold the injected layer fixed across every backbone, but nothing holds the resulting evidence fixed: a stronger backbone may simply recover from an injected fault and never produce a failure to attribute at all, and because this recovery is a function of backbone capability rather than random chance, the very pool of failures available for comparison shrinks in a structured, not incidental, way. Even among the failures that do occur, a single fixed judge reading traces from many different agent backbones cannot tell ``the agents behaved differently'' apart from ``the judge is inconsistent across agents'' --- instability has two possible sources, and no amount of additional trace data disentangles them unless the judge itself is also varied. A disagreement between backbones on the final label is itself ambiguous: it could mean the underlying failure evidence genuinely diverged and the judge faithfully reported that divergence, or it could mean the evidence was similar but got labeled inconsistently --- and only a check against the injected ground truth, not agreement between backbones alone, can tell these apart. Compounding all of this, the plan/tool/execution boundary is not a natural category --- a bad plan routinely causes a malformed tool call --- so a fixed codebook necessarily discards some genuine ambiguity rather than resolving it, and every model family's traces carry that family's own verbosity and formatting, giving a text-reading judge a surface-level shortcut that has nothing to do with where the failure occurred.
+
+Our approach turns each of these obstacles into a design decision rather than a hedge. Every agreement statistic is reported beside the failure-overlap rate, and a metric that tolerates missing (recovered) cells is pre-committed as the primary statistic whenever overlap runs low, so censoring becomes a measured quantity instead of a silent bias. A judge-by-agent factorial crosses several vendor-disjoint judge backbones against several agent backbones over the identical trace set, apportioning any instability into an agent-driven share, a judge-driven share, and their interaction, rather than reporting one conflated number. Every failing cell is cross-tabulated against the injected ground-truth layer, exposing whether backbones that agree with each other also agree with the truth --- the distinction between attribution being \emph{stable} and attribution being \emph{correct}. A style-normalized and paraphrased rendering of every trace, produced by a rewriter model distinct from every agent and judge in the study, isolates how much of any disagreement is driven by surface form rather than substance. And a fixed, pre-registered codebook with an explicit tie-break rule, validated against human annotators before use, converts residual category ambiguity into a reported sensitivity rather than an invisible source of noise.
+
+We evaluate this design across a fault-injection suite built over GAIA and WebArena-style tasks, executed under a backbone grid crossing model family with capability tier, and complemented by a check against Who\&When's \citep{WhoWhen2025} naturally-failed logs to see whether the same finding holds outside synthetic fault injection.
+
+In summary, we contribute:
+\begin{itemize}[leftmargin=1.4em]
+\item An identification of the asymmetry underlying automated failure attribution for LLM agents: fault injection fixes the cause of a failure across backbones, but nothing fixes the evidence an attribution procedure must read, so every plan/tool/execution label silently asserts an invariance its measurement pipeline never established.
+\item A censoring-aware measurement protocol that gates every cross-backbone agreement statistic on the failure-overlap rate, promoting a partial-overlap-tolerant statistic to primary status whenever recovery-driven missingness runs high, rather than reporting agreement over an unreported, backbone-dependent subsample.
+\item A judge-by-agent factorial design that apportions attribution instability into agent-driven, judge-driven, and surface-style-driven shares from a single fitted structure, together with a ground-truth accuracy check that separates label \emph{stability} from label \emph{correctness}.
+\item An empirical account of whether current LLM-agent failure attribution is a property of the task or, at least in part, of the backbone that happened to produce and judge the failure --- and, if the latter, whether that dependence is structured by model family and capability tier or is idiosyncratic per backbone.
+\end{itemize}
+
+\section{Problem Definition}
+
+\noindent\textbf{Formal setup.} Consider a task set $T$ and a set of fault layers $L=\{\text{plan},\text{tool},\text{exec}\}$, each with a programmatic injector $\iota_\ell$. A cell $c=(t,\ell)\in T\times L$ carries a machine-readable injection record $r_c$ and a ground-truth layer $\ell^*(c)=\ell$, fixed at injection time. A backbone set $B$, $|B|=K$, serves as the agent's executing model under one fixed scaffold; running cell $c$ under backbone $b$ yields a trace $\tau(c,b)$ and a failure flag $F(c,b)\in\{0,1\}$ from the task's programmatic checker. A judge set $J$ applies an attribution procedure $A_j:\tau\mapsto L$ under a frozen prompt and codebook, optionally reading a style-normalized trace $\nu(\tau)$ instead of the raw one. The failing intersection $\mathcal{I}=\{c : \forall b\in B,\ F(c,b)=1\}$ is the set of cells that fail under every tested backbone, with failure-overlap rate $\Omega=|\mathcal{I}|/|T\times L|$. The object of study is the distribution of labels $\{A_j(\tau(c,b))\}_{b\in B}$ over $c\in\mathcal{I}$, relative to $\ell^*(c)$, and how that distribution decomposes across $B$, $J$, and $T$.
+
+\noindent\textbf{Why this is hard.} Fixing $\ell^*(c)$ at injection time does not fix what any attribution procedure actually observes: the trace $\tau(c,b)$ is a function of the executing backbone $b$, and a backbone strong enough to route around an injected fault contributes $F(c,b)=0$ instead of a labelable failure --- so $\mathcal{I}$ itself is a backbone-dependent, non-random subsample of $T\times L$, and any agreement statistic computed on it is uninterpretable unless $\Omega$ is reported beside it. Even restricted to $\mathcal{I}$, a single judge $j$ reading $\tau(c,b)$ for many values of $b$ cannot separate variation attributable to $b$ from variation attributable to $j$'s own inconsistency across producers, so apportioning instability requires observing the same $\tau(c,b)$ under more than one $j$. Disagreement in $\{A_j(\tau(c,b))\}_{b}$ is itself ambiguous between two situations --- the traces genuinely differ and are each labeled correctly, or the traces are similar and are labeled inconsistently --- and only a comparison against $\ell^*(c)$, not agreement among backbones alone, distinguishes them. Finally, $L$ is a stipulated partition of a space where single failures can genuinely span two layers, so a fixed decision rule for resolving that ambiguity is required before any of the above can even be measured, and the informational content of $\tau(c,b)$ is entangled with each backbone's characteristic surface style unless that style is experimentally decoupled from content.
+
+\section{Method Overview}
+
+At a conceptual level, the study is a single measurement pipeline with six cooperating parts. A fault-injection suite and a multi-backbone execution harness produce, for every cell, a trace and a failure flag under every tested backbone; a censoring-aware metric strategy turns the resulting failing-cell set into a stability verdict that stays interpretable even when that set is small; a judge-by-agent factorial turns the same traces into a decomposition of \emph{why} the verdict looks the way it does; a ground-truth accuracy check and a style-normalization arm each isolate one specific alternative explanation for an observed disagreement; and a family-by-capability crossing asks whether whatever instability remains is structured or idiosyncratic.
+
+The \textbf{censoring-aware stability protocol} takes the per-backbone failure flags and produces a stability verdict --- stable, partially stable, or model-specific --- gated on the failure-overlap rate, promoting a missingness-tolerant statistic to primary status whenever overlap runs low. The \textbf{judge-by-agent factorial} takes the same failing traces, read by several vendor-disjoint judges instead of one, and apportions label instability into agent-driven, judge-driven, and interaction shares. The \textbf{manifestation-accuracy check} takes the failing intersection and cross-tabulates cross-backbone agreement against the injected ground truth, exposing cells where backbones agree with each other but not with the truth. The \textbf{style-normalization arm} re-renders every trace through a content-preserving, style-stripping rewriter and re-judges it, isolating how much cross-backbone disagreement tracks surface form rather than substance. The \textbf{codebook tie-break gate} fixes one pre-registered decision rule for layer-spanning failures, validated against human annotators, and reports a sensitivity re-score under an alternative rule. The \textbf{family-capability crossing} structures the backbone grid by vendor lineage and capability tier, asking whether residual instability is patterned by either.
+
+\section{Methodology}
+
+\subsection{Censoring-Aware Stability Protocol}
+\textbf{Challenge.} A stronger backbone may simply recover from an injected fault rather than fail, so the set of cells available for a cross-backbone agreement statistic is itself a function of which backbones are being compared --- an unreported censoring structure can make any single agreement number vacuous.
+
+\textbf{Insight.} Censoring cannot be designed away, since recovery is a real backbone behavior rather than sampling noise, but it can be made visible: reporting the failure-overlap rate as a first-class quantity and pre-committing which statistic is authoritative under low overlap turns a hidden bias into a checkable design choice.
+
+\textbf{Method.} Fleiss' $\kappa$, computed over the failing intersection $\mathcal{I}$, is the primary stability statistic whenever the failure-overlap rate $\Omega \geq 0.5$; below that pre-registered threshold, Krippendorff's $\alpha$, computed over all failing (possibly partial) cells, becomes primary instead. Both the failure-overlap rate and per-backbone recovery rate are reported beside every agreement number, and a stability verdict (stable / partially stable / model-specific) is assigned only relative to pre-registered $\kappa$/$\alpha$ bands fixed before any data is collected.
+
+\subsection{Judge-by-Agent Factorial Decomposition}
+\textbf{Challenge.} Whenever one fixed judge reads traces produced by many different agent backbones, any observed label instability is compatible with two incompatible explanations --- the agents behaved differently, or the judge is inconsistent across agents --- and no amount of additional agent-side data can tell them apart.
+
+\textbf{Insight.} Only a design that varies the judge identity independently of the agent identity, while keeping judge--agent relatedness controlled, can attribute instability to a specific source rather than reporting an ambiguous aggregate; a single fitted structure over this crossed design also yields two separately falsifiable readouts --- the overall stability band and the per-layer ordering within it --- from one measurement pass.
+
+\textbf{Method.} Three vendor-disjoint judge backbones and six to eight agent backbones read the identical trace set. A cross-classified mixed-effects model regresses label match on task, agent-backbone, and judge-backbone random effects plus their interactions, yielding variance shares with bootstrap confidence intervals and likelihood-ratio tests. A 200-trace human-codebook subset, requiring Cohen's $\kappa \geq 0.7$ between annotators, anchors judge validity before any judge's labels are trusted; the subset is drawn by stratified random sampling over (agent backbone $\times$ injected layer) from pilot-stage failing traces and is held out of every headline estimate, keeping instrument validation disjoint from evaluation data.
+
+\subsection{Manifestation-Accuracy Check}
+\textbf{Challenge.} Agreement among backbones alone cannot distinguish ``backbones manifest and diagnose the fault identically and correctly'' from ``backbones manifest the fault differently but converge on the same wrong label'' --- both look identical in a simple pairwise-agreement number.
+
+\textbf{Insight.} Cross-tabulating agreement against the injected ground-truth layer exposes the agree-wrong cell directly, converting an otherwise invisible failure mode --- stable but inaccurate diagnosis --- into a reportable quantity rather than leaving it folded into an aggregate agreement statistic.
+
+\textbf{Method.} For every cell in the failing intersection, the joint outcome \{all backbones agree and match ground truth; all backbones agree but disagree with ground truth; backbones disagree\} is tabulated per backbone and per layer, alongside per-backbone accuracy against the injection record.
+
+\textbf{Pre-committed interpretation.} One further reading of any cross-backbone disagreement must be anticipated: an injected fault may genuinely cascade to a different decisive layer under a different backbone, in which case disagreement is faithful reporting of divergent downstream failures rather than measurement instability. The codebook's earliest-causally-decisive tie-break pins the ground truth to the injected layer in exactly this case, and the agree-wrong tabulation reports how often convergent labels part ways with it. The pre-committed reading is that the paper's re-scoping conclusion survives under either interpretation --- whether disagreement reflects unstable measurement or genuinely divergent causal manifestation, a single-backbone label still fails to transfer across the swap --- and only the stronger gloss that the judges themselves are unreliable would be withdrawn in the causal-divergence case.
+
+\subsection{Style-Normalization Arm}
+\textbf{Challenge.} Every trace produced by a given backbone carries that backbone's characteristic phrasing, verbosity, and formatting inseparably from its content, so there is no naturally occurring variation in the raw data that would let a statistical control alone separate ``the judge responds to backbone-identifying style'' from ``the judge responds to what actually happened.''
+
+\textbf{Insight.} Isolating the style contribution requires an experimental manipulation that holds content fixed while destroying backbone-identifying surface form, not a post hoc adjustment applied after the fact.
+
+\textbf{Method.} Every trace is additionally rendered through a fixed rewriter model --- distinct from every agent and judge backbone in the study --- that strips model-identifying tokens, canonicalizes tool-call formatting, and paraphrases reasoning text while preserving its content. The style-share is computed as the fractional drop in mean pairwise cross-backbone disagreement between the raw and style-normalized arms.
+
+\textbf{Rewriter-fidelity gate (pre-registered).} The paraphrase step is itself an instrument that can silently destroy the evidence it is supposed to preserve: a rewriter that flattens genuinely divergent failure evidence into similar-looking text would shrink normalized-arm disagreement for content reasons, inflating the style-share. Before any normalized-arm label enters an estimate, the rewriter must pass a content-fidelity check on a stratified sample of rewritten failing traces: the injected fault's machine-readable manifestation (from the injection record $r_c$) must remain identifiable in the rewritten trace, and judge accuracy against the injected ground truth on rewritten traces must not fall below its raw-arm counterpart by more than a margin fixed, together with the codebook hash, before Stage-2 judging. Rewrites failing the per-trace evidence check are regenerated once and otherwise excluded, with the exclusion rate reported beside the style-share; failing the sample-level gate blocks the normalized arm entirely and RQ5 is reported INCONCLUSIVE rather than computed on a compromised instrument.
+
+\subsection{Codebook Tie-Break Gate}
+\textbf{Challenge.} The plan/tool/execution boundary is stipulated rather than discovered from data, and a failure that genuinely spans two layers will be pushed to one side by whichever tie-break convention is chosen --- different conventions can produce different apparent disagreement rates even when nothing about backbone behavior has changed.
+
+\textbf{Insight.} A fixed tie-break rule cannot resolve genuine layer-spanning ambiguity, but it can convert an otherwise invisible source of disagreement into a measured, reportable sensitivity, pinning the label definition so that residual disagreement is attributable to backbone effects rather than to shifting category boundaries.
+
+\textbf{Method.} One pre-registered codebook fixes an earliest-causally-decisive-layer tie-break rule, validated by requiring Cohen's $\kappa \geq 0.7$ between two human annotators on a 200-trace subset before it is used for any LLM-judge labeling. The full backbone grid is additionally re-scored under an alternative (latest-decisive-layer) tie-break rule, and the change in the primary stability-band verdict under the two rules is reported as a sensitivity check.
+
+\subsection{Family-Capability Crossing}
+\textbf{Challenge.} Even after agent, judge, and style contributions are separated, any residual instability could be unstructured noise across backbones or a systematic function of vendor lineage and capability tier --- and these two possibilities carry opposite practical consequences for how re-validation costs can be amortized.
+
+\textbf{Insight.} Because family and capability tier are themselves correlated in practice, only a design that explicitly crosses the two --- rather than one that merely samples across available backbones --- can tell whether either factor, on its own, structures the instability.
+
+\textbf{Method.} The backbone grid crosses model family with capability tier (two sizes per family where available). Mean within-family pairwise agreement is compared against cross-family pairwise agreement via a permutation test respecting task clustering, and each backbone's fault-recovery rate is correlated with its clean-run capability via Spearman's $\rho$.
+
+\section{Experiments}
+
+\subsection{Experimental Setup}
+
+\textbf{Datasets.} GAIA (levels 1--2) --- tool-use/assistant tasks with deterministic, programmatic success checkers; used as the pilot-stage domain because a checkable single-step-tool task gives the fault-injection ground truth a clean, unambiguous referent. WebArena-style tasks --- reproducible web-agent tasks with richer multi-step tool interaction; used as the scale-up domain to test whether findings generalize beyond short, deterministic GAIA-style tasks to longer-horizon tool chains. Who\&When \citep{WhoWhen2025} (naturally-failed multi-agent logs) --- used to test whether the stability-band finding (RQ1 below), established on synthetic single-layer injected faults, replicates on organically-arising, human-annotated failures where the ground-truth layer comes from expert agreement rather than injection-guaranteed construction; without this check, any stability finding would be scoped only to synthetic-fault artifacts.
+
+\textbf{Baselines} (sanity-check comparators and reference labelers, not competitors to beat --- this is a measurement study, and no research question here is framed as ``our procedure beats baseline X''). Who\&When's \citep{WhoWhen2025} all-at-once and step-by-step LLM-judge protocols bracket context-granularity effects within the attribution procedure's own design space; of these two, the all-at-once protocol is the pre-registered primary attribution procedure --- its single trace-level pass matches the estimand's one-label-per-failing-trace unit of analysis --- frozen together with the codebook hash before any labeling, with the step-by-step protocol run as a secondary robustness arm only, never the source of a headline number. AgenTracer-style \citep{AgenTracer2025} counterfactual-replay labeling serves as an independent reference labeler on a budget-permitting subset, checking the fixed judge's labels against a causal-replay definition of the decisive step. Chance-level agreement, from a label-marginal-preserving permutation, is the statistical floor beneath which no claim of ``agreement'' is meaningful. Majority-vote-across-backbones pseudo-consensus is a sanity baseline, promotable to a load-bearing contribution only if the agree-wrong mass (RQ4 below) turns out to be negligible. A same-backbone test--retest arm (identical backbone re-run at $T=0$, plus three seeds at $T=0.7$) is the ``why do this at all'' control distinguishing genuine cross-backbone disagreement from ordinary LLM or judge sampling noise. Two pipeline-level placebo arms complete the controls: a judge test--retest arm re-judges the identical trace twice under the frozen judge at $T=0$, isolating judge sampling noise from agent re-execution nondeterminism, and a no-op injection arm submits uninjected, successful traces to the judge, verifying it does not hallucinate a fault layer where none was injected.
+
+\textbf{Metrics.} Fleiss' $\kappa$ (primary stability statistic when $\Omega \geq 0.5$) and Krippendorff's $\alpha$ (primary when $\Omega < 0.5$), both per layer; the failure-overlap rate $\Omega$ and per-backbone recovery rate; per-backbone attribution accuracy against the injected ground-truth layer; the agree-wrong mass; judge-backbone and agent-backbone variance shares from the cross-classified mixed model; the style-share; within- versus cross-family pairwise agreement; and the Spearman correlation between fault-recovery rate and clean-run capability.
+
+\textbf{Aggregation and thin-cell discipline (pre-registered, applies across RQ1--RQ7 and SC1).} Cells drawn from GAIA-derived and WebArena-derived task families are pooled for every headline verdict; as a pre-registered secondary check, each hypothesis's band/threshold decision is also recomputed within each family alone, and a hypothesis counts as family-robust only if the pooled verdict agrees with at least one of the two family-specific verdicts --- disagreement on both downgrades the claim from a general statement to a family-conditional one, never reported as the pooled number alone. Separately, any comparison cell that falls below its pre-registered minimum count is reported as \textbf{INCONCLUSIVE}, not null, and is retained in every denominator rather than silently dropped: a (backbone-pair $\times$ layer) cell with fewer than 20 jointly-failing tasks is INCONCLUSIVE for RQ4's agree-wrong mass; a (judge-backbone $\times$ agent-backbone) cell with fewer than 15 failing traces is INCONCLUSIVE for RQ3's variance-share estimate (though retained in the reported denominator); and RQ6's family contrast is INCONCLUSIVE as a whole if the pooled within-family arm falls below 3 pairs or the cross-family arm falls below 6 pairs, in which case no per-family inferential claim is made at the resulting $n=1$-pair-per-family resolution.
+
+\textbf{Compute-budget arithmetic and cost gate (pre-registered).} The Stage-2 design implies, from its own stated targets, $\approx$900 cells $\times$ 6--8 backbones $\times$ 3 seeds $\approx$ 16,200--21,600 agent executions, and on the order of 90k judge calls across the raw and normalized arms and the control arms --- over traces that, on the WebArena-style slice, run to tens of thousands of tokens each, so judging cost, not agent execution, dominates the bill. Rather than attaching a speculative dollar figure to this design before piloting, the pilot stage doubles as the cost instrument: measured per-trace agent-execution and per-call judging costs from the pilot are extrapolated to the full grid, and a hard Stage-2 budget ceiling is fixed from that extrapolation before scale-up, alongside the walking skeleton's existing pass criteria. If the extrapolated full-grid cost exceeds the ceiling, the pre-approved shrink axis (dropping the weakest capability tier from the headline grid, reported descriptively) applies before any per-cell $n$ is reduced --- never a silent thinning of cells.
+
+\textbf{Research questions:}
+\begin{enumerate}[leftmargin=1.6em]
+\item RQ1 --- Does the attribution label survive a swap of the agent's executing backbone?
+\item RQ2 --- Is execution-layer attribution more consistent across backbones than plan-layer attribution?
+\item RQ3 --- How much of any observed instability is attributable to the judge backbone rather than the agent backbone?
+\item RQ4 --- When backbones agree with each other, do they also agree with the injected ground truth?
+\item RQ5 --- How much of any observed disagreement is driven by surface style rather than substance?
+\item RQ6 --- Is cross-backbone agreement structured by model family?
+\item RQ7 --- Is censoring (fault recovery) structured by backbone capability?
+\end{enumerate}
+
+In addition, one instrument-validation sensitivity check --- \textbf{SC1}: Is the codebook's tie-break rule doing real work, or is residual disagreement concentrated in backbone effects regardless of which rule is used? --- is reported beside the headline results. SC1 was demoted from headline RQ6 on 2026-07-05 because its target threshold traces to the discussion-stage transcript rather than to a pre-registered H-id in the hypothesis machinery (see the SC1 subsection); it feeds no aggregation vote and no fallback rule.
+
+\subsubsection{RQ1: Does the attribution label survive a swap of the agent's executing backbone?}
+\textbf{Setup.} Pilot stage: 60 tasks $\times$ 3 fault layers $\times$ 4 backbones (one pilot per distinct model family) at $T=0$. Scale-up: $\approx$900 (task, layer) cells $\times$ 6--8 backbones (crossing family and capability tier) $\times$ 3 seeds, on GAIA and WebArena-style tasks. Fleiss' $\kappa$ on the failing intersection $\mathcal{I}$; Krippendorff's $\alpha$ on all failing cells if $\Omega < 0.5$; 10,000 task-level cluster-bootstrap resamples for all confidence intervals; Holm correction across backbones and layers, $\alpha = 0.05$.
+
+\textbf{Expected outcome.} Cross-backbone agreement is substantially below-perfect: the primary stability statistic's 95\% CI lies entirely below the pre-registered ``stable'' band ($\kappa$ or $\alpha \geq 0.8$), placing the finding in the ``model-specific'' ($< 0.6$) or ``partially stable'' (0.6--0.8) range rather than ``stable.''
+
+\textbf{Falsification condition.} Refuted toward ``stable'' if the primary statistic's 95\% CI lies entirely at or above 0.8 across layers and family pairs --- which would itself be informative in the opposite direction (diagnosis is a task property, and single-backbone attribution benchmarks are certifying something that does transfer, a claim no prior attribution paper has actually tested).
+
+\textbf{Partial-band decision rule.} If the pooled statistic lands in the partially-stable band (0.6--0.8) or its CI straddles 0.8, the pre-registered consequence is that the per-layer decomposition becomes the primary result and the claim becomes RQ2's layer ordering; the practitioner decision is then made per layer, not per pipeline --- attribution labels are treated as transferable across a backbone swap only for layers whose per-layer statistic lies in the stable band ($\geq 0.8$), and labels for layers below it are re-validated per backbone.
+
+\textbf{Hypothesis (plain language).} Failure attribution for LLM agents is not fully backbone-invariant within the tested horizon; the diagnosis is, at least in part, a property of which backbone produced the failure.
+
+\textbf{Metrics.} Primary stability statistic and its CI per layer and per backbone pair; failure-overlap rate $\Omega$ reported beside every number.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ2: Is execution-layer attribution more consistent across backbones than plan-layer attribution?}
+\textbf{Setup.} Same Stage-2 grid and fitted structure as RQ1; layer-specific $\kappa$ (or $\alpha$) compared pairwise (execution vs. plan, execution vs. tool, tool vs. plan) with Holm-corrected significance tests.
+
+\textbf{Expected outcome.} $\kappa_{\text{exec}}$ exceeds $\kappa_{\text{plan}}$ by at least 0.10 absolute, with Holm-corrected $p < 0.05$ --- execution-layer faults, which leave a more mechanically legible trace (e.g., a tool call literally erroring), are attributed more consistently than plan-layer faults, which require more model-dependent interpretive judgment.
+
+\textbf{Falsification condition.} Refuted if the plan-versus-execution gap is under 0.10 absolute or fails to reach significance, or if the ordering reverses (plan-layer attribution proves more consistent than execution-layer) --- either would undercut the ``mechanical legibility'' account of why some layers should be easier to diagnose consistently than others.
+
+\textbf{Hypothesis (plain language).} Consistency is not uniform across failure layers; more mechanically observable failures are diagnosed more consistently than more interpretive ones.
+
+\textbf{Metrics.} Per-layer stability statistic and pairwise contrast with Holm-corrected $p$-values.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ3: How much of any observed instability is attributable to the judge backbone rather than the agent backbone?}
+\textbf{Setup.} Three vendor-disjoint judge backbones $\times$ 6--8 agent backbones over the identical Stage-2 trace set (raw arm); cross-classified mixed-effects model (label match $\sim (1|\text{task}) + (1|\text{agent\_backbone}) + (1|\text{judge\_backbone}) + \text{interactions}$); variance shares from likelihood-ratio tests and bootstrap CIs; 200-trace human-codebook subset anchors judge validity ($\kappa \geq 0.7$ gate).
+
+\textbf{Expected outcome.} Judge-backbone variance share exceeds 0.20 of total random-effect variance, with likelihood-ratio-test $p < 0.05$ --- the judge is a non-trivial, independently identifiable source of instability, not an inert reader of the trace.
+
+\textbf{Falsification condition.} Refuted if judge-backbone variance share is statistically indistinguishable from zero --- that would mean judges are effectively interchangeable in this regime, and any instability found in RQ1 is purely agent-behavioral rather than partly a judging artifact.
+
+\textbf{Hypothesis (plain language).} Some meaningful share of attribution instability comes from which model is doing the diagnosing, not only from which model produced the failure.
+
+\textbf{Metrics.} Judge-backbone, agent-backbone, task, and interaction variance shares with bootstrap CIs.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ4: When backbones agree with each other, do they also agree with the injected ground truth?}
+\textbf{Setup.} Over the failing intersection $\mathcal{I}$, the joint outcome \{agree-correct, agree-wrong, disagree\} is tabulated against the injected ground-truth layer, per backbone and per layer; bootstrap CI (task-clustered) on the agree-wrong proportion.
+
+\textbf{Expected outcome.} The agree-wrong mass is at least 5\% of $\mathcal{I}$, with a 95\% CI lower bound above 2\% --- a non-trivial fraction of jointly-failing cells shows backbones converging on the same \emph{wrong} layer, demonstrating that stability and correctness are separable outcomes.
+
+\textbf{Falsification condition.} Refuted if the agree-wrong mass is statistically indistinguishable from zero (CI upper bound at or below 2\%) --- that would mean cross-backbone consensus is itself a reliable correctness signal, upgrading majority-vote-across-backbones from a sanity baseline to a valid pseudo-oracle for attribution labels.
+
+\textbf{Hypothesis (plain language).} Backbones agreeing with each other is not the same claim as backbones being right; stable-but-wrong diagnosis is a real, non-negligible failure mode.
+
+\textbf{Metrics.} Agree-correct / agree-wrong / disagree proportions per layer; per-backbone accuracy against the injection record.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ5: How much of any observed disagreement is driven by surface style rather than substance?}
+\textbf{Setup.} Within the raw-arm trace set, every trace is additionally rendered through a fixed rewriter model (distinct from all agent and judge backbones) that strips model-identifying tokens, canonicalizes tool-call formatting, and neutrally paraphrases reasoning text; the normalized arm is re-judged by the same judges, gated on the pre-registered rewriter-fidelity check (Methodology): normalized-arm labels enter this estimate only if the injected fault's manifestation survives rewriting on the audited sample and judge ground-truth accuracy on rewritten traces stays within the pre-fixed margin of the raw arm. Style-share computed as (mean pairwise disagreement, raw $-$ mean pairwise disagreement, normalized) / mean pairwise disagreement, raw, with bootstrap CIs.
+
+\textbf{Expected outcome.} Style-share is at least 10\%, with a 95\% CI lower bound above 0 --- a measurable but partial fraction of raw cross-backbone disagreement is attributable to surface form, leaving most of the disagreement unexplained by style alone.
+
+\textbf{Falsification condition.} Refuted if style-share's CI includes zero or is negative --- that would mean style normalization does not reduce disagreement, and any judge-side effect identified in RQ3 is not a simple surface-form artifact.
+
+\textbf{Hypothesis (plain language).} Surface style contributes to, but does not fully explain, cross-backbone disagreement in attribution labels.
+
+\textbf{Metrics.} Style-share with bootstrap CI, raw versus normalized arm.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ6: Is cross-backbone agreement structured by model family?}
+\textbf{Setup.} Pairwise agreement (per RQ1's primary statistic) split into within-family and cross-family pairs across the Stage-2 backbone grid; permutation test on the family split, respecting task-level clustering, Holm-corrected across domains.
+
+\textbf{Expected outcome.} Mean within-family pairwise agreement exceeds cross-family pairwise agreement by at least 0.10 absolute, with Holm-corrected $p < 0.05$ --- same-vendor backbones agree with each other more than cross-vendor pairs do.
+
+\textbf{Falsification condition.} Refuted if the within- versus cross-family gap is under 0.10 absolute or fails to reach significance --- that would mean knowing a backbone's vendor lineage carries no information about whether its diagnosis will transfer to another backbone.
+
+\textbf{Hypothesis (plain language).} Attribution instability is at least partly patterned by model family, not purely idiosyncratic per backbone.
+
+\textbf{Metrics.} Within-family versus cross-family mean pairwise agreement and permutation-test $p$-value.
+
+\textbf{Result.} \ph
+
+\subsubsection{RQ7: Is censoring (fault recovery) structured by backbone capability?}
+\textbf{Setup.} Each backbone's fault-recovery rate (fraction of injected cells it does not fail on) is correlated with its clean-run capability (measured by clean-run task success rate) via Spearman's $\rho$ across the Stage-2 backbone grid.
+
+\textbf{Power note (pre-registered).} With $K = 6$--$8$ backbones, the exact-permutation significance threshold for Spearman's $\rho$ at $\alpha = 0.05$ (two-sided) is approximately $0.89$ / $0.79$ / $0.74$ for $K = 6$ / $7$ / $8$ --- a moderate correlation of $0.5$ cannot reach $p < 0.05$ at this $K$ by arithmetic, so a $\rho$-plus-$p$ compound criterion at a $0.5$ floor would be unconfirmable by construction. The confirmatory threshold is therefore set at the exact critical value for the realized $K$, and the $\rho$ point estimate with its task-level cluster-bootstrap CI is the primary reported quantity.
+
+\textbf{Expected outcome.} Fault-recovery rate correlates positively with clean-run capability: confirmed if $\rho$ meets the exact $K$-adjusted significance threshold above; $\rho \in [0.5, \text{threshold})$ is pre-declared \textbf{suggestive-INCONCLUSIVE} (reported descriptively with its CI, never claimed as a confirmed effect and never counted as a refutation) --- stronger backbones are expected to recover from injected faults more often, meaning the analyzable failing intersection $\mathcal{I}$ is systematically skewed toward weaker backbones' failures.
+
+\textbf{Falsification condition.} Refuted if $\rho < 0.5$ (point estimate below the pre-registered effect floor) --- that would mean censoring is not simply a proxy for capability, and the failing intersection is not predictably skewed by backbone strength alone.
+
+\textbf{Hypothesis (plain language).} The set of failures available to study is not a neutral sample of backbone behavior; it is capability-skewed, with implications for how any headline agreement number should be read.
+
+\textbf{Metrics.} Spearman $\rho$ between per-backbone fault-recovery rate and clean-run success rate.
+
+\textbf{Result.} \ph
+
+\subsubsection{SC1 (instrument-validation sensitivity check, formerly RQ6): Is the codebook's tie-break rule doing real work, or is residual disagreement concentrated in backbone effects regardless of which rule is used?}
+\emph{Demoted from headline RQ to sensitivity check (2026-07-05): its target threshold has no corresponding H-id in the pre-registered hypothesis machinery --- it validates the codebook instrument rather than testing a headline hypothesis, and it feeds no aggregation vote and no fallback rule.}
+
+\textbf{Setup.} The full Stage-2 grid is re-scored under an alternative (latest-decisive-layer) tie-break rule, holding every other design choice fixed; the primary stability-band verdict (stable / partially stable / model-specific) under each rule is compared per (backbone $\times$ domain) cell.
+
+\textbf{Expected outcome.} The stability-band verdict changes in no more than one of the tested cells when the tie-break rule is switched --- residual disagreement is concentrated in backbone effects (per RQ1--RQ3), not in which tie-break convention the codebook happens to use.
+
+\textbf{Falsification condition.} Refuted if the verdict changes in more than one cell --- that would mean a meaningful share of the paper's headline stability finding is an artifact of an arbitrary codebook convention rather than of backbone behavior, and the codebook itself would need to be treated as a confound in every headline RQ.
+
+\textbf{Hypothesis (plain language).} The codebook's tie-break convention is a minor, checked design choice, not a hidden driver of the paper's central findings.
+
+\textbf{Metrics.} Count and identity of (backbone $\times$ domain) cells whose stability-band verdict changes across tie-break rules.
+
+\textbf{Result.} \ph
+
+\vspace{0.5em}
+\noindent\textbf{Further evaluation.} With more time, a natural extension is to test whether attribution stability holds under adversarially-constructed faults designed to maximize manifestation divergence across backbones, rather than faults drawn from the same distribution used to calibrate the pilot --- explicitly out of scope here because it changes the question from ``how stable is attribution under realistic faults'' to ``how stable is attribution under worst-case faults,'' which needs its own calibration rather than an extension of the current design.
+
+\section{Related Work}
+
+The closest prior work to this paper is the Who\&When line --- Who\&When \citep{WhoWhen2025}, its successor benchmark Who\&When Pro \citep{WhoWhenPro2026}, and AgenTracer \citep{AgenTracer2025} --- and it is worth stating the delta plainly before surveying the wider landscape: these papers formalize automated failure attribution as a decisive-error judging problem, industrialize injected-fault ground truth at scale, and validate strong labeling procedures against it --- but none re-runs the same task and the same injected fault under more than one agent backbone, so none can say whether its own labels are a property of the failure or of the backbone that generated the trace being labeled, which is precisely the axis this paper is built to test.
+
+\textbf{LLM-agent failure attribution.} Who\&When \citep{WhoWhen2025} formalizes decisive-error attribution --- the earliest agent-step pair whose correction flips a failed trajectory to success --- and evaluates several LLM-judge strategies (all-at-once, step-by-step, a hybrid agent-then-step pipeline) for finding it, releasing a dataset of human-annotated failure logs. AgenTracer \citep{AgenTracer2025} scales the same decisive-error idea into a learning problem: it programmatically injects faults into successful trajectories so the injected step is the decisive error by construction, unifies this with counterfactual replay of naturally-failed trajectories, and trains a compact tracer to predict the responsible agent and step. Who\&When Pro \citep{WhoWhenPro2026} is the nearest instrument to ours: it constructs 12,326 failed trajectories with golden labels by replaying a successful prefix exactly and then injecting a failure, across 3 modalities and 26 benchmarks, and its cross-model analyses document systematic patterns in how attributor models from different families label failures. We concede the injection-built-corpus instrument outright --- prefix-replay fault injection at scale is theirs --- and note that their model-family analyses are the judge-side half of our question asked observationally: attributor models differ on \emph{fixed} traces drawn from whatever stack produced them. What no paper in this line does is hold the injected fault fixed and re-execute it under a grid of agent backbones, so agent-driven trace divergence, judge-driven labeling variance, and their interaction remain conflated in any observed difference; our judge-by-agent factorial exists to separate exactly these. The wider 2025--26 attribution wave --- causal-graph screening \citep{CHIEF2026}, spectrum analysis over repeated replays \citep{FAMAS2025}, intervention-driven debugging \citep{DoVer2025}, annotated error taxonomies on GAIA-class domains \citep{AgentErrorBench2025}, and non-injected long-horizon root-cause benchmarks \citep[concurrent with this work]{LongRCA2026} --- improves or evaluates the attributor within one fixed execution stack; DoVer's finding that multiple distinct interventions can independently repair one failure independently corroborates the layer-ambiguity concern our codebook tie-break gate is built to control. Across the entire line, cross-backbone label stability is neither measured nor claimed.
+
+\textbf{LLM-judge reliability.} Independent of agent attribution specifically, LLM judges have been shown to be unreliable raters along several axes: preference-leakage work \citep{PreferenceLeakage2025} shows a judge systematically inflates scores for outputs from a generator related to itself across three concrete relatedness types (same model, inheritance, same family), and a separate line of work, BiasScope \citep{BiasScope2025}, shows judges can be reliably flipped by structured surface perturbations of a response, discovered automatically via an iterative bias-discovery framework rather than hand-designed from a fixed list. A third line, MENLO \citep{MENLO2025}, documents that evaluators are not condition-invariant along the language axis either, with pairwise LLM-judge accuracy varying substantially across 47 language varieties even after fine-tuning. All three establish that LLM judges carry unvalidated dependencies, but all three operate on short pairwise-preference or single-response judgments. One recent exception reaches agent trajectories: an Agent-as-a-Judge study \citep{AaaJBackbone2026} measures inter-backbone agreement among six judge backbones on requirement-level judgments of developer-agent runs and finds it modest (Fleiss' $\kappa \leq 0.231$), with judge backbone interacting with evaluation language --- direct evidence that the judge backbone is a live experimental variable on agent traces, which we concede plainly. Its axis, however, is requirement satisfaction, not failure-layer attribution; it varies only the judge, never the agent backbone that produced the trace; and it has no injected ground truth against which a judgment could be scored correct or wrong. No prior work separates judge-side from agent-side variance in a trace-attribution setting against known fault layers, which is exactly the gap this paper's judge-by-agent factorial is built to close. Notably, BiasScope's own design deliberately restricts its teacher model to reasoning-based bias analysis specifically to avoid triggering preference leakage \citep{PreferenceLeakage2025} in its own pipeline --- a precedent for the vendor-disjoint judge design this paper's assumption ledger (A4) also adopts.
+
+\textbf{Backbone-level comparison and failure taxonomies.} Breaking Agent Backbones \citep{BreakingBackbones2025} argues that the right unit of analysis for agent-security evaluation is the single backbone LLM call rather than the whole agent, and compares many backbone LLMs on identical attack scenarios --- establishing backbone-level comparison as a legitimate evaluation axis, but only for attack-susceptibility scores, and its snapshot abstraction deliberately strips the multi-step propagation that makes a failure-layer diagnosis ambiguous in the first place. The Multi-Agent System Failure Taxonomy \citep{MAST2503} induces a failure taxonomy from expert-annotated traces across mainstream multi-agent frameworks and validates it via inter-annotator agreement among human and LLM annotators reading the \emph{same} traces --- reliability is established across annotators, not across backbones, so whether the same task re-run under a different backbone would be assigned the same failure category is untested, and its taxonomy is reused here only as an instrument for this paper's own codebook, not as a scoreboard baseline.
+
+\section{Conclusion}
+
+This work reframes an assumption quietly built into every automated failure-attribution tool for LLM agents --- that a plan/tool/execution label describes the failure, not the backbone that happened to produce and judge it --- as a measurable, falsifiable question rather than a default to trust. The central methodological wager is that this question cannot be answered by a single agreement number: censoring, judge identity, surface style, and codebook convention each have to be separately accounted for before any residual instability can be attributed to genuine backbone-behavioral divergence, and the design here is built so that each of those sources is estimated rather than assumed away. Whichever way the headline finding lands, it is decision-relevant: if attribution turns out to be largely stable, single-backbone attribution benchmarks are certifying something that does transfer, and that certification itself is new; if it turns out to be model-specific, then diagnostic tooling built on one backbone needs re-validation whenever the backbone changes, and the structure of that instability (family-patterned or idiosyncratic) determines whether re-validation can be amortized or must be repeated per backbone. Four limitations bound this claim from the outset. First, the plan/tool/execution codebook is a stipulated partition of a space where failures can genuinely span categories, and while the tie-break sensitivity check reports how much this convention matters, it cannot resolve the underlying ambiguity --- a richer, possibly graded failure taxonomy is a natural next methodological target. Second, the design is scoped to programmatically injected, single-layer faults on sandboxable benchmarks; whether the same stability (or instability) pattern holds for organically-arising, multi-cause failures in production agent deployments is only partially addressed by the Who\&When complement and remains open beyond it. Third, piloting deliberately iterates fault payloads toward irrecoverable-by-design lethality to secure failure overlap, which shifts the studied fault population toward maximal-lethality faults and narrows the validity envelope relative to organic failures; the payloads are frozen before the main grid runs, so this shift is pre-registered rather than data-dependent, but the Who\&When complement offsets it only partially. Fourth, every number is produced under one fixed ReAct-style agent scaffold, so all findings are scoped to that scaffold --- whether attribution instability is itself scaffold-specific is left open.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\vspace{1em}
+\hrule
+\vspace{1em}
+
+\section*{Pre-handoff checklist}
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Organization/navigation} --- narrative flows problem $\to$ method $\to$ experiments $\to$ related work without forward references to undefined terms.
+\item \textbf{Terminology discipline} --- ``failure-overlap rate,'' ``failing intersection,'' ``stability band,'' ``agree-wrong mass,'' ``style-share'' each defined at first use in Problem Definition or Methodology, used consistently thereafter; no internal stage IDs (\texttt{sp\_*}, \texttt{m\_*}, \texttt{rq\_*}) leaked into prose --- checked directly against the discussion pipeline log.
+\item \textbf{Notation with worked example} --- the formal setup section defines $(T, L, \iota_\ell, c, r_c, \ell^*, B, \tau, F, J, A_j, \nu, \mathcal{I}, \Omega)$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+\item \textbf{RQ framing matches outcomes} --- all 7 RQs (plus the SC1 sensitivity check) are graded/quantitative (rates, slopes, agreement proportions, correlations), each answered in its own subsection with an explicit falsifiable expected outcome and a distinct falsification condition, not a binary yes/no.
+\item \textbf{No typesetting artifacts} --- only explicit placeholder markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+\item \textbf{Artifact plan} --- the fault-injection suite, normalized traces, labels, and analysis code are the natural release artifacts; not yet built, so not claimed as available.
+\end{itemize}
+
+\section*{Hand-off}
+This is a draft, not a finished paper --- experiments have not run. Natural next steps: prose polish and venue-specific LaTeX formatting once a target venue is chosen, or revising an earlier stage if piloting surfaces a problem (e.g., if the failure-overlap rate $\Omega$ is far lower than the 0.5 gate across most cells).
+
+\end{document}

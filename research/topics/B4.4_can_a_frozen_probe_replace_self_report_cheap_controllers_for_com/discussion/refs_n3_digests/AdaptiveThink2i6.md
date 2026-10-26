@@ -1,0 +1,32 @@
+# Digest (stub, corpus-grounded): Adaptive Thinking: Large Language Models Know When to Think in Latent Space
+
+> **Source disclosure.** This is a minimal N0/N1/N2/N6-only digest built from the OpenReview submission's own reconstructed proposal text in the local corpus (`openview_corpus/ideas.jsonl`, paper_id `2i6Rp0gCq6`) -- no full PDF is cached locally for this OpenReview-only submission, so N3-N12 (related work read by the authors, results, threats, artifacts) are NOT available and are intentionally omitted rather than guessed. This is the same source digest.md's own N3/N4 quote from. Tag: [GROUNDED:corpus].
+
+- **paper_id**: 2i6Rp0gCq6
+- **paper_url**: https://openreview.net/forum?id=2i6Rp0gCq6
+
+## N2 Motivation (verbatim from proposal.motivation)
+
+Recent work has shown that increasing inference-time reasoning compute can significantly improve large language model performance, but the benefit strongly depends on the difficulty of the query. @snell2024testtimecompute demonstrates that allocating additional test-time compute can outperform scaling model parameters, yet the gains are highly sensitive to how compute is distributed across prompts. In practice, most reasoning systems either allocate a fixed chain-of-thought budget or rely on heuristics to decide when to extend reasoning. These strategies often waste computation on simple queries while under-allocating reasoning to complex ones.
+
+Self-consistency has emerged as a reliable indicator of reasoning reliability. @wang2023selfconsistency shows that agreement among independently sampled reasoning paths strongly correlates with correctness, while @chen2023universalsc demonstrates that this signal generalizes across diverse generation tasks. However, computing self-consistency requires sampling multiple reasoning trajectories, which significantly increases inference cost. Subsequent work attempts to reduce this overhead by adaptively adjusting the number of samples based on estimated difficulty (@wang2025difficultyadaptive) or allowing models to estimate reasoning budgets before generation (@li2025selfbudgeter). Despite these advances, these methods still rely on additional inference-time computation or model-generated estimates that introduce latency.
+
+At the same time, studies of internal representations suggest that reasoning processes leave structured signals in the latent space of large language models. @yang2025latentreasoning provides evidence that multi-hop reasoning steps can be detected in hidden-state representations, indicating that internal activations may encode information about reasoning complexity before explicit reasoning tokens are produced. This observation creates an opportunity: if reasoning difficulty signals are already present in latent representations, it may be possible to predict the necessity of extended reasoning without performing costly sampling or generation. Addressing this possibility would enable compute-efficient, query-adaptive reasoning systems.
+
+## N6 Methodology (verbatim from proposal.method)
+
+Our approach introduces a lightweight latent-space controller that predicts the expected self-consistency of a query from its hidden representation before decoding begins. The predicted self-consistency acts as a proxy for reasoning necessity, enabling the system to decide whether extended chain-of-thought reasoning should be performed and how much compute should be allocated. By learning this mapping offline and evaluating it during the prefilling stage, the system transforms an expensive sampling-based diagnostic into a fast latent-space prediction that guides adaptive test-time compute allocation.
+
+1. **Self-Consistency as a Reasoning Difficulty Proxy**: We adopt self-consistency as a principled indicator of reasoning necessity, building on the observation from @wang2023selfconsistency that agreement across reasoning paths reflects model confidence. Unlike previous work that uses self-consistency as a decoding strategy, we reinterpret it as a supervision signal that measures how much additional reasoning improves performance. This framing aligns with evidence from @snell2024testtimecompute that optimal test-time compute depends on prompt difficulty and allows us to treat self-consistency as a target variable for predicting reasoning requirements.
+
+2. **Latent Representation Extraction**: For each query, we extract the hidden representation of the final token from the last transformer layer during the prefilling stage, before any answer tokens are generated. Insights from @yang2025latentreasoning suggest that reasoning-related information is encoded in deeper model layers, making these representations suitable for predicting reasoning difficulty. These representations serve as compact summaries of the model’s internal understanding of the prompt.
+
+3. **Self-Consistency Prediction Adapter**: We train a lightweight two-layer MLP adapter to map the extracted hidden representations to predicted self-consistency scores. Training labels are obtained offline by computing self-consistency through repeated non-thinking-mode sampling for queries in a calibration dataset, similar in spirit to the sampling procedures used in @wang2025difficultyadaptive. The adapter learns to approximate this expensive measurement directly from latent features, enabling efficient prediction during inference.
+
+4. **Adaptive Thinking Budget Allocation**: At inference time, the predicted self-consistency score determines whether and how much reasoning should be performed. If the predicted score exceeds a predefined threshold, the model skips chain-of-thought reasoning and generates an answer directly, reducing unnecessary computation as motivated by findings in @hassid2025dontoverthink. Otherwise, the system enables extended reasoning with an allocated thinking budget. This mechanism acts as a pre-decoding controller that allocates compute adaptively per query, extending ideas from budget-aware reasoning approaches such as @li2025selfbudgeter.
+
+Together, these components form a lightweight control layer that estimates reasoning necessity from latent representations and allocates test-time compute accordingly, achieving an efficient balance between reasoning performance and inference cost.
+
+## Status
+
+PARTIAL -- motivation+method only, grounded in the paper's own OpenReview proposal text; N0/N1/N3-N12 not reconstructed here (see digest.md N3/N4 for this paper's role in the B4.4 lineage).

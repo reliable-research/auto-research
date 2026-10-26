@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arch.review.integrity-reviewer",
+  "version": "0.1.0",
+  "name": "Integrity Reviewer",
+  "description": "Independently audits evidence, leakage, regressions, and promotion eligibility.",
+  "maturity": "stable",
+  "capabilities": ["review.audit_integrity"],
+  "inputs": ["claim.candidate_set.v1", "experiment.result_set.v1"],
+  "outputs": ["claim.promoted_set.v1"],
+  "adapter": {"type": "command", "command": ["python3", "{runtime_stub}"]},
+  "risk": "R2",
+  "permissions": {
+    "filesystem": {"read": ["project:workspace"], "write": ["attempt:artifacts"]},
+    "network": {"mode": "disabled", "hosts": []},
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": ["schema.valid", "claim.promotion"],
+  "budgets": {"maxWallSeconds": 120, "maxToolCalls": 5, "maxSources": 50, "maxCostUsd": 0},
+  "routing": {"allowImplicit": true}
+}

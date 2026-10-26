@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="620" viewBox="0 0 900 620" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="620" fill="#ffffff"/>
+  <text x="450" y="26" text-anchor="middle" font-size="16" font-weight="bold" fill="#1a1a1a">B3.2 — Identification Framework for Black-Box Drift Attribution (Capability / Policy / Format)</text>
+
+  <!-- ================= Row 1 ================= -->
+
+  <!-- Box A: Probe battery -->
+  <rect x="16" y="44" width="248" height="208" rx="8" fill="#eef4fb" stroke="#4a7ab5" stroke-width="1.6"/>
+  <text x="140" y="63" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#2c5282">Probe battery (~3,000 items)</text>
+  <rect x="26" y="72" width="228" height="44" rx="4" fill="#ffffff" stroke="#4a7ab5" stroke-width="0.9"/>
+  <text x="32" y="86" font-size="10.5" fill="#222"><tspan font-weight="bold" fill="#2c5282">Capability</tspan> — 1,500 items</text>
+  <text x="32" y="99" font-size="9.5" fill="#444">format-robust scoring:</text>
+  <text x="32" y="111" font-size="9.5" fill="#444">fence-strip / normalize / execute</text>
+  <rect x="26" y="122" width="228" height="44" rx="4" fill="#ffffff" stroke="#4a7ab5" stroke-width="0.9"/>
+  <text x="32" y="136" font-size="10.5" fill="#222"><tspan font-weight="bold" fill="#9b3535">Policy</tspan> — 1,000 items, 3 strata</text>
+  <text x="32" y="149" font-size="9.5" fill="#444">safe-but-seeming / pseudo- / harmful</text>
+  <text x="32" y="161" font-size="9.5" fill="#444">style-normalized, 2-judge agreement</text>
+  <rect x="26" y="172" width="228" height="44" rx="4" fill="#ffffff" stroke="#4a7ab5" stroke-width="0.9"/>
+  <text x="32" y="186" font-size="10.5" fill="#222"><tspan font-weight="bold" fill="#8a6d1a">Format</tspan> — 500 items, 2 strata</text>
+  <text x="32" y="199" font-size="9.5" fill="#444">near-ceiling + mid-difficulty</text>
+  <text x="32" y="211" font-size="9.5" fill="#444">(capability matched post hoc)</text>
+  <text x="140" y="232" text-anchor="middle" font-size="9" fill="#555" font-style="italic">leakage features measured, never assumed 0</text>
+  <text x="140" y="245" text-anchor="middle" font-size="9" fill="#555" font-style="italic">one bank shared with B3.1 (disjoint claims)</text>
+
+  <!-- Box C: Decomposition machinery -->
+  <rect x="284" y="44" width="330" height="208" rx="8" fill="#eefaf2" stroke="#3d9970" stroke-width="1.6"/>
+  <text x="449" y="63" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1f6b4a">Decomposition machinery</text>
+  <text x="294" y="81" font-size="10.5" font-weight="bold" fill="#1f6b4a">G-theory variance-component model</text>
+  <text x="294" y="94" font-size="9.5" fill="#333">facets: axis (fixed) · item (random ∈ axis) · replicate (random)</text>
+  <text x="294" y="107" font-size="9.5" fill="#333">axis shares counted only in excess of within-version</text>
+  <text x="294" y="119" font-size="9.5" fill="#333">noise floor (k≥5 repeats, interleaved query windows)</text>
+  <text x="294" y="132" font-size="9.5" fill="#333">output: (cap%, pol%, fmt%, leak%, resid%) + bootstrap CIs</text>
+  <line x1="294" y1="140" x2="604" y2="140" stroke="#3d9970" stroke-width="0.8" stroke-dasharray="3,3"/>
+  <text x="294" y="156" font-size="10.5" font-weight="bold" fill="#1f6b4a">Assumption ledger (each paired with its test)</text>
+  <text x="294" y="169" font-size="9.5" fill="#333"><tspan font-weight="bold">A1</tspan> axis alignment → 3×3 confusion matrix, leakage &lt;15%</text>
+  <text x="294" y="182" font-size="9.5" fill="#333"><tspan font-weight="bold">A2</tspan> additivity → mixed-dose linearity R²</text>
+  <text x="294" y="195" font-size="9.5" fill="#333"><tspan font-weight="bold">A3</tspan> noise stationarity → interleaved same-version windows</text>
+  <text x="294" y="208" font-size="9.5" fill="#333"><tspan font-weight="bold">A4</tspan> basis adequacy → residual-structure clustering</text>
+  <text x="294" y="221" font-size="9.5" fill="#333"><tspan font-weight="bold">A5</tspan> calibration transfer → leakage-vs-scale (7–8B → 70B),</text>
+  <text x="310" y="234" font-size="9.5" fill="#333">declared untestable-in-full; widens commercial intervals</text>
+  <text x="449" y="247" text-anchor="middle" font-size="9" fill="#555" font-style="italic">shares are instrument-relative by construction (pre-registered battery)</text>
+
+  <!-- Box G: Licensed output -->
+  <rect x="634" y="44" width="250" height="208" rx="8" fill="#eef7f7" stroke="#2a8f8f" stroke-width="1.6"/>
+  <text x="759" y="63" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#186363">Licensed output (per real pair)</text>
+  <!-- little simplex -->
+  <polygon points="700,80 664,136 736,136" fill="#ffffff" stroke="#2a8f8f" stroke-width="1.2"/>
+  <circle cx="702" cy="118" r="3.4" fill="#c0603a"/>
+  <text x="700" y="76" text-anchor="middle" font-size="8.5" fill="#186363">cap</text>
+  <text x="656" y="146" text-anchor="middle" font-size="8.5" fill="#186363">pol</text>
+  <text x="744" y="146" text-anchor="middle" font-size="8.5" fill="#186363">fmt</text>
+  <text x="750" y="96" font-size="9.5" fill="#333">axis-share simplex</text>
+  <text x="750" y="109" font-size="9.5" fill="#333">+ leak% + resid%</text>
+  <text x="750" y="122" font-size="9.5" fill="#333">+ noise floor</text>
+  <text x="750" y="135" font-size="9.5" fill="#333">+ bootstrap CIs</text>
+  <text x="644" y="163" font-size="9.5" fill="#333"><tspan font-weight="bold">G2</tspan>: ≥2 axes above noise floor on ≥4/6 pairs,</text>
+  <text x="644" y="175" font-size="9.5" fill="#333">self-intervention axis-specific — else report</text>
+  <text x="644" y="187" font-size="9.5" fill="#333">"noise-dominated or A5 broken"</text>
+  <text x="644" y="205" font-size="9.5" fill="#333"><tspan font-weight="bold">E5</tspan> (exploratory): cross-vendor structure,</text>
+  <text x="644" y="217" font-size="9.5" fill="#333">Kendall's W + permutation CIs</text>
+  <text x="644" y="229" font-size="9.5" fill="#333"><tspan font-weight="bold">G3</tspan>: confirmatory only if ≥10 pairs</text>
+  <text x="759" y="245" text-anchor="middle" font-size="9" fill="#555" font-style="italic">nonidentification is a first-class verdict</text>
+
+  <!-- ================= Row 2 ================= -->
+
+  <!-- Box B: version pairs -->
+  <rect x="16" y="300" width="248" height="274" rx="8" fill="#f4f0fa" stroke="#7a5fb0" stroke-width="1.6"/>
+  <text x="140" y="319" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#4c3a80">Model-version pairs</text>
+  <rect x="26" y="328" width="228" height="88" rx="4" fill="#ffffff" stroke="#7a5fb0" stroke-width="0.9"/>
+  <text x="32" y="343" font-size="10.5" font-weight="bold" fill="#4c3a80">Real pairs (→ E2)</text>
+  <text x="32" y="356" font-size="9.5" fill="#444">≥6 pairs · ≥2 vendors, snapshot-pinned,</text>
+  <text x="32" y="368" font-size="9.5" fill="#444">both endpoints live at start, cached</text>
+  <text x="32" y="380" font-size="9.5" fill="#444">+ open-weight anchors</text>
+  <text x="32" y="392" font-size="9.5" fill="#444">(Llama-3→3.1, Qwen2→2.5)</text>
+  <text x="32" y="409" font-size="9" fill="#666" font-style="italic">no ground truth → overidentification only</text>
+  <rect x="26" y="426" width="228" height="138" rx="4" fill="#ffffff" stroke="#7a5fb0" stroke-width="0.9"/>
+  <text x="32" y="441" font-size="10.5" font-weight="bold" fill="#4c3a80">Construction-known controls (→ E1)</text>
+  <text x="32" y="454" font-size="9.5" fill="#444">9–12 pairs, dominant axis by design,</text>
+  <text x="32" y="466" font-size="9.5" fill="#444"><tspan font-weight="bold">purity measured, not assumed</tspan>:</text>
+  <text x="32" y="480" font-size="9.5" fill="#444">fmt: template swap / JSON-force / style-SFT</text>
+  <text x="32" y="492" font-size="9.5" fill="#444">pol: system-prompt tighten / safety-SFT</text>
+  <text x="32" y="504" font-size="9.5" fill="#444">cap: domain-SFT gain / quantization (stress)</text>
+  <text x="32" y="519" font-size="9.5" fill="#444">+ 4–6 <tspan font-weight="bold">mixed-dose</tspan> pairs (2 causes,</text>
+  <text x="32" y="531" font-size="9.5" fill="#444">known relative strengths)</text>
+  <text x="32" y="546" font-size="9" fill="#666" font-style="italic">hardness ladder: clean → entangled;</text>
+  <text x="32" y="558" font-size="9" fill="#666" font-style="italic">graded vs measured dominant axis</text>
+
+  <!-- Box E1 -->
+  <rect x="284" y="300" width="200" height="120" rx="8" fill="#fdf2ee" stroke="#c0603a" stroke-width="1.6"/>
+  <text x="384" y="319" text-anchor="middle" font-size="12" font-weight="bold" fill="#8f3f1e">E1 — Calibration (runs first)</text>
+  <text x="294" y="337" font-size="9.5" fill="#333">• blind dominant-axis recovery</text>
+  <text x="294" y="350" font-size="9.5" fill="#333">• empirical 3×3 masquerade matrix</text>
+  <text x="294" y="363" font-size="9.5" fill="#333">• leakage lower / upper bounds</text>
+  <text x="294" y="376" font-size="9.5" fill="#333">• mixed-dose: shares track dose?</text>
+  <text x="294" y="389" font-size="9.5" fill="#333">• full pipeline run blind</text>
+  <text x="294" y="407" font-size="9" fill="#666" font-style="italic">simulator used only to size controls</text>
+
+  <!-- Gate G1 -->
+  <rect x="504" y="330" width="110" height="80" rx="12" fill="#fff8e1" stroke="#d4a017" stroke-width="2"/>
+  <text x="559" y="349" text-anchor="middle" font-size="12" font-weight="bold" fill="#8a6d1a">Gate G1</text>
+  <text x="559" y="364" text-anchor="middle" font-size="9" fill="#333">recovery ≥8/9 (clean)</text>
+  <text x="559" y="376" text-anchor="middle" font-size="9" fill="#333">leakage &lt; 15%</text>
+  <text x="559" y="388" text-anchor="middle" font-size="9" fill="#333">split-half ICC ≥ 0.7</text>
+  <text x="559" y="400" text-anchor="middle" font-size="9" fill="#333">dose R² ≥ 0.6</text>
+
+  <!-- Box E4 -->
+  <rect x="284" y="440" width="200" height="134" rx="8" fill="#fdf2ee" stroke="#c0603a" stroke-width="1.6"/>
+  <text x="384" y="459" text-anchor="middle" font-size="12" font-weight="bold" fill="#8f3f1e">E4 — Masquerade quantified</text>
+  <text x="294" y="477" font-size="9.5" fill="#333">fmt → "capability drop" under strict</text>
+  <text x="294" y="489" font-size="9.5" fill="#333">parsing (2307.09009 reproduced)</text>
+  <text x="294" y="504" font-size="9.5" fill="#333">pol → cap under refusal-as-error</text>
+  <text x="294" y="519" font-size="9.5" fill="#333">cap → pol under knowledge-aware</text>
+  <text x="294" y="531" font-size="9.5" fill="#333">refusal</text>
+  <text x="294" y="549" font-size="9" fill="#666" font-style="italic">naive vs identified scoring;</text>
+  <text x="294" y="561" font-size="9" fill="#666" font-style="italic">publishable regardless of G1</text>
+
+  <!-- Box F: E2/E3 -->
+  <rect x="634" y="300" width="250" height="150" rx="8" fill="#f0f4ee" stroke="#5a7d3a" stroke-width="1.6"/>
+  <text x="759" y="319" text-anchor="middle" font-size="12" font-weight="bold" fill="#3e5a24">E2 / E3 — Real pairs + overID</text>
+  <text x="644" y="337" font-size="9.5" fill="#333"><tspan font-weight="bold">E3 self-intervention (co-primary):</tspan></text>
+  <text x="644" y="350" font-size="9.5" fill="#333">identical format / policy wrap on <tspan font-weight="bold">both</tspan></text>
+  <text x="644" y="362" font-size="9.5" fill="#333">versions + placebo wrap; attribution</text>
+  <text x="644" y="374" font-size="9.5" fill="#333">on the differential → must move only</text>
+  <text x="644" y="386" font-size="9.5" fill="#333">the intended axis (no A5 needed)</text>
+  <text x="644" y="404" font-size="9.5" fill="#333">• split-half simplex agreement (ICC)</text>
+  <text x="644" y="417" font-size="9.5" fill="#333">• scoring-rule swap (strict vs robust)</text>
+  <text x="644" y="430" font-size="9.5" fill="#333">• paraphrase stability of shares</text>
+  <text x="759" y="444" text-anchor="middle" font-size="9" fill="#666" font-style="italic">runs on the commercial pairs themselves</text>
+
+  <!-- Pivot box -->
+  <rect x="634" y="480" width="250" height="94" rx="8" fill="#fbeeee" stroke="#b04a4a" stroke-width="1.6"/>
+  <text x="759" y="499" text-anchor="middle" font-size="12" font-weight="bold" fill="#7d2e2e">Pivot — measurement critique</text>
+  <text x="644" y="516" font-size="9.5" fill="#333">G1 fail: quantified masquerade matrix +</text>
+  <text x="644" y="528" font-size="9.5" fill="#333">minimal access conditions to restore ID</text>
+  <text x="644" y="540" font-size="9.5" fill="#333">(logprobs, paired system-prompt control)</text>
+  <text x="644" y="556" font-size="9.5" fill="#333">G1 marginal: bounded attribution —</text>
+  <text x="644" y="568" font-size="9.5" fill="#333">interval-only claims (merge into B3.3)</text>
+
+  <!-- ================= Arrows ================= -->
+
+  <!-- A -> C : scored deltas -->
+  <line x1="264" y1="148" x2="282" y2="148" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="273" y="140" text-anchor="middle" font-size="8.5" fill="#555">y_i</text>
+
+  <!-- C -> G : licensed shares -->
+  <line x1="614" y1="148" x2="632" y2="148" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- A -> B : battery queries pairs -->
+  <line x1="140" y1="252" x2="140" y2="298" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="146" y="279" font-size="8.5" fill="#555">queries ×5 repeats, interleaved</text>
+
+  <!-- controls -> E1 (elbow through x-corridor) -->
+  <polyline points="264,495 274,495 274,360 282,360" fill="none" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="278" y="288" font-size="8.5" fill="#555" transform="rotate(0)"></text>
+
+  <!-- E1 -> G1 -->
+  <line x1="484" y1="360" x2="502" y2="360" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- G1 pass -> E2/E3 -->
+  <line x1="614" y1="395" x2="632" y2="395" stroke="#3e5a24" stroke-width="1.8" marker-end="url(#arr)"/>
+  <text x="614" y="415" text-anchor="end" font-size="8.5" fill="#3e5a24" font-weight="bold">pass</text>
+
+  <!-- G1 fail -> pivot (elbow) -->
+  <polyline points="559,410 559,505 632,505" fill="none" stroke="#b04a4a" stroke-width="1.8" marker-end="url(#arr)"/>
+  <text x="570" y="470" font-size="8.5" fill="#b04a4a" font-weight="bold">fail / marginal</text>
+
+  <!-- E4 -> pivot -->
+  <line x1="484" y1="535" x2="632" y2="535" stroke="#c0603a" stroke-width="1.4" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <text x="558" y="548" text-anchor="middle" font-size="8.5" fill="#c0603a">feeds critique</text>
+
+  <!-- real pairs -> E2/E3 (elbow over row gap) -->
+  <polyline points="264,345 272,345 272,284 624,284 624,340 632,340" fill="none" stroke="#7a5fb0" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="448" y="278" text-anchor="middle" font-size="8.5" fill="#7a5fb0">real pairs (E2 decomposition + E3 self-intervention)</text>
+
+  <!-- E2/E3 -> outputs -->
+  <line x1="759" y1="300" x2="759" y2="254" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="765" y="281" font-size="8.5" fill="#555">shares + verdicts</text>
+</svg>

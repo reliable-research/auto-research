@@ -1,0 +1,279 @@
+# Why Tests Cannot See Design: A Dual-Oracle Measurement of Structural Blind Spots in Test Suites
+
+> Assembled from the six confirmed stage outputs in `pipeline.md`, post-audit (`taste_audit.md`: 🟢). Status: **specification / paper draft — no experiments have been run.** All numbers below are pre-registered design targets, not results.
+
+## Abstract
+
+Coding agents now author and modify production code with a test suite as the de facto gate for acceptance, yet a passing suite is, in practice, almost entirely a verdict about input/output behavior. Design conventions — naming, module layering, event ordering — can vary freely within a single behavior-equivalence class, so a change that violates one of these conventions while preserving observable behavior sits on the far side of a boundary that no amount of additional functional testing can cross. Whether this boundary is real, and which convention categories fall on the wrong side of it, has never been directly measured. We build a dual-oracle measurement procedure that admits *design mutants* — program variants certified, by sources independent of the suite under study, as both behaviorally equivalent under a bounded differential check and convention-violating under a machine-readable rule checker — across naming, layering/cross-cutting, and temporal/ordering categories. A matched convention-neutral control isolates genuine design-blindness from the generic difficulty of killing any equivalent mutant, and a capability-matched test-suite augmentation distinguishes a structural limit from one that more or stronger functional tests would simply close. We report, across mature open-source Java and Python subject systems, which design-property categories survive as certified blind spots, whether that survival is convention-specific rather than an artifact of equivalence, and whether it persists under a stronger suite — and what this implies for using a green test suite to gate design compliance in autonomous coding-agent workflows.
+
+## Introduction
+
+Coding agents increasingly propose, and sometimes directly commit, changes to production codebases, and the practical question of whether to accept such a change is answered, in most teams today, by one signal: does the existing test suite still pass. This is a convenient gate to implement and easy to justify — the suite already exists, it runs automatically, and a failure is unambiguous. It is exactly this convenience that makes it worth checking what the gate can and cannot see, rather than assuming.
+
+A test verdict, however, is in practice almost entirely a function of a program's observable input/output behavior, and is therefore near-constant across an entire class of programs that behave identically. Design conventions — how things are named, which module is allowed to call which other module, in what order two operations must occur — are free to vary *within* that same behavior-equivalence class. A change that renames something against a documented convention, routes a call across a layering boundary it should not cross, or reorders two operations whose final output happens to be the same either way, can be behaviorally invisible to a suite while still being exactly the kind of change a codebase's design intent forbids. Whether this gap is real, and which categories of design property actually fall inside it, has not been measured — only assumed, in either direction.
+
+The closest existing work approaches this gap from the LLM-code-testing side and from classical software-engineering foundations, and it is worth naming the two nearest points of contact plainly before surveying the wider landscape: a binary-matrix formalization of test-case discrimination power is the closest existing account of which faulty program variants a test set can and cannot tell apart, and the classical mutation-score literature is the closest existing account of test adequacy itself — yet both are built entirely around *functionally wrong* programs, and neither has any notion of a variant that is functionally right but design-wrong. Work that trains test generators with a discrimination reward scores a suite purely by its ability to reject functionally incorrect code, so a variant that is functionally correct but convention-violating is, by that reward's own construction, always accepted rather than flagged. Benchmark-construction pipelines that derive tests from a reference solution make the same commitment more directly, building the entire evaluation around functional correctness as the sole oracle. Work that instead needs formal specifications and proofs *in addition to* a test suite is itself indirect evidence that tests under-express intended behavior, though it treats this as a benchmarking-scope decision rather than a measured account of which properties are actually missed. These two clusters of prior work — the LLM-code-testing line optimizing for functional discrimination, and the classical software-engineering line either scoping test adequacy to behavior by definition or building entirely separate machinery once design conformance is at stake — are not unrelated: the first supplies the applied stakes (autonomous agents now generate the code these tools evaluate purely functionally), and the second supplies the theoretical vocabulary (the mutation score, the equivalent-mutant problem) that this paper extends into a dimension neither line currently measures. One recent measurement deserves naming here rather than only in related work: "Does Pass Rate Tell the Whole Story?" (arXiv:2604.05955) has now shown, observationally, that test-passing agent patches widely violate mined design constraints and that functional correctness is statistically near-independent of design satisfaction — establishing *that* green patches violate design in the field, but not *why the gate cannot see it*: it measures a patch population's compliance rate, whereas the question here is the suite's own detection boundary, identified through constructed, certified variants rather than observed agent output.
+
+Turning this gap into a measurable claim surfaces its own obstacles. Certifying that a candidate variant is genuinely behavior-preserving *and* genuinely convention-violating requires two sources of ground truth independent of the very suite being measured — otherwise "the suite didn't catch it" and "it wasn't actually a violation" become indistinguishable. Some conventions are local to a single line, but layering and cross-cutting rules are properties of a call graph or module boundary, which ordinary, single-statement mutation operators are not built to touch without a much larger, harder-to-certify rewrite. Temporal and ordering properties are properties of an execution trace rather than of a final output, so the textbook notion of a "kill" — the final output differs — is structurally blind to an ordering violation that leaves the final output untouched. Even once a convention-violating, behavior-preserving variant is constructed, its survival alone does not settle the question: every such variant is, by definition, also an equivalent mutant, so survival could reflect nothing more than the well-known difficulty of killing any equivalent mutant, regardless of what it violates — and a finding that a category is "missed" is only actionable if it also says whether the miss is a permanent limit of functional testing or something a stronger suite would simply fix.
+
+Our approach turns each of these obstacles into a specific design decision. A candidate mutant is admitted to the measured set only once two oracles independent of the suite under study — a bounded differential-execution check and a machine-readable convention checker — agree that it is both behavior-preserving and convention-violating, so admission is never decided by the instrument being evaluated. Non-local conventions are targeted by operators that relocate or reroute a call across a declared boundary while preserving the call multiset, keeping the mutation minimal and certifiable rather than a sweeping rewrite. The kill criterion itself is extended with trace-order assertions drawn from the suite's own observational vocabulary (never from the admission-side checker, which would make detection definitional), so a same-final-output reordering can register as a violation even though it would never register as a behavioral difference under output-diffing alone. To rule out the possibility that survival merely reflects generic equivalent-mutant difficulty, every admitted design mutant is paired with a matched, convention-neutral mutant from the same operator family, and kill probability is compared between the two matched groups. And to distinguish a structural limit from a quantity-limited one, the same measurement is repeated after augmenting the suite with a capability-matched, discrimination-optimized test set, checking whether the gap survives a real increase in functional-test strength rather than just its current level.
+
+We evaluate this design across mature open-source Java and Python subject systems that already ship machine-readable naming and layering conventions, comparing each system's unmodified suite against the constructed design mutants, a matched convention-neutral control, a default functional-mutation arm, and a capability-matched augmented suite.
+
+In summary, we contribute:
+- A dual-oracle admission criterion that certifies a program variant as simultaneously behavior-preserving and convention-violating using sources independent of the suite under study, making "the suite missed this" a claim about the suite rather than about the certifying procedure.
+- A matched convention-neutral control that isolates genuine, convention-specific test blindness from the generic difficulty of killing any equivalent mutant.
+- An extension of the classical output-diff kill criterion to trace-order assertions, making temporal and ordering violations visible to a mutation-based measurement at all.
+- A capability-matched augmentation check that distinguishes a structural limit of what functional tests can express from a quantity-limited gap that a stronger suite would close.
+- An empirical account, across naming, layering/cross-cutting, and temporal/ordering categories, of which design properties mature test suites structurally cannot see, and what this implies for gating coding-agent changes on test-suite success alone.
+
+## Problem Definition
+
+**Formal setup.** Consider a subject program $P$ with an existing, unmodified test suite $T$, and a candidate mutant $m$ of $P$ belonging to a design-constraint category $c \in \{\text{NAM (naming)}, \text{LAY (layering/cross-cutting)}, \text{TMP (temporal/ordering)}\}$. Let $K_T(m) \in \{0,1\}$ denote whether $T$ kills $m$ (some test fails, with the temporal-category kill criterion extended to include order-sensitive observations expressible within the suite's own execution — ordered-mock verifications and sequence assertions at the suite's existing observation points; the admission-side trace-order checker never counts as a kill, for the instrument-separation reason given in the Methodology). Let $\mathrm{EQ}_B(m) \in \{0,1\}$ denote bounded functional equivalence — certified against $P$ using a differential-execution corpus of size $B$, generated independently of $T$ — and let $V(m) \in \{0,1\}$ denote whether an independent, machine-readable rule checker (naming/layering/trace-order rules shipped with the subject project) flags $m$ as violating its target convention. The **admitted design-mutant set** is $D_c = \{m : \mathrm{op}(m) \in c,\ \mathrm{EQ}_B(m) = 1,\ V(m) = 1\}$; the **matched neutral set** $N_c = \{m : \mathrm{op}(m) \in c,\ \mathrm{EQ}_B(m) = 1,\ V(m) = 0\}$ shares the same operator family and locality footprint but does not violate the convention. The per-category **Design-Mutant Survival Rate** is $\mathrm{DMSR}_c = |\{m \in D_c : K_T(m) = 0\}| / |D_c|$, contrasted against $T$'s ordinary Functional Mutation Score $\mathrm{FMS}$ (survival rate $\mathrm{FSR} = 1 - \mathrm{FMS}$) under default operators.
+
+A category is reported as a genuine, design-specific, structural blind spot only if three conditions jointly hold: (a) $\mathrm{DMSR}_c$ clears a pre-registered gap over $\mathrm{FSR}$; (b) that gap is not reproduced when comparing kill probability between $D_c$ and the matched neutral set $N_c$ (ruling out the generic equivalent-mutant effect); and (c) the gap does not close once $T$ is augmented with a capability-matched, stronger functional test set (ruling out a quantity-limited explanation). A category failing (a) is reported as not classifiable as a blind spot; failing (b) alone is reported as equivalent-mutant-driven rather than design-specific; failing (c) alone is reported as quantity-limited rather than structural.
+
+**Why this is hard.** Certifying membership in $D_c$ requires that both $\mathrm{EQ}_B$ and $V$ come from sources independent of $T$ — otherwise "$T$ failed to kill $m$" and "$m$ was never actually a violation" (or never actually equivalent) cannot be told apart, and $\mathrm{EQ}_B$ itself is only decidable up to the stated budget $B$, never as an absolute equivalence guarantee. The layering/cross-cutting category requires an operator that changes a call's position relative to a module boundary while leaving the call multiset — and hence observable behavior — unchanged, a substantially stronger constructive burden than a single-statement edit. The temporal/ordering category exposes a gap in the classical kill criterion itself: $K_T(m)$, defined purely as a final-output difference, cannot by construction register an ordering violation that leaves the final output unchanged, so the criterion must be extended with order-level checks — and two distinct circularities must be avoided at once: the *admission* oracle must stay independent of the suite (else "not a violation" and "not killed" blur), while the *kill*-side extension must stay internal to the suite's own observational vocabulary (else, since admission already requires the external trace-order checker to flag the mutant, every admitted temporal mutant would count as caught and the category's survival rate would be pinned at zero by construction). Even with all of the above resolved, every $m \in D_c$ is by definition also a member of the classical equivalent-mutant class, so a raw $\mathrm{DMSR}_c$-over-$\mathrm{FSR}$ gap alone cannot distinguish genuine design-blindness from the well-known general difficulty of killing any equivalent mutant — which is exactly what the matched-neutral comparison against $N_c$ is for. And a gap that exists today says nothing about whether it is permanent: only a real, capability-matched increase in functional-test strength can distinguish a structural limit from a limit that more or better functional tests would simply remove.
+
+## Method Overview
+
+At a conceptual level, the measurement is a single pipeline with seven cooperating parts, organized around one governing rule: a candidate program variant only enters the measured record once two sources of ground truth outside the suite being studied — an independent equivalence check and an independent convention checker — agree it belongs there. Design mutants and their matched neutral counterparts enter the pipeline per category; a statistical design spanning many subject systems turns the resulting kill/survive records into a condition-level profile; and a capability-matched augmentation arm turns the same records into a determination of whether any observed gap is permanent or merely a matter of test-suite strength.
+
+The **dual-oracle admission** module takes a candidate mutant and certifies it, using sources independent of the suite under study, as simultaneously behavior-preserving and convention-violating — the gate every other module's output passes through. The **non-local operator catalog** constructs layering/cross-cutting mutations that relocate a call across a declared boundary while preserving the call multiset, so non-local conventions are testable at all. The **extended temporal kill criterion** adds order-sensitive assertions drawn from the suite's own observation points — never from the admission-side checker — to the classical output-diff kill test, so ordering violations that leave final output unchanged are still detectable without being detected by definition. The **codifiable-convention scoping** module restricts admission to conventions with a machine-readable representation, with an audited-precision gate that demotes a category to exploratory status if the checker's agreement with human judgment falls short. The **design-specificity control** builds a matched, convention-neutral counterpart to every admitted design mutant and compares kill probability between the two, isolating genuine convention-blindness from the generic equivalent-mutant effect. The **augmentation arm** re-runs the measurement after strengthening each suite with a capability-matched, discrimination-optimized test set, separating a structural limit from a quantity-limited one. The **multi-system, cross-category design** runs all three categories across many subject systems in two ecosystems under one statistical model, so a category-level claim is a property of the condition rather than of which systems happened to be sampled.
+
+## Methodology
+
+### Dual-Oracle Admission
+
+**Challenge.** Neither behavioral equivalence nor convention-violation has a ground-truth source inside the object being measured — if either certification came from the suite under study, "the suite didn't kill it" and "it wasn't really equivalent or violating" would be indistinguishable.
+
+**Insight.** Requiring both certifications from sources independent of the suite under study is what turns "the suite missed this" into a claim about the suite, rather than about the certifying procedure's own reliability.
+
+**Method.** A candidate mutant is admitted only if (i) a bounded differential-execution check, run against an input corpus generated independently of the suite under study, finds no observed behavioral difference from the original program at a stated input budget, and (ii) a rule-based checker independent of the suite (a naming, layering, or trace-order rule shipped with the subject project) certifies that it violates its target convention. Both checks are audited against a stratified human sample to bound their own error rate before any downstream survival number is treated as more than exploratory.
+
+### Non-Local Operator Catalog
+
+**Challenge.** Layering and cross-cutting conventions are properties of a call graph or module boundary, not of a single statement, so ordinary local mutation operators cannot express a violation of them without a far larger, harder-to-certify rewrite.
+
+**Insight.** Preserving the call multiset while deliberately breaking only the layering rule keeps the mutation minimal and admissible, rather than turning into a sweeping structural rewrite that the equivalence oracle could not realistically certify.
+
+**Method.** An operator family relocates or reroutes a call across a declared module boundary — for example, having an upper-layer component call a lower-layer component's internals directly — while leaving the set of calls made and their arguments otherwise unchanged, so behavioral equivalence remains certifiable at the same input budget used for local mutations.
+
+### Extended Temporal Kill Criterion
+
+**Challenge.** The classical kill criterion is a final-output difference; an ordering violation between two operations whose final output is unaffected by their order is, by that definition, invisible to any test no matter how thorough.
+
+**Insight.** Two circularities threaten this category from opposite directions, and they are resolved by assigning the two trace-order instruments to opposite sides of the measurement: the *admission* checker must be independent of the suite under study (otherwise "not a violation" and "not killed" are indistinguishable), while the *kill*-side extension must be built only from the suite's own observational vocabulary — because admission already requires the external trace-order checker to flag the mutant, letting that same checker also count as a kill would catch every admitted temporal mutant by definition and pin the category's survival rate at zero, telling us nothing about the suite.
+
+**Method.** Order-swap operators are applied to pairs of operations whose outputs are commutative. The kill criterion is then extended so that a mutant additionally counts as "caught" if any order-sensitive observation *already expressible inside the suite's own execution* fires — an ordered-mock verification, a sequence-asserting test assertion, or an invariant check instrumented at the suite's existing observation points — even when no assertion on final output would have failed. The project's external trace-order rule checker is reserved exclusively for admission-side ground truth and never contributes to $K_T$: it defines *whether the mutant is a violation*, while the extended criterion measures *whether the suite, granted its full order-observing vocabulary, can see it*.
+
+### Codifiable-Convention Scoping
+
+**Challenge.** Genuinely tacit or undocumented conventions have no machine-checkable ground truth at all, but restricting the study to conventions that do have one risks quietly redefining the whole finding as "blind to the easy cases" without saying so.
+
+**Insight.** Making the restriction an explicit, audited scoping decision — rather than an unexamined default — turns a real limitation into a stated boundary condition the reader can evaluate rather than a silent one.
+
+**Method.** Only conventions representable in a machine-readable rule format (naming rules, layering rules, trace-order rules already shipped by or constructible for the subject project) are admitted into the study, and any category whose checker precision falls below a pre-registered threshold against a stratified human audit is reported as exploratory rather than confirmatory for that category.
+
+### Design-Specificity Control
+
+**Challenge.** Every admitted design mutant is, by construction, also an equivalent mutant, so an observed survival gap over the functional baseline could reflect nothing more than the generic difficulty of killing any equivalent mutant, independent of whether it violates a convention.
+
+**Insight.** If the suite's kill probability carries no information about whether a matched mutant actually violates the convention, that is precisely what a convention-blind suite would produce; a gap here, in the other direction, would instead show the suite partially senses conventions through incidental structural coupling.
+
+**Method.** For every admitted design mutant, a matched mutant from the same operator family and locality footprint is constructed that is equally behavior-preserving but does not violate the target convention. Kill probability is compared between the two matched groups per category, holding operator family and locality fixed.
+
+### Augmentation Arm
+
+**Challenge.** A category-level gap that has only ever been observed against one suite's current strength cannot say whether the gap is a permanent limit of functional testing or simply a reflection of that suite's current level of investment.
+
+**Insight.** If the gap were only a matter of insufficient functional-test strength, a real, capability-matched increase in that strength — even from tests with no awareness of design conventions at all — should shrink it; a gap that survives such an increase is evidence about what functional tests can express in principle, not merely how many exist.
+
+**Method.** Each subject suite is augmented with a discrimination-optimized generated test set whose capability is validated by a pre-committed increase in the suite's own functional mutation score; per-category survival is re-measured before and after augmentation, with the validity of the comparison gated on that capability increase actually occurring.
+
+### Multi-System, Cross-Category Design
+
+**Challenge.** A category-level claim drawn from too few subject systems, or from an unrandomized or narrow sample, risks describing the idiosyncrasies of the systems chosen rather than a property of the category itself.
+
+**Insight.** Modeling system-level variation explicitly, rather than pooling raw counts or inspecting one or two systems by eye, is what lets a category-level claim survive individual systems behaving differently from one another — and the same fitted structure can be resampled to check that the claim is not an artifact of which systems happened to be included.
+
+**Method.** All three categories are measured across many subject systems spanning two ecosystems, and one mixed-effects model regresses the kill outcome on mutant type and category with a random effect per system. The identical fitted structure is additionally recomputed on two disjoint random half-samples of systems, checking that the category-level classification agrees across the split.
+
+## Experiments
+
+### Experimental Setup
+
+**Datasets.** Defects4J-derived Java subject projects that ship Checkstyle and ArchUnit configurations — the primary pilot and scale-up corpus, chosen because these projects already carry machine-readable naming and layering ground truth rather than requiring one to be authored from scratch. A Python subset with mature pytest suites and flake8/import-linter configurations — the cross-ecosystem arm needed to test whether the category-structure and split-half findings generalize beyond one language's tooling idioms, rather than being an artifact of Java-specific conventions. A held-out set of roughly three additional systems, drawn after the primary corpus is fixed, reserved specifically as a pre-registered replication set for the split-half reliability check, so that check is not run only by re-splitting the same fixed corpus after the fact.
+
+**Baselines** (confound-isolation and sanity-check comparators, not competitors to beat — this is a measurement study, and no research question here is framed as "our procedure beats baseline X"). A default functional-mutation arm, run with standard operators on the identical unmodified suite, is the necessary reference defining the functional survival rate against which every design-mutant survival rate is contrasted. A matched, convention-neutral equivalent-mutant control, built from the same operator families and locality footprints as the admitted design mutants but not violating any convention, isolates whether survival is convention-specific or merely reflects the generic difficulty of killing any equivalent mutant. A capability-matched augmented suite, strengthened with a discrimination-optimized generated test set validated by its own increase in functional mutation score, is the comparator for whether an observed gap is structural or quantity-limited.
+
+**Metrics.** Per-category Design-Mutant Survival Rate and its contrast with the Functional Survival Rate; the kill-probability difference between the admitted set and its matched neutral control; the per-category survival change after augmentation; equivalence-oracle mislabel rate and violation-checker precision against a stratified human audit; and split-half agreement of the category-level classification.
+
+**Research questions:**
+1. RQ1 — Is the equivalence oracle itself trustworthy enough for its certifications to be treated as ground truth?
+2. RQ2 — Is the violation checker itself precise enough for its certifications to be treated as ground truth?
+3. RQ3 — Can the non-local (layering/cross-cutting) operator family be constructed at a usable admission yield?
+4. RQ4 — Does the extended kill criterion actually catch cases the classical output-diff criterion could never catch?
+5. RQ5 — Does restricting the study to codifiable conventions still admit enough mutants to measure?
+6. RQ6 — Is survival specific to convention-violation, or is it explained by the generic equivalent-mutant effect?
+7. RQ7 — Does an observed category-level gap persist under a capability-matched, stronger test suite?
+8. RQ8 — Does survival differ systematically by design-property category?
+9. RQ9 — Is the category-level classification stable across independent random sub-samples of subject systems?
+
+#### RQ1: Is the equivalence oracle itself trustworthy enough for its certifications to be treated as ground truth?
+
+**Setup.** Draw a stratified random sample of at least 300 admitted mutants across categories and systems; have human auditors independently assess whether each is genuinely behavior-preserving, and compare against the differential-execution oracle's certification.
+
+**Expected outcome.** The equivalence oracle's mislabel rate against the human audit is below 5%.
+
+**Falsification condition.** Refuted if the mislabel rate is at or above 5% — that would mean downstream survival numbers cannot be cleanly attributed to the suite rather than to equivalence-oracle noise, and the category in question would need a tightened equivalence budget or restricted operator family before its results could be treated as confirmatory.
+
+**Hypothesis (plain language).** The bounded differential-execution check is a trustworthy enough proxy for true behavioral equivalence that its certifications can be relied on for the rest of the study.
+
+**Metrics.** Equivalence-oracle mislabel rate against the human audit, overall and per category.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ2: Is the violation checker itself precise enough for its certifications to be treated as ground truth?
+
+**Setup.** Using the same stratified human audit sample as RQ1, compare the machine-readable rule checker's violation verdict against the human auditors' judgment, per category.
+
+**Expected outcome.** Checker precision is at least 0.90 in each category.
+
+**Falsification condition.** Refuted for any category where precision falls below 0.90 — that category's results are then reported as exploratory rather than confirmatory, per the codifiable-convention scoping module's audited-precision gate, rather than silently retained at full confidence.
+
+**Hypothesis (plain language).** A machine-readable rule checker's violation verdict is a close enough proxy for human-judged convention violation to serve as ground truth for this measurement.
+
+**Metrics.** Violation-checker precision against the human audit, per category.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ3: Can the non-local (layering/cross-cutting) operator family be constructed at a usable admission yield?
+
+**Setup.** Apply the layering/cross-cutting operator family to each subject system and record the number of candidates that pass dual-oracle admission.
+
+**Expected outcome.** At least 50 admitted mutants per subject system for this category.
+
+**Falsification condition.** Refuted if yield falls below 50 admitted mutants per system in a majority of systems — that would mean the non-local category is constructible only in principle, not at a scale sufficient to support a category-level claim, and the operator family would need revision before scale-up.
+
+**Hypothesis (plain language).** Non-local design violations can be constructed as certified mutants often enough to measure, not merely as a theoretical category.
+
+**Metrics.** Admitted-mutant count per system for the layering/cross-cutting category.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ4: Does the extended kill criterion actually catch cases the classical output-diff criterion could never catch?
+
+**Setup.** Among admitted temporal/ordering mutants, identify those with confirmed-identical final output under the differential corpus, and check how many are nonetheless flagged as convention-violating by the independent trace-order checker.
+
+**Expected outcome.** At least 50% of admitted temporal/ordering mutants have confirmed-identical final output yet are flagged as violating by the trace-order checker.
+
+**Falsification condition.** Refuted if fewer than half of admitted temporal/ordering mutants show this pattern — that would mean the temporal category, as operationalized, is not meaningfully separating ordering violations from final-output-detectable ones, undermining the claim that the kill-criterion extension does real work rather than restating the classical criterion. (A bare existence claim — at least one such mutant — was considered and rejected during method design as too weak to fail: with any nontrivial admitted count, a single instance is close to guaranteed and would not constitute a meaningful test.)
+
+**Hypothesis (plain language).** Ordering violations that leave final output unchanged are common enough among admitted temporal mutants that the extended kill criterion is doing real, load-bearing work, not confirming a near-vacuous edge case.
+
+**Metrics.** Proportion of admitted temporal/ordering mutants with confirmed-identical final output that are flagged as violating by the trace-order checker.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ5: Does restricting the study to codifiable conventions still admit enough mutants to measure?
+
+**Setup.** Across all three categories, count admitted mutants per category per system after the codifiable-convention scoping restriction is applied.
+
+**Expected outcome.** At least 150 admitted mutants per category per system in at least 9 of 12 tested systems — with the layering/cross-cutting category held to its own RQ3 floor of at least 50 per system, so a LAY yield between 50 and 149 does not fail this RQ while passing RQ3.
+
+**Falsification condition.** Refuted if fewer than 9 of 12 systems clear this bar — that would mean the codifiable-conventions restriction, whatever its conceptual justification, is too narrow in practice to support the category-level statistical design, and the operator catalog or checker rule set would need broadening before the main analysis could proceed as planned.
+
+**Hypothesis (plain language).** Restricting to machine-checkable conventions is a real scoping choice, but not one so narrow that it starves the measurement of cases to analyze.
+
+**Metrics.** Admitted-mutant count per category per system.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ6: Is survival specific to convention-violation, or is it explained by the generic equivalent-mutant effect?
+
+**Setup.** For each category, compare kill probability between the admitted design-mutant set and its matched, convention-neutral control, holding operator family and locality fixed. Because the supporting outcome here is a *small* difference, the confirmatory analysis is a two-one-sided-tests (TOST) equivalence procedure with a pre-registered margin of 0.05, run at the pooled level (all systems, within the mixed-effects model), not a failure-to-reject of an ordinary difference test. The pooling is a power necessity, stated openly: at the pre-registered floor of 150 mutants per category per system, a per-system two-proportion 95% confidence interval has a worst-case half-width of roughly ±0.10 — a single system can never confirm a gap below 0.05 — whereas pooling across at least 12 systems (n ≥ 1800 per group per category) brings the worst-case half-width to roughly ±0.03, inside the margin. One category is honestly weaker: layering/cross-cutting carries a lower admission floor (50 per system, per RQ3), so its pooled worst case (n ≥ 600 per group) yields a half-width of roughly ±0.06 — if the pooled LAY interval cannot exclude the 0.05 margin, that category's equivalence verdict is reported as exploratory rather than confirmatory, not silently passed. Per-system contrasts are in all cases reported descriptively only.
+
+**Expected outcome.** The pooled TOST procedure concludes equivalence within the ±0.05 margin per category (both one-sided tests rejected at α=0.05).
+
+**Falsification condition.** Refuted if the pooled TOST procedure fails to conclude equivalence within the ±0.05 margin in a given category (either because the estimated gap is at or above 0.05, or because the pooled interval is too wide to exclude it) — but note the direction this cuts: a *small* gap here is the outcome that supports a genuine, convention-specific blind-spot claim, because it shows the suite's kill behavior carries no information about violation status once equivalence is already held fixed, ruling out the alternative that survival merely reflects the generic difficulty of killing any equivalent mutant. A *large* gap (design mutants surviving noticeably more, or less, than matched neutral ones) would instead show the suite partially senses convention-violation through incidental structural coupling — informative, but weakening a strong blind-spot claim for that category. Readers should not expect "bigger gap, stronger finding" here — the polarity is reversed relative to most difference-based tests in this paper.
+
+**Hypothesis (plain language).** Once a mutant's behavioral equivalence is already accounted for, whether it happens to violate a design convention makes no further difference to the suite's chance of catching it — the suite is blind to the convention itself, not merely bad at catching equivalent mutants in general.
+
+**Metrics.** Pooled TOST equivalence verdict (margin ±0.05, α=0.05) on the kill-probability difference between the admitted design-mutant set and its matched neutral control, per category, with confidence intervals; per-system differences reported descriptively.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ7: Does an observed category-level gap persist under a capability-matched, stronger test suite?
+
+**Setup.** For the non-local categories (layering/cross-cutting, temporal/ordering), augment each subject suite with a discrimination-optimized generated test set validated to raise the suite's functional mutation score by at least 10 points, and re-measure per-category survival before and after.
+
+**Expected outcome.** The absolute survival-rate reduction after augmentation is below 0.10, with no statistically significant per-mutant kill change, across a majority of tested systems.
+
+**Falsification condition.** Refuted if augmentation significantly reduces non-local-category survival by 0.10 or more — that would mean the observed gap is quantity-limited (closable by more or stronger functional tests) rather than a structural limit of what functional testing can express, and the paper's practical implication would shift from "a new gating mechanism is needed" to "invest further in functional test strength."
+
+**Hypothesis (plain language).** The gap for non-local design properties is not simply a matter of the current suite being under-resourced; a genuinely stronger functional suite does not close it.
+
+**Metrics.** Per-category survival-rate change after augmentation, and paired significance test on per-mutant kill outcomes, conditional on the augmentation's own capability-increase validity check passing.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ8: Does survival differ systematically by design-property category?
+
+**Setup.** Fit the pre-registered mixed-effects model (kill outcome regressed on mutant type and category, with a random effect per system) across all tested systems and test the category term.
+
+**Expected outcome.** The category effect is statistically significant, pooled across all tested systems.
+
+**Falsification condition.** Refuted if the category effect is not significant — that would support undifferentiated test-blindness across naming, layering, and temporal properties rather than a structure tied to non-locality or temporality specifically.
+
+**Hypothesis (plain language).** Test blindness is not uniform across design-property categories; some categories are harder for a suite to accidentally catch than others.
+
+**Metrics.** Likelihood-ratio test statistic and p-value for the category fixed effect; per-category effect-size estimates with confidence intervals.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+#### RQ9: Is the category-level classification stable across independent random sub-samples of subject systems?
+
+**Setup.** Split the tested systems into two disjoint random halves, recompute the category-level classification independently on each half using the identical fitted model structure, and compare agreement, including on the held-out replication systems reserved for this check.
+
+**Expected outcome.** The two half-sample classifications agree on a majority of category comparisons.
+
+**Falsification condition.** Refuted if agreement falls at or below chance — that would mean the reported category structure is sensitive to which systems happened to be sampled rather than describing the category itself.
+
+**Hypothesis (plain language).** The reported category-level structure describes a real property of the categories being measured, not an artifact of which specific subject systems happened to be included.
+
+**Metrics.** Split-half classification agreement rate across category comparisons.
+
+**Result.** *[placeholder — fill in after experiments are run]*
+
+**Further evaluation.** With more time, a natural extension is to relax the codifiable-conventions restriction toward genuinely tacit or undocumented conventions — explicitly out of scope here because it requires an entirely different ground-truth procedure (likely expert elicitation rather than a machine-readable checker) rather than an extension of the dual-oracle admission rule above.
+
+## Related Work
+
+The two nearest points of contact for this paper are a binary-matrix formalization of test-case discrimination power and the classical mutation-testing literature's own definition of test adequacy, and the delta is worth stating plainly before surveying the wider landscape: both give the closest existing account of which program variants a test suite can and cannot tell apart, but both are built entirely around *functionally wrong* programs — neither has any notion of a variant that is functionally correct yet violates a design convention, which is precisely the kind of variant this paper's admission procedure is built to certify and measure. These two lines of prior work — LLM-code-testing research optimizing for functional discrimination, and classical software-engineering research either scoping adequacy to behavior by definition or building separate machinery once design conformance is at stake — are related in a specific way worth making explicit: the first supplies the applied motivation for this paper (autonomous coding agents are now generating the code these tools evaluate on functional grounds alone), while the second supplies the theoretical vocabulary this paper extends into a dimension neither line currently measures.
+
+**Testing and code review as functional-correctness oracles.** A binary-matrix formalization models wrong programs against trusted test cases and shows the matrix's rank bounds how many distinguishable failure signatures a test set can separate — the closest existing formalization of discrimination power, but every row is a functionally wrong program by construction, making a functionally-equivalent-yet-convention-violating variant an all-pass row invisible to a rank analysis. Adversarially trained test generators score a candidate suite by a discrimination reward — accept the reference implementation, reject sampled wrong programs — which by its own construction always accepts a convention-violating-but-behaviorally-identical mutant, since the reward has no channel for anything but functional correctness. Defect-focused automated review reframes evaluation around merge-request-level key-bug detection, still a functional-defect target with no separate category for naming, layering, or temporal conventions. Benchmark-construction pipelines that generate a reference solution first and derive execution-grounded tests from it make the functional-only commitment explicit at the level of the whole pipeline, deliberately equating "correct" with "passes the derived tests." A benchmark that pairs each task with a formal specification and proof, in addition to a test suite, is itself indirect evidence that tests under-express intended behavior — but treats this as a scope choice for benchmark construction, not a measured account of which properties tests specifically cannot reach. And multi-agent code-generation platforms that flag the risk of code and its judging tests hallucinating together name the circularity problem directly but resolve it only by adding more agents inside the same loop, without a test-suite-independent oracle of the kind a design-conformance measurement requires.
+
+**Mutation-testing adequacy and architecture conformance.** The foundational survey of mutation testing establishes the mutation score and the equivalent-mutant problem as the field's central obstacle — but frames both entirely around behavioral change: an equivalent mutant is, by definition, one no test can kill because behavior is unchanged, and the framework never asks whether such a mutant nonetheless violates a design convention. Work on assessing oracle quality via checked coverage — the fraction of executed code whose result is actually asserted, not merely run — exposes that mature suites execute far more than they check, but is scoped to single-execution output/assertion pairs and cannot characterize whole property classes, like cross-cutting concerns or temporal ordering, that may never be observable through any single execution's checked output. Architecture-conformance checking via reflexion models builds dedicated, model-based machinery to compare an implementation against its intended architecture, precisely because the ordinary test suite is assumed unable to check design conformance at all — but this line of work never measures, through the suite itself, how much of that conformance space is actually invisible to it, which is exactly the mechanical account this paper is built to produce.
+
+**Design-compliance measurement and trace-level compliance (2026).** Two recent clusters sit closest in time and must be conceded by name. "Does Pass Rate Tell the Whole Story?" (arXiv:2604.05955) mines 1,787 design constraints from six repositories' pull requests and shows that fewer than half of test-resolved agent issues are fully design-satisfying, with functional correctness statistically near-independent of design satisfaction — the strongest field evidence to date that a green suite is not a design gate. We concede that the *existence and prevalence* of green-but-design-violating patches is therefore already established; what that observational design cannot deliver — and what this paper's estimand is — is the *suite-side* account: whether the miss is a structural property of what functional tests can express, identified causally via certified equivalent mutants, a matched convention-neutral control, and a capability-matched augmentation arm, rather than a property of how today's agents happen to behave. Second, a trace-level procedural-compliance line — exemplified by AgentLTL (arXiv:2607.02599), which verifies an agent's tool-call trace against temporal-logic rules and can gate or train on the resulting compliance score — verifies the *process* that produced an artifact; this paper's estimand is the *artifact-level* expressivity boundary of the test suite itself, a different object: a perfectly procedure-compliant trace can still emit a convention-violating, behaviorally equivalent patch that no functional test distinguishes.
+
+## Conclusion
+
+This work reframes an assumption embedded in how coding-agent changes are gated in practice — that a passing test suite says something about design compliance, not just functional correctness — as a measurable question with a precise identifiability structure, rather than a claim to be asserted in either direction. The central methodological wager is that a survival gap is only informative once it has cleared three hurdles at once: the oracles certifying it are independent of the suite being measured, the gap is shown to be convention-specific rather than a generic equivalent-mutant artifact, and the gap is shown to survive a real increase in test-suite strength rather than reflecting only its current level. Whichever categories clear all three hurdles, the finding is decision-relevant either way: a category that clears them means no realistic investment in functional testing closes that particular blind spot, and a design-compliance gate needs a fundamentally different mechanism; a category that fails the augmentation check instead means the fix was always available, just under-invested in. Two limitations bound this claim from the outset and are natural next steps rather than afterthoughts: the study is scoped to conventions with a machine-readable representation, leaving genuinely tacit or undocumented conventions — plausibly the harder and more realistic case — for a follow-up that would need an entirely different ground-truth procedure; and the equivalence oracle's own bounded-budget nature means a category's blind-spot status is only as strong as its audited mislabel rate, pointing toward tighter equivalence certification, not a larger corpus of subject systems, as the next methodological target.
+
+---
+
+## Pre-handoff checklist
+
+- **Organization/navigation** — narrative flows problem → method → experiments → related work without forward references to undefined terms.
+- **Terminology discipline** — "design mutant," "dual-oracle admission," "matched neutral control," "capability-matched augmentation," "Design-Mutant Survival Rate" each defined at first use in Problem Definition or Method Overview, used consistently thereafter; no internal stage IDs (`sp_*`, `m_*`, `rq_*`) leaked into prose — checked directly against `pipeline.md`.
+- **Terminology discipline (Related Work fix applied)** — the two related-work clusters (LLM-code-testing, classical SE adequacy/conformance) are explicitly connected by one bridging sentence rather than left as two unconnected literatures; see `stage_review.md` Stage 2 for the finding this fixes.
+- **Notation with worked example** — the formal setup section defines $(P, T, m, c, K_T, \mathrm{EQ}_B, V, D_c, N_c, \mathrm{DMSR}_c, \mathrm{FMS})$ and the Problem Definition/Methodology sections consistently reuse this notation; no separate worked numeric example is included since no numbers exist yet (would require fabricating results).
+- **RQ framing matches outcomes** — all 9 RQs are graded/quantitative (rates, proportions, agreement fractions), each answered in its own subsection with an explicit falsifiable expected outcome and falsification condition, not a binary yes/no; RQ6's falsification condition additionally states its reversed polarity explicitly (see `stage_review.md` Stage 4 fix) so the direction of a "good" result is not assumed obvious.
+- **No typesetting artifacts** — no `[CITE]`/`[TODO]` placeholders; only explicit `[placeholder — fill in after experiments are run]` markers in Results, per the drafting convention this is a pre-registered spec, not a report.
+- **Artifact plan** — the dual-oracle admission harness, the operator/checker catalogs, and the self-generated design-mutant corpus are the natural release artifacts; not yet built, so not claimed as available.
+
+## Hand-off
+
+This is a Markdown draft, not a finished paper — experiments have not run. Natural next steps: `research-paper-writing` for LaTeX conversion and prose polish once a target venue is chosen, or back into this pipeline if a stage needs revision (e.g., if piloting surfaces that the non-local operator yield in RQ3 is far below target, that is exactly the kind of cross-stage problem that becomes visible only once a draft exists, per `paper_assembly.md`).

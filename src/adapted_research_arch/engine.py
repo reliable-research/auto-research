@@ -68,9 +68,13 @@ class ResearchEngine:
         thread_id: str | None = None,
         idempotency_key: str | None = None,
         agent_pins: dict[str, str] | None = None,
+        evidence_mode: str = "SIMULATED",
         execute: bool = True,
     ) -> dict[str, Any]:
         workflow = self._workflow(workflow_id)
+        evidence_mode = str(evidence_mode).upper()
+        if evidence_mode not in {"SIMULATED", "MEASURED"}:
+            raise EngineError("evidence_mode must be SIMULATED or MEASURED")
         pins = _validate_agent_pins(workflow, agent_pins or {})
         if thread_id is None:
             thread = self.project.start_thread(
@@ -95,10 +99,14 @@ class ResearchEngine:
                     "objective": objective,
                     "controlMode": control_mode,
                     "agentPins": pins,
+                    "evidenceMode": evidence_mode,
                 },
             )
         elif pins != self._agent_pins(ledger):
             raise EngineError("idempotent workflow start cannot change recorded agent pins")
+        created = next(ledger.events_of_type("workflow/created"))["payload"]
+        if created.get("evidenceMode", "SIMULATED") != evidence_mode:
+            raise EngineError("idempotent workflow start cannot change evidence mode")
         return self.resume(str(run["id"])) if execute else self.describe(str(run["id"]))
 
     def resume(self, run_id: str) -> dict[str, Any]:
@@ -430,7 +438,7 @@ class ResearchEngine:
         }
         promoted = claims.list(run_id=str(run["id"]), state="promoted")
         candidates = claims.list(run_id=str(run["id"]), state="evidence_linked")
-        return {
+        request = {
             "protocolVersion": "1.0",
             "projectId": self.project.project_id,
             "runId": run["id"],
@@ -446,8 +454,8 @@ class ResearchEngine:
                 "gates": list(stage.gates),
             },
             "dependencyResults": dependency_results,
-            "candidateClaims": candidates if stage.capability == "review.audit_integrity" else [],
-            "promotedClaims": promoted if stage.capability == "publication.write_from_claims" else [],
+            "candidateClaims": candidates if stage.capability in {"review.audit_integrity", "research.review_stage"} else [],
+            "promotedClaims": promoted if stage.capability == "publication.write_from_claims" or (workflow.id == "idea-to-paper" and stage.id == "s8") else [],
             "memory": self.memory.query(str(run["objective"]), reviewed_only=True, for_agent=True),
             "dataFirewall": {
                 "agentVisible": ["train", "development"],
@@ -462,6 +470,24 @@ class ResearchEngine:
                 "instructions": (package.root / "AGENT.md").read_text(encoding="utf-8"),
             },
         }
+
+
+        if workflow.id == "idea-to-paper":
+            from .research.gates import context
+            created = next(self._ledger(str(run["id"])).events_of_type("workflow/created"))["payload"]
+            request["researchContract"] = context(stage.id, created.get("evidenceMode", "SIMULATED"))
+            if "s2" in dependency_results:
+                request["researchContract"]["problemContract"] = dependency_results["s2"]["records"]["research.stage.v1"].get("problemContract")
+            with self.project.connect() as connection:
+                failures = connection.execute(
+                    "SELECT error FROM attempts WHERE run_id = ? AND stage_id = ? AND error IS NOT NULL ORDER BY created_at DESC LIMIT 3",
+                    (str(run["id"]), stage.id),
+                ).fetchall()
+            request["researchContract"]["revisionFeedback"] = [row["error"] for row in reversed(failures)]
+            # Keep raw logs in the artifact store, rather than repeating them in every model prompt.
+            for value in dependency_results.values():
+                value.pop("artifacts", None)
+        return request
 
     @staticmethod
     def _bind_claim(candidate: CandidateClaim, artifacts: dict[str, ArtifactRef]) -> CandidateClaim:
@@ -504,6 +530,14 @@ class ResearchEngine:
                 missing = set(stage.outputs) - set(output.get("records", {}))
                 if missing:
                     errors.append(f"schema.valid missing records {sorted(missing)}")
+            elif gate.startswith("research."):
+                from .research.gates import evaluate
+                prior = {dependency: self._read_stage_result(run_id, dependency) for dependency in stage.depends_on}
+                workspace = self.project.run_dir(run_id) / "attempts" / stage.id / attempt_id / "workspace"
+                try:
+                    errors.extend(evaluate(gate, request, output, workspace, prior))
+                except (KeyError, TypeError, ValueError) as error:
+                    errors.append(f"{gate}: invalid research record: {error}")
             elif gate in {"evidence.locator_resolution", "claim.evidence_complete"}:
                 unresolved = [item["id"] for item in stage_claims if not item["evidence_resolved"]]
                 if unresolved:
@@ -522,6 +556,8 @@ class ResearchEngine:
                 if set(baseline.get("metrics", {})) != set(output.get("metrics", {})):
                     errors.append("baseline.matched metric contract differs")
             elif gate == "claim.promotion":
+                if errors:
+                    continue
                 drafts = claims.list(run_id=run_id, state="draft")
                 if drafts:
                     errors.append(f"claim.promotion unresolved claims {[item['id'] for item in drafts]}")

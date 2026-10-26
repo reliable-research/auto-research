@@ -44,6 +44,7 @@ def parser() -> argparse.ArgumentParser:
     start.add_argument("workflow", choices=sorted(WORKFLOWS))
     start.add_argument("objective")
     start.add_argument("--mode", choices=("autopilot", "copilot", "manual"), default="autopilot")
+    start.add_argument("--evidence-mode", choices=("SIMULATED", "MEASURED"), default="SIMULATED")
     start.add_argument("--thread")
     start.add_argument("--idempotency-key")
     start.add_argument(
@@ -118,6 +119,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         thread_id=args.thread,
                         idempotency_key=args.idempotency_key,
                         agent_pins=_parse_agent_pins(args.agent_pin),
+                        evidence_mode=args.evidence_mode,
                     )
                 )
             if args.run_command == "resume":

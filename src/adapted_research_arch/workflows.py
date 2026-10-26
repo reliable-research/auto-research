@@ -83,7 +83,48 @@ PAPER_REPRODUCTION = WorkflowSpec(
 )
 
 
+def _research_stages() -> tuple[StageSpec, ...]:
+    from .research.stages import STAGE_ORDER, get_stage
+    result = []
+    for index, identifier in enumerate(STAGE_ORDER):
+        name = identifier.value.lower()
+        dependencies = [f"s{index}", f"s{index}_review"] if index else []
+        if index >= 2 and "s2" not in dependencies:
+            dependencies.append("s2")
+        if index >= 5:
+            dependencies.append("s5")
+        if index >= 6:
+            dependencies.append("s6")
+        if index == 7:
+            dependencies = list(dict.fromkeys([*dependencies, *[f"s{n}" for n in range(1, 8)]]))
+        gates = ("schema.valid", "research.integrity", "numeric.provenance")
+        if index == 7:
+            gates += ("publication.reverse_links",)
+        result.append(stage(
+            name, "research.measure" if index == 5 else "research.build_stage",
+            get_stage(identifier).goal, depends_on=tuple(dependencies),
+            risk=Risk.R3 if index == 5 else Risk.R2,
+            outputs=("research.stage.v1",), gates=gates,
+        ))
+        review_gates = ("schema.valid", "research.review", "research.integrity")
+        if index in (5, 6):
+            review_gates += ("claim.promotion",)
+        review_dependencies = list(dict.fromkeys([name, *dependencies]))
+        result.append(stage(
+            name + "_review", "research.review_stage", "Review the six current-stage cards and machine checks.",
+            depends_on=tuple(review_dependencies), outputs=("research.review.v1",), gates=review_gates,
+        ))
+    return tuple(result)
+
+
+IDEA_TO_PAPER = WorkflowSpec(
+    id="idea-to-paper", version="0.1.0",
+    description="One evidence-gated research loop, with eight stages and separate reviews.",
+    stages=_research_stages(),
+)
+
+
 WORKFLOWS = {
     item.id: item
-    for item in (LITERATURE_REVIEW, DATA_ANALYSIS, CODE_OPTIMIZATION, PAPER_REPRODUCTION)
+    for item in (LITERATURE_REVIEW, DATA_ANALYSIS, CODE_OPTIMIZATION, PAPER_REPRODUCTION, IDEA_TO_PAPER)
 }

@@ -162,6 +162,7 @@ class ProtocolServer:
                 thread_id=params.get("threadId"),
                 idempotency_key=params.get("idempotencyKey"),
                 agent_pins=params.get("agentPins"),
+                evidence_mode=str(params.get("evidenceMode", "SIMULATED")),
                 execute=bool(params.get("execute", True)),
             )
         if method == "workflow/resume":

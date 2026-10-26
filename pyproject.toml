@@ -17,4 +17,4 @@ ara = "adapted_research_arch.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-adapted_research_arch = ["builtin_agents/**/*.json", "builtin_agents/**/*.md", "builtin_agents/*.py"]
+adapted_research_arch = ["builtin_agents/**/*.json", "builtin_agents/**/*.md", "builtin_agents/*.py", "research/assets/*.md"]

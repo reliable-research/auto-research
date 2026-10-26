@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "id": "research.measurement",
+  "version": "0.1.0",
+  "name": "research-measurement",
+  "description": "Frames objectives and measurable completion criteria.",
+  "maturity": "experimental",
+  "capabilities": [
+    "research.measure"
+  ],
+  "inputs": [],
+  "outputs": [
+    "research.stage.v1"
+  ],
+  "adapter": {
+    "type": "command",
+    "command": [
+      "python3",
+      "-m",
+      "adapted_research_arch.research.bridge"
+    ]
+  },
+  "risk": "R3",
+  "permissions": {
+    "filesystem": {
+      "read": [
+        "project:workspace"
+      ],
+      "write": [
+        "attempt:workspace",
+        "attempt:artifacts"
+      ]
+    },
+    "network": {
+      "mode": "disabled",
+      "hosts": []
+    },
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": [
+    "schema.valid",
+    "research.integrity"
+  ],
+  "budgets": {
+    "maxWallSeconds": 900,
+    "maxToolCalls": 100,
+    "maxSources": 50,
+    "maxCostUsd": 0
+  },
+  "routing": {
+    "allowImplicit": false
+  }
+}

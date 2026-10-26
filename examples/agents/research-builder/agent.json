@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0",
+  "id": "research.builder",
+  "version": "0.1.0",
+  "name": "research-builder",
+  "description": "Frames objectives and measurable completion criteria.",
+  "maturity": "experimental",
+  "capabilities": [
+    "research.build_stage"
+  ],
+  "inputs": [],
+  "outputs": [
+    "research.stage.v1"
+  ],
+  "adapter": {
+    "type": "model",
+    "provider": "configured-bridge",
+    "model": "configured"
+  },
+  "risk": "R2",
+  "permissions": {
+    "filesystem": {
+      "read": [
+        "project:workspace"
+      ],
+      "write": [
+        "attempt:workspace",
+        "attempt:artifacts"
+      ]
+    },
+    "network": {
+      "mode": "disabled",
+      "hosts": []
+    },
+    "process": true,
+    "scheduler": false,
+    "gpu": false,
+    "externalWrite": false,
+    "secretHandles": []
+  },
+  "tools": [],
+  "evaluators": [
+    "schema.valid",
+    "research.integrity"
+  ],
+  "budgets": {
+    "maxWallSeconds": 900,
+    "maxToolCalls": 100,
+    "maxSources": 50,
+    "maxCostUsd": 0
+  },
+  "routing": {
+    "allowImplicit": false
+  }
+}

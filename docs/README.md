@@ -2,6 +2,8 @@
 
 | Document | Use |
 |---|---|
+| [RESEARCH_LOOP.md](RESEARCH_LOOP.md) | Central question, stage gates, measurement, and paper workflow |
+| [CODELESS_INTEGRATION.md](CODELESS_INTEGRATION.md) | What was absorbed from codeless and why |
 | [PRODUCT_GUIDE.md](PRODUCT_GUIDE.md) | Install, operate, recover runs, and connect adapters |
 | [CONTAINERS.md](CONTAINERS.md) | Docker environment and CLI authentication |
 | [DESIGN.md](../DESIGN.md) | Architecture and design intent; deferred features are not runtime guarantees |

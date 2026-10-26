@@ -2,7 +2,7 @@
 
 ## Release result
 
-Version 0.1 implements the local runtime, shared CLI/protocol surface, ten fixture agent packages, four workflows, trust and policy controls, evidence promotion, reviewed memory, and verification tooling. The standard-library conformance suite contains 32 tests and runs without credentials or network access.
+Version 0.1 implements the local runtime, shared CLI/protocol surface, ten fixture agent packages, four workflows, trust and policy controls, evidence promotion, reviewed memory, and verification tooling. The standard-library conformance suite also covers research contracts, measurement, and the native idea-to-paper workflow and runs without credentials or network access.
 
 ## Architecture acceptance mapping
 
@@ -39,3 +39,7 @@ The local subprocess adapter uses copied attempt workspaces and post-execution s
 The included agent packages are deterministic fixtures. Real model intelligence, scientific data connectors, scheduler jobs, and remote tools enter through versioned adapters and must still pass the same state, policy, evidence, and evaluation mechanisms.
 
 Phases 7–10 remain deferred: scheduler/container orchestration, broad advanced search, publication rendering and external publishing, and distributed deployment.
+
+## Research-loop integration
+
+The codeless components run inside the existing controller. Eight stages each have a separate six-card review; S2 scope and S5 protocol commitments remain fixed. Native integration tests exercise simulated and measured execution, negative and invalid observations, role separation, artifact integrity, and drift rejection. These checks validate the software contracts; no live model or research benchmark score is claimed. See [RESEARCH_LOOP.md](RESEARCH_LOOP.md).

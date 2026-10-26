@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run conformance and sandbox regressions
+      - name: Run runtime, research, and integrity checks
         env:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -v

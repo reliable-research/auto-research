@@ -1,0 +1,24 @@
+{
+  "run_id": "R-h0050-hard_symbolic_bound",
+  "label": "hard_symbolic_bound @ unwind=50",
+  "group": "hard-k=50",
+  "command": [
+    "cbmc",
+    "benchmarks_hard/hard_symbolic_bound.c",
+    "--unwind",
+    "50",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 300.0,
+  "status": "PASS",
+  "exit_code": 0,
+  "wall_time_s": 5.5681,
+  "stdout_path": "artifacts/poc_runs/R-h0050-hard_symbolic_bound.log",
+  "stderr_path": "artifacts/poc_runs/R-h0050-hard_symbolic_bound.err.log",
+  "input_hashes": {
+    "benchmarks_hard/hard_symbolic_bound.c": "9b55bd7d87a4273bdf35520f9625345ec632b44e561d3e06f79bb6fdd5e5a0fc"
+  },
+  "started_at": "2026-09-15T14:31:11.391342+00:00",
+  "finished_at": "2026-09-15T14:31:16.959486+00:00",
+  "note": ""
+}

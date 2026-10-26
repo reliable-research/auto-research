@@ -1,0 +1,24 @@
+{
+  "run_id": "R-h0050-hard_array_state",
+  "label": "hard_array_state @ unwind=50",
+  "group": "hard-k=50",
+  "command": [
+    "cbmc",
+    "benchmarks_hard/hard_array_state.c",
+    "--unwind",
+    "50",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 300.0,
+  "status": "PASS",
+  "exit_code": 0,
+  "wall_time_s": 8.9835,
+  "stdout_path": "artifacts/poc_runs/R-h0050-hard_array_state.log",
+  "stderr_path": "artifacts/poc_runs/R-h0050-hard_array_state.err.log",
+  "input_hashes": {
+    "benchmarks_hard/hard_array_state.c": "d05734a3d863462f59218f5a86ee092e5ad3bd0c5cbd36359cae8dd8dcc5094c"
+  },
+  "started_at": "2026-09-15T14:36:27.485075+00:00",
+  "finished_at": "2026-09-15T14:36:36.468600+00:00",
+  "note": ""
+}

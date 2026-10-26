@@ -1,0 +1,24 @@
+{
+  "run_id": "R-k0050-safe_nested_guard",
+  "label": "safe_nested_guard @ unwind=50",
+  "group": "easy-k=50",
+  "command": [
+    "cbmc",
+    "benchmarks/safe_nested_guard.c",
+    "--unwind",
+    "50",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 60.0,
+  "status": "FAIL",
+  "exit_code": 10,
+  "wall_time_s": 0.0473,
+  "stdout_path": "artifacts/poc_runs/R-k0050-safe_nested_guard.log",
+  "stderr_path": "artifacts/poc_runs/R-k0050-safe_nested_guard.err.log",
+  "input_hashes": {
+    "benchmarks/safe_nested_guard.c": "59065c667d7966d0c83720ecad4251d0488477d5d33d38631dff57238c8d83e7"
+  },
+  "started_at": "2026-09-15T14:25:51.115176+00:00",
+  "finished_at": "2026-09-15T14:25:51.162467+00:00",
+  "note": ""
+}

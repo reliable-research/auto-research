@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoresearch-codeless"
+version = "4.0.0"
+description = "Executable implementation of the Idea to Paper Codeless Workflow v4 powered by Gemini via agy"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "AutoResearch Codeless Team" }
+]
+dependencies = [
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+autoresearch = "autoresearch.cli.main:main"
+idea2paper = "autoresearch.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["autoresearch*"]

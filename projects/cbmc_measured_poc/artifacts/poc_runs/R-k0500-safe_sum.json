@@ -1,0 +1,24 @@
+{
+  "run_id": "R-k0500-safe_sum",
+  "label": "safe_sum @ unwind=500",
+  "group": "easy-k=500",
+  "command": [
+    "cbmc",
+    "benchmarks/safe_sum.c",
+    "--unwind",
+    "500",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 60.0,
+  "status": "FAIL",
+  "exit_code": 10,
+  "wall_time_s": 0.0951,
+  "stdout_path": "artifacts/poc_runs/R-k0500-safe_sum.log",
+  "stderr_path": "artifacts/poc_runs/R-k0500-safe_sum.err.log",
+  "input_hashes": {
+    "benchmarks/safe_sum.c": "cd55691f3236be547c9faac88b9ce63500e3347cba231728f0004f5eefde2f03"
+  },
+  "started_at": "2026-09-15T14:25:51.611354+00:00",
+  "finished_at": "2026-09-15T14:25:51.706494+00:00",
+  "note": ""
+}

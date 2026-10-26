@@ -1,0 +1,24 @@
+{
+  "run_id": "R-k1001-safe_linear",
+  "label": "safe_linear @ unwind=1001",
+  "group": "easy-k=1001",
+  "command": [
+    "cbmc",
+    "benchmarks/safe_linear.c",
+    "--unwind",
+    "1001",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 60.0,
+  "status": "PASS",
+  "exit_code": 0,
+  "wall_time_s": 0.1229,
+  "stdout_path": "artifacts/poc_runs/R-k1001-safe_linear.log",
+  "stderr_path": "artifacts/poc_runs/R-k1001-safe_linear.err.log",
+  "input_hashes": {
+    "benchmarks/safe_linear.c": "f69a78c6bf25c466b03ce5e64855bab4ad9de35e53b3f9af3ecfe39df304156a"
+  },
+  "started_at": "2026-09-15T14:25:52.387963+00:00",
+  "finished_at": "2026-09-15T14:25:52.510861+00:00",
+  "note": ""
+}

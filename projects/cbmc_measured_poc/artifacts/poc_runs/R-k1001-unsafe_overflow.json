@@ -1,0 +1,24 @@
+{
+  "run_id": "R-k1001-unsafe_overflow",
+  "label": "unsafe_overflow @ unwind=1001",
+  "group": "easy-k=1001",
+  "command": [
+    "cbmc",
+    "benchmarks/unsafe_overflow.c",
+    "--unwind",
+    "1001",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 60.0,
+  "status": "FAIL",
+  "exit_code": 10,
+  "wall_time_s": 0.1205,
+  "stdout_path": "artifacts/poc_runs/R-k1001-unsafe_overflow.log",
+  "stderr_path": "artifacts/poc_runs/R-k1001-unsafe_overflow.err.log",
+  "input_hashes": {
+    "benchmarks/unsafe_overflow.c": "e2afab6303d18cc6dce8082eea25a437f11f2829a58a73fcbba04c4f861c33c8"
+  },
+  "started_at": "2026-09-15T14:25:52.756229+00:00",
+  "finished_at": "2026-09-15T14:25:52.876776+00:00",
+  "note": ""
+}

@@ -1,0 +1,24 @@
+{
+  "run_id": "R-h0050-hard_multivar",
+  "label": "hard_multivar @ unwind=50",
+  "group": "hard-k=50",
+  "command": [
+    "cbmc",
+    "benchmarks_hard/hard_multivar.c",
+    "--unwind",
+    "50",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 300.0,
+  "status": "TIMEOUT",
+  "exit_code": null,
+  "wall_time_s": 300.1192,
+  "stdout_path": "artifacts/poc_runs/R-h0050-hard_multivar.log",
+  "stderr_path": "artifacts/poc_runs/R-h0050-hard_multivar.err.log",
+  "input_hashes": {
+    "benchmarks_hard/hard_multivar.c": "61a0d3985a4ba2239c7a4421848d8bcdf223ac3f1fdf15b3d3f4e03d06c8da9e"
+  },
+  "started_at": "2026-09-15T14:31:27.363113+00:00",
+  "finished_at": "2026-09-15T14:36:27.482350+00:00",
+  "note": "exceeded timeout of 300.0s"
+}

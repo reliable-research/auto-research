@@ -1,0 +1,680 @@
+{
+  "_note": "Frozen protocol. Two tiers share one command shape and differ only in the program under test. Easy tier: concrete loop bound 1000, so k=1001 is the completeness threshold. Hard tier: symbolic loop bound n<=49 with nondet array indices, so k=50 is the completeness threshold. Nondet values are masked to 10 bits so the only refutable property is the loop invariant, not signed overflow.",
+  "defaults": {
+    "timeout_s": 60
+  },
+  "runs": [
+    {
+      "run_id": "R-k0010-safe_sum",
+      "label": "safe_sum @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_sum.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0010-safe_counter",
+      "label": "safe_counter @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_counter.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0010-safe_linear",
+      "label": "safe_linear @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_linear.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0010-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_nested_guard.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0010-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_offbyone.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0010-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_overflow.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0050-safe_sum",
+      "label": "safe_sum @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_sum.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0050-safe_counter",
+      "label": "safe_counter @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_counter.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0050-safe_linear",
+      "label": "safe_linear @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_linear.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0050-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_nested_guard.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0050-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_offbyone.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0050-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_overflow.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0100-safe_sum",
+      "label": "safe_sum @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_sum.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0100-safe_counter",
+      "label": "safe_counter @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_counter.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0100-safe_linear",
+      "label": "safe_linear @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_linear.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0100-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_nested_guard.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0100-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_offbyone.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0100-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_overflow.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0500-safe_sum",
+      "label": "safe_sum @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_sum.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0500-safe_counter",
+      "label": "safe_counter @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_counter.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0500-safe_linear",
+      "label": "safe_linear @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_linear.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0500-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_nested_guard.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0500-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_offbyone.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k0500-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_overflow.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k1001-safe_sum",
+      "label": "safe_sum @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_sum.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k1001-safe_counter",
+      "label": "safe_counter @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_counter.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k1001-safe_linear",
+      "label": "safe_linear @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_linear.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k1001-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/safe_nested_guard.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k1001-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_offbyone.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-k1001-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks/unsafe_overflow.c"
+      ],
+      "timeout_s": 60
+    },
+    {
+      "run_id": "R-h0010-hard_symbolic_bound",
+      "label": "hard_symbolic_bound @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_symbolic_bound.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_symbolic_bound.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0010-hard_nested_branch",
+      "label": "hard_nested_branch @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_nested_branch.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_nested_branch.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0010-hard_multivar",
+      "label": "hard_multivar @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_multivar.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_multivar.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0010-hard_array_state",
+      "label": "hard_array_state @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_array_state.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_array_state.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0025-hard_symbolic_bound",
+      "label": "hard_symbolic_bound @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_symbolic_bound.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_symbolic_bound.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0025-hard_nested_branch",
+      "label": "hard_nested_branch @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_nested_branch.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_nested_branch.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0025-hard_multivar",
+      "label": "hard_multivar @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_multivar.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_multivar.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0025-hard_array_state",
+      "label": "hard_array_state @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_array_state.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_array_state.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0050-hard_symbolic_bound",
+      "label": "hard_symbolic_bound @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_symbolic_bound.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_symbolic_bound.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0050-hard_nested_branch",
+      "label": "hard_nested_branch @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_nested_branch.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_nested_branch.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0050-hard_multivar",
+      "label": "hard_multivar @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_multivar.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_multivar.c"
+      ],
+      "timeout_s": 300
+    },
+    {
+      "run_id": "R-h0050-hard_array_state",
+      "label": "hard_array_state @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_array_state.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "inputs": [
+        "benchmarks_hard/hard_array_state.c"
+      ],
+      "timeout_s": 300
+    }
+  ]
+}

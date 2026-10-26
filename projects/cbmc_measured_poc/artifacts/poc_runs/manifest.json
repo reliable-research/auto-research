@@ -1,0 +1,1024 @@
+{
+  "environment": {
+    "recorded_at": "2026-09-15T14:36:36.471201+00:00",
+    "git_commit": null,
+    "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.12.3",
+    "tool_versions": {
+      "cbmc": "6.10.0 (cbmc-6.10.0)"
+    }
+  },
+  "run_count": 42,
+  "artifacts_dir": "artifacts/poc_runs",
+  "records": [
+    {
+      "run_id": "R-k0010-safe_sum",
+      "label": "safe_sum @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.1437,
+      "stdout_path": "artifacts/poc_runs/R-k0010-safe_sum.log",
+      "stderr_path": "artifacts/poc_runs/R-k0010-safe_sum.err.log",
+      "input_hashes": {
+        "benchmarks/safe_sum.c": "cd55691f3236be547c9faac88b9ce63500e3347cba231728f0004f5eefde2f03"
+      },
+      "started_at": "2026-09-15T14:25:50.548980+00:00",
+      "finished_at": "2026-09-15T14:25:50.692714+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0010-safe_counter",
+      "label": "safe_counter @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0472,
+      "stdout_path": "artifacts/poc_runs/R-k0010-safe_counter.log",
+      "stderr_path": "artifacts/poc_runs/R-k0010-safe_counter.err.log",
+      "input_hashes": {
+        "benchmarks/safe_counter.c": "9755474ac306e3c028ac6e26cb9883858083c117f8695f225a9b41f8dec2b8cb"
+      },
+      "started_at": "2026-09-15T14:25:50.708597+00:00",
+      "finished_at": "2026-09-15T14:25:50.755771+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0010-safe_linear",
+      "label": "safe_linear @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0478,
+      "stdout_path": "artifacts/poc_runs/R-k0010-safe_linear.log",
+      "stderr_path": "artifacts/poc_runs/R-k0010-safe_linear.err.log",
+      "input_hashes": {
+        "benchmarks/safe_linear.c": "f69a78c6bf25c466b03ce5e64855bab4ad9de35e53b3f9af3ecfe39df304156a"
+      },
+      "started_at": "2026-09-15T14:25:50.761685+00:00",
+      "finished_at": "2026-09-15T14:25:50.809489+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0010-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0484,
+      "stdout_path": "artifacts/poc_runs/R-k0010-safe_nested_guard.log",
+      "stderr_path": "artifacts/poc_runs/R-k0010-safe_nested_guard.err.log",
+      "input_hashes": {
+        "benchmarks/safe_nested_guard.c": "59065c667d7966d0c83720ecad4251d0488477d5d33d38631dff57238c8d83e7"
+      },
+      "started_at": "2026-09-15T14:25:50.821034+00:00",
+      "finished_at": "2026-09-15T14:25:50.869471+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0010-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0408,
+      "stdout_path": "artifacts/poc_runs/R-k0010-unsafe_offbyone.log",
+      "stderr_path": "artifacts/poc_runs/R-k0010-unsafe_offbyone.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_offbyone.c": "3087cbff4902566c0f084c9d91d1858290f9e6c8da746f55b992b72b6605d87b"
+      },
+      "started_at": "2026-09-15T14:25:50.875395+00:00",
+      "finished_at": "2026-09-15T14:25:50.916191+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0010-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=10",
+      "group": "easy-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0436,
+      "stdout_path": "artifacts/poc_runs/R-k0010-unsafe_overflow.log",
+      "stderr_path": "artifacts/poc_runs/R-k0010-unsafe_overflow.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_overflow.c": "e2afab6303d18cc6dce8082eea25a437f11f2829a58a73fcbba04c4f861c33c8"
+      },
+      "started_at": "2026-09-15T14:25:50.921212+00:00",
+      "finished_at": "2026-09-15T14:25:50.964806+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0050-safe_sum",
+      "label": "safe_sum @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0476,
+      "stdout_path": "artifacts/poc_runs/R-k0050-safe_sum.log",
+      "stderr_path": "artifacts/poc_runs/R-k0050-safe_sum.err.log",
+      "input_hashes": {
+        "benchmarks/safe_sum.c": "cd55691f3236be547c9faac88b9ce63500e3347cba231728f0004f5eefde2f03"
+      },
+      "started_at": "2026-09-15T14:25:50.967420+00:00",
+      "finished_at": "2026-09-15T14:25:51.015050+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0050-safe_counter",
+      "label": "safe_counter @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0502,
+      "stdout_path": "artifacts/poc_runs/R-k0050-safe_counter.log",
+      "stderr_path": "artifacts/poc_runs/R-k0050-safe_counter.err.log",
+      "input_hashes": {
+        "benchmarks/safe_counter.c": "9755474ac306e3c028ac6e26cb9883858083c117f8695f225a9b41f8dec2b8cb"
+      },
+      "started_at": "2026-09-15T14:25:51.017500+00:00",
+      "finished_at": "2026-09-15T14:25:51.067677+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0050-safe_linear",
+      "label": "safe_linear @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0428,
+      "stdout_path": "artifacts/poc_runs/R-k0050-safe_linear.log",
+      "stderr_path": "artifacts/poc_runs/R-k0050-safe_linear.err.log",
+      "input_hashes": {
+        "benchmarks/safe_linear.c": "f69a78c6bf25c466b03ce5e64855bab4ad9de35e53b3f9af3ecfe39df304156a"
+      },
+      "started_at": "2026-09-15T14:25:51.070120+00:00",
+      "finished_at": "2026-09-15T14:25:51.112885+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0050-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0473,
+      "stdout_path": "artifacts/poc_runs/R-k0050-safe_nested_guard.log",
+      "stderr_path": "artifacts/poc_runs/R-k0050-safe_nested_guard.err.log",
+      "input_hashes": {
+        "benchmarks/safe_nested_guard.c": "59065c667d7966d0c83720ecad4251d0488477d5d33d38631dff57238c8d83e7"
+      },
+      "started_at": "2026-09-15T14:25:51.115176+00:00",
+      "finished_at": "2026-09-15T14:25:51.162467+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0050-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0488,
+      "stdout_path": "artifacts/poc_runs/R-k0050-unsafe_offbyone.log",
+      "stderr_path": "artifacts/poc_runs/R-k0050-unsafe_offbyone.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_offbyone.c": "3087cbff4902566c0f084c9d91d1858290f9e6c8da746f55b992b72b6605d87b"
+      },
+      "started_at": "2026-09-15T14:25:51.165050+00:00",
+      "finished_at": "2026-09-15T14:25:51.213896+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0050-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=50",
+      "group": "easy-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0475,
+      "stdout_path": "artifacts/poc_runs/R-k0050-unsafe_overflow.log",
+      "stderr_path": "artifacts/poc_runs/R-k0050-unsafe_overflow.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_overflow.c": "e2afab6303d18cc6dce8082eea25a437f11f2829a58a73fcbba04c4f861c33c8"
+      },
+      "started_at": "2026-09-15T14:25:51.216423+00:00",
+      "finished_at": "2026-09-15T14:25:51.263886+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0100-safe_sum",
+      "label": "safe_sum @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0562,
+      "stdout_path": "artifacts/poc_runs/R-k0100-safe_sum.log",
+      "stderr_path": "artifacts/poc_runs/R-k0100-safe_sum.err.log",
+      "input_hashes": {
+        "benchmarks/safe_sum.c": "cd55691f3236be547c9faac88b9ce63500e3347cba231728f0004f5eefde2f03"
+      },
+      "started_at": "2026-09-15T14:25:51.266533+00:00",
+      "finished_at": "2026-09-15T14:25:51.322751+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0100-safe_counter",
+      "label": "safe_counter @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0553,
+      "stdout_path": "artifacts/poc_runs/R-k0100-safe_counter.log",
+      "stderr_path": "artifacts/poc_runs/R-k0100-safe_counter.err.log",
+      "input_hashes": {
+        "benchmarks/safe_counter.c": "9755474ac306e3c028ac6e26cb9883858083c117f8695f225a9b41f8dec2b8cb"
+      },
+      "started_at": "2026-09-15T14:25:51.324035+00:00",
+      "finished_at": "2026-09-15T14:25:51.379314+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0100-safe_linear",
+      "label": "safe_linear @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0526,
+      "stdout_path": "artifacts/poc_runs/R-k0100-safe_linear.log",
+      "stderr_path": "artifacts/poc_runs/R-k0100-safe_linear.err.log",
+      "input_hashes": {
+        "benchmarks/safe_linear.c": "f69a78c6bf25c466b03ce5e64855bab4ad9de35e53b3f9af3ecfe39df304156a"
+      },
+      "started_at": "2026-09-15T14:25:51.381810+00:00",
+      "finished_at": "2026-09-15T14:25:51.434428+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0100-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.057,
+      "stdout_path": "artifacts/poc_runs/R-k0100-safe_nested_guard.log",
+      "stderr_path": "artifacts/poc_runs/R-k0100-safe_nested_guard.err.log",
+      "input_hashes": {
+        "benchmarks/safe_nested_guard.c": "59065c667d7966d0c83720ecad4251d0488477d5d33d38631dff57238c8d83e7"
+      },
+      "started_at": "2026-09-15T14:25:51.436945+00:00",
+      "finished_at": "2026-09-15T14:25:51.493985+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0100-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0527,
+      "stdout_path": "artifacts/poc_runs/R-k0100-unsafe_offbyone.log",
+      "stderr_path": "artifacts/poc_runs/R-k0100-unsafe_offbyone.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_offbyone.c": "3087cbff4902566c0f084c9d91d1858290f9e6c8da746f55b992b72b6605d87b"
+      },
+      "started_at": "2026-09-15T14:25:51.496754+00:00",
+      "finished_at": "2026-09-15T14:25:51.549487+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0100-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=100",
+      "group": "easy-k=100",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "100",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0578,
+      "stdout_path": "artifacts/poc_runs/R-k0100-unsafe_overflow.log",
+      "stderr_path": "artifacts/poc_runs/R-k0100-unsafe_overflow.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_overflow.c": "e2afab6303d18cc6dce8082eea25a437f11f2829a58a73fcbba04c4f861c33c8"
+      },
+      "started_at": "2026-09-15T14:25:51.550980+00:00",
+      "finished_at": "2026-09-15T14:25:51.608781+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0500-safe_sum",
+      "label": "safe_sum @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0951,
+      "stdout_path": "artifacts/poc_runs/R-k0500-safe_sum.log",
+      "stderr_path": "artifacts/poc_runs/R-k0500-safe_sum.err.log",
+      "input_hashes": {
+        "benchmarks/safe_sum.c": "cd55691f3236be547c9faac88b9ce63500e3347cba231728f0004f5eefde2f03"
+      },
+      "started_at": "2026-09-15T14:25:51.611354+00:00",
+      "finished_at": "2026-09-15T14:25:51.706494+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0500-safe_counter",
+      "label": "safe_counter @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0794,
+      "stdout_path": "artifacts/poc_runs/R-k0500-safe_counter.log",
+      "stderr_path": "artifacts/poc_runs/R-k0500-safe_counter.err.log",
+      "input_hashes": {
+        "benchmarks/safe_counter.c": "9755474ac306e3c028ac6e26cb9883858083c117f8695f225a9b41f8dec2b8cb"
+      },
+      "started_at": "2026-09-15T14:25:51.709005+00:00",
+      "finished_at": "2026-09-15T14:25:51.788415+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0500-safe_linear",
+      "label": "safe_linear @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0783,
+      "stdout_path": "artifacts/poc_runs/R-k0500-safe_linear.log",
+      "stderr_path": "artifacts/poc_runs/R-k0500-safe_linear.err.log",
+      "input_hashes": {
+        "benchmarks/safe_linear.c": "f69a78c6bf25c466b03ce5e64855bab4ad9de35e53b3f9af3ecfe39df304156a"
+      },
+      "started_at": "2026-09-15T14:25:51.791107+00:00",
+      "finished_at": "2026-09-15T14:25:51.869364+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0500-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.093,
+      "stdout_path": "artifacts/poc_runs/R-k0500-safe_nested_guard.log",
+      "stderr_path": "artifacts/poc_runs/R-k0500-safe_nested_guard.err.log",
+      "input_hashes": {
+        "benchmarks/safe_nested_guard.c": "59065c667d7966d0c83720ecad4251d0488477d5d33d38631dff57238c8d83e7"
+      },
+      "started_at": "2026-09-15T14:25:51.871760+00:00",
+      "finished_at": "2026-09-15T14:25:51.964771+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0500-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0799,
+      "stdout_path": "artifacts/poc_runs/R-k0500-unsafe_offbyone.log",
+      "stderr_path": "artifacts/poc_runs/R-k0500-unsafe_offbyone.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_offbyone.c": "3087cbff4902566c0f084c9d91d1858290f9e6c8da746f55b992b72b6605d87b"
+      },
+      "started_at": "2026-09-15T14:25:51.967390+00:00",
+      "finished_at": "2026-09-15T14:25:52.047298+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k0500-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=500",
+      "group": "easy-k=500",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "500",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.0939,
+      "stdout_path": "artifacts/poc_runs/R-k0500-unsafe_overflow.log",
+      "stderr_path": "artifacts/poc_runs/R-k0500-unsafe_overflow.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_overflow.c": "e2afab6303d18cc6dce8082eea25a437f11f2829a58a73fcbba04c4f861c33c8"
+      },
+      "started_at": "2026-09-15T14:25:52.049896+00:00",
+      "finished_at": "2026-09-15T14:25:52.143811+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k1001-safe_sum",
+      "label": "safe_sum @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_sum.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 0.1321,
+      "stdout_path": "artifacts/poc_runs/R-k1001-safe_sum.log",
+      "stderr_path": "artifacts/poc_runs/R-k1001-safe_sum.err.log",
+      "input_hashes": {
+        "benchmarks/safe_sum.c": "cd55691f3236be547c9faac88b9ce63500e3347cba231728f0004f5eefde2f03"
+      },
+      "started_at": "2026-09-15T14:25:52.146439+00:00",
+      "finished_at": "2026-09-15T14:25:52.278517+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k1001-safe_counter",
+      "label": "safe_counter @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_counter.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 0.1042,
+      "stdout_path": "artifacts/poc_runs/R-k1001-safe_counter.log",
+      "stderr_path": "artifacts/poc_runs/R-k1001-safe_counter.err.log",
+      "input_hashes": {
+        "benchmarks/safe_counter.c": "9755474ac306e3c028ac6e26cb9883858083c117f8695f225a9b41f8dec2b8cb"
+      },
+      "started_at": "2026-09-15T14:25:52.281184+00:00",
+      "finished_at": "2026-09-15T14:25:52.385423+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k1001-safe_linear",
+      "label": "safe_linear @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_linear.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 0.1229,
+      "stdout_path": "artifacts/poc_runs/R-k1001-safe_linear.log",
+      "stderr_path": "artifacts/poc_runs/R-k1001-safe_linear.err.log",
+      "input_hashes": {
+        "benchmarks/safe_linear.c": "f69a78c6bf25c466b03ce5e64855bab4ad9de35e53b3f9af3ecfe39df304156a"
+      },
+      "started_at": "2026-09-15T14:25:52.387963+00:00",
+      "finished_at": "2026-09-15T14:25:52.510861+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k1001-safe_nested_guard",
+      "label": "safe_nested_guard @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/safe_nested_guard.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 0.1379,
+      "stdout_path": "artifacts/poc_runs/R-k1001-safe_nested_guard.log",
+      "stderr_path": "artifacts/poc_runs/R-k1001-safe_nested_guard.err.log",
+      "input_hashes": {
+        "benchmarks/safe_nested_guard.c": "59065c667d7966d0c83720ecad4251d0488477d5d33d38631dff57238c8d83e7"
+      },
+      "started_at": "2026-09-15T14:25:52.512463+00:00",
+      "finished_at": "2026-09-15T14:25:52.650417+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k1001-unsafe_offbyone",
+      "label": "unsafe_offbyone @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_offbyone.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.1005,
+      "stdout_path": "artifacts/poc_runs/R-k1001-unsafe_offbyone.log",
+      "stderr_path": "artifacts/poc_runs/R-k1001-unsafe_offbyone.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_offbyone.c": "3087cbff4902566c0f084c9d91d1858290f9e6c8da746f55b992b72b6605d87b"
+      },
+      "started_at": "2026-09-15T14:25:52.653044+00:00",
+      "finished_at": "2026-09-15T14:25:52.753590+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-k1001-unsafe_overflow",
+      "label": "unsafe_overflow @ unwind=1001",
+      "group": "easy-k=1001",
+      "command": [
+        "cbmc",
+        "benchmarks/unsafe_overflow.c",
+        "--unwind",
+        "1001",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 60.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.1205,
+      "stdout_path": "artifacts/poc_runs/R-k1001-unsafe_overflow.log",
+      "stderr_path": "artifacts/poc_runs/R-k1001-unsafe_overflow.err.log",
+      "input_hashes": {
+        "benchmarks/unsafe_overflow.c": "e2afab6303d18cc6dce8082eea25a437f11f2829a58a73fcbba04c4f861c33c8"
+      },
+      "started_at": "2026-09-15T14:25:52.756229+00:00",
+      "finished_at": "2026-09-15T14:25:52.876776+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0010-hard_symbolic_bound",
+      "label": "hard_symbolic_bound @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_symbolic_bound.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 1.532,
+      "stdout_path": "artifacts/poc_runs/R-h0010-hard_symbolic_bound.log",
+      "stderr_path": "artifacts/poc_runs/R-h0010-hard_symbolic_bound.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_symbolic_bound.c": "9b55bd7d87a4273bdf35520f9625345ec632b44e561d3e06f79bb6fdd5e5a0fc"
+      },
+      "started_at": "2026-09-15T14:25:52.882498+00:00",
+      "finished_at": "2026-09-15T14:25:54.414511+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0010-hard_nested_branch",
+      "label": "hard_nested_branch @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_nested_branch.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 0.649,
+      "stdout_path": "artifacts/poc_runs/R-h0010-hard_nested_branch.log",
+      "stderr_path": "artifacts/poc_runs/R-h0010-hard_nested_branch.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_nested_branch.c": "516c7474df63cb28dd35fec9d36036723f24e3c8a51b0d26217355d198171b5a"
+      },
+      "started_at": "2026-09-15T14:25:54.421445+00:00",
+      "finished_at": "2026-09-15T14:25:55.070464+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0010-hard_multivar",
+      "label": "hard_multivar @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_multivar.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 5.8228,
+      "stdout_path": "artifacts/poc_runs/R-h0010-hard_multivar.log",
+      "stderr_path": "artifacts/poc_runs/R-h0010-hard_multivar.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_multivar.c": "61a0d3985a4ba2239c7a4421848d8bcdf223ac3f1fdf15b3d3f4e03d06c8da9e"
+      },
+      "started_at": "2026-09-15T14:25:55.077170+00:00",
+      "finished_at": "2026-09-15T14:26:00.899991+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0010-hard_array_state",
+      "label": "hard_array_state @ unwind=10",
+      "group": "hard-k=10",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_array_state.c",
+        "--unwind",
+        "10",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 2.6899,
+      "stdout_path": "artifacts/poc_runs/R-h0010-hard_array_state.log",
+      "stderr_path": "artifacts/poc_runs/R-h0010-hard_array_state.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_array_state.c": "d05734a3d863462f59218f5a86ee092e5ad3bd0c5cbd36359cae8dd8dcc5094c"
+      },
+      "started_at": "2026-09-15T14:26:00.906228+00:00",
+      "finished_at": "2026-09-15T14:26:03.596096+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0025-hard_symbolic_bound",
+      "label": "hard_symbolic_bound @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_symbolic_bound.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 2.8473,
+      "stdout_path": "artifacts/poc_runs/R-h0025-hard_symbolic_bound.log",
+      "stderr_path": "artifacts/poc_runs/R-h0025-hard_symbolic_bound.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_symbolic_bound.c": "9b55bd7d87a4273bdf35520f9625345ec632b44e561d3e06f79bb6fdd5e5a0fc"
+      },
+      "started_at": "2026-09-15T14:26:03.598556+00:00",
+      "finished_at": "2026-09-15T14:26:06.445849+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0025-hard_nested_branch",
+      "label": "hard_nested_branch @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_nested_branch.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 2.0033,
+      "stdout_path": "artifacts/poc_runs/R-h0025-hard_nested_branch.log",
+      "stderr_path": "artifacts/poc_runs/R-h0025-hard_nested_branch.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_nested_branch.c": "516c7474df63cb28dd35fec9d36036723f24e3c8a51b0d26217355d198171b5a"
+      },
+      "started_at": "2026-09-15T14:26:06.449360+00:00",
+      "finished_at": "2026-09-15T14:26:08.452659+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0025-hard_multivar",
+      "label": "hard_multivar @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_multivar.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "TIMEOUT",
+      "exit_code": null,
+      "wall_time_s": 300.0291,
+      "stdout_path": "artifacts/poc_runs/R-h0025-hard_multivar.log",
+      "stderr_path": "artifacts/poc_runs/R-h0025-hard_multivar.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_multivar.c": "61a0d3985a4ba2239c7a4421848d8bcdf223ac3f1fdf15b3d3f4e03d06c8da9e"
+      },
+      "started_at": "2026-09-15T14:26:08.455526+00:00",
+      "finished_at": "2026-09-15T14:31:08.484630+00:00",
+      "note": "exceeded timeout of 300.0s"
+    },
+    {
+      "run_id": "R-h0025-hard_array_state",
+      "label": "hard_array_state @ unwind=25",
+      "group": "hard-k=25",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_array_state.c",
+        "--unwind",
+        "25",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "FAIL",
+      "exit_code": 10,
+      "wall_time_s": 2.8937,
+      "stdout_path": "artifacts/poc_runs/R-h0025-hard_array_state.log",
+      "stderr_path": "artifacts/poc_runs/R-h0025-hard_array_state.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_array_state.c": "d05734a3d863462f59218f5a86ee092e5ad3bd0c5cbd36359cae8dd8dcc5094c"
+      },
+      "started_at": "2026-09-15T14:31:08.491577+00:00",
+      "finished_at": "2026-09-15T14:31:11.385297+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0050-hard_symbolic_bound",
+      "label": "hard_symbolic_bound @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_symbolic_bound.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 5.5681,
+      "stdout_path": "artifacts/poc_runs/R-h0050-hard_symbolic_bound.log",
+      "stderr_path": "artifacts/poc_runs/R-h0050-hard_symbolic_bound.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_symbolic_bound.c": "9b55bd7d87a4273bdf35520f9625345ec632b44e561d3e06f79bb6fdd5e5a0fc"
+      },
+      "started_at": "2026-09-15T14:31:11.391342+00:00",
+      "finished_at": "2026-09-15T14:31:16.959486+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0050-hard_nested_branch",
+      "label": "hard_nested_branch @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_nested_branch.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 10.3899,
+      "stdout_path": "artifacts/poc_runs/R-h0050-hard_nested_branch.log",
+      "stderr_path": "artifacts/poc_runs/R-h0050-hard_nested_branch.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_nested_branch.c": "516c7474df63cb28dd35fec9d36036723f24e3c8a51b0d26217355d198171b5a"
+      },
+      "started_at": "2026-09-15T14:31:16.966326+00:00",
+      "finished_at": "2026-09-15T14:31:27.356268+00:00",
+      "note": ""
+    },
+    {
+      "run_id": "R-h0050-hard_multivar",
+      "label": "hard_multivar @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_multivar.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "TIMEOUT",
+      "exit_code": null,
+      "wall_time_s": 300.1192,
+      "stdout_path": "artifacts/poc_runs/R-h0050-hard_multivar.log",
+      "stderr_path": "artifacts/poc_runs/R-h0050-hard_multivar.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_multivar.c": "61a0d3985a4ba2239c7a4421848d8bcdf223ac3f1fdf15b3d3f4e03d06c8da9e"
+      },
+      "started_at": "2026-09-15T14:31:27.363113+00:00",
+      "finished_at": "2026-09-15T14:36:27.482350+00:00",
+      "note": "exceeded timeout of 300.0s"
+    },
+    {
+      "run_id": "R-h0050-hard_array_state",
+      "label": "hard_array_state @ unwind=50",
+      "group": "hard-k=50",
+      "command": [
+        "cbmc",
+        "benchmarks_hard/hard_array_state.c",
+        "--unwind",
+        "50",
+        "--unwinding-assertions"
+      ],
+      "timeout_s": 300.0,
+      "status": "PASS",
+      "exit_code": 0,
+      "wall_time_s": 8.9835,
+      "stdout_path": "artifacts/poc_runs/R-h0050-hard_array_state.log",
+      "stderr_path": "artifacts/poc_runs/R-h0050-hard_array_state.err.log",
+      "input_hashes": {
+        "benchmarks_hard/hard_array_state.c": "d05734a3d863462f59218f5a86ee092e5ad3bd0c5cbd36359cae8dd8dcc5094c"
+      },
+      "started_at": "2026-09-15T14:36:27.485075+00:00",
+      "finished_at": "2026-09-15T14:36:36.468600+00:00",
+      "note": ""
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "run_id": "R-k0500-unsafe_offbyone",
+  "label": "unsafe_offbyone @ unwind=500",
+  "group": "easy-k=500",
+  "command": [
+    "cbmc",
+    "benchmarks/unsafe_offbyone.c",
+    "--unwind",
+    "500",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 60.0,
+  "status": "FAIL",
+  "exit_code": 10,
+  "wall_time_s": 0.0799,
+  "stdout_path": "artifacts/poc_runs/R-k0500-unsafe_offbyone.log",
+  "stderr_path": "artifacts/poc_runs/R-k0500-unsafe_offbyone.err.log",
+  "input_hashes": {
+    "benchmarks/unsafe_offbyone.c": "3087cbff4902566c0f084c9d91d1858290f9e6c8da746f55b992b72b6605d87b"
+  },
+  "started_at": "2026-09-15T14:25:51.967390+00:00",
+  "finished_at": "2026-09-15T14:25:52.047298+00:00",
+  "note": ""
+}

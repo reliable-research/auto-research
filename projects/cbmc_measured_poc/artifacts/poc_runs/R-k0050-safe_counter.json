@@ -1,0 +1,24 @@
+{
+  "run_id": "R-k0050-safe_counter",
+  "label": "safe_counter @ unwind=50",
+  "group": "easy-k=50",
+  "command": [
+    "cbmc",
+    "benchmarks/safe_counter.c",
+    "--unwind",
+    "50",
+    "--unwinding-assertions"
+  ],
+  "timeout_s": 60.0,
+  "status": "FAIL",
+  "exit_code": 10,
+  "wall_time_s": 0.0502,
+  "stdout_path": "artifacts/poc_runs/R-k0050-safe_counter.log",
+  "stderr_path": "artifacts/poc_runs/R-k0050-safe_counter.err.log",
+  "input_hashes": {
+    "benchmarks/safe_counter.c": "9755474ac306e3c028ac6e26cb9883858083c117f8695f225a9b41f8dec2b8cb"
+  },
+  "started_at": "2026-09-15T14:25:51.017500+00:00",
+  "finished_at": "2026-09-15T14:25:51.067677+00:00",
+  "note": ""
+}

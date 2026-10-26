@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Measurement evidence: raw tool logs are cited by results.json and must ship with it.
+!projects/*/artifacts/**/*.log
